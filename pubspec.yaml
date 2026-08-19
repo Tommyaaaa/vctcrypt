@@ -1,0 +1,23 @@
+name: vctcrypt
+description: VCTCrypt - VCT File Encryption Tool with triple AES-256-GCM encryption.
+publish_to: "none"
+version: 1.1.0+2
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cryptography: ^2.7.0
+  file_picker: ^8.0.0
+  shared_preferences: ^2.3.0
+  desktop_drop: ^0.4.4
+  path: ^1.9.0
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

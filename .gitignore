@@ -1,0 +1,31 @@
+# Flutter / Dart
+build/
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+*.lock
+!pubspec.lock
+
+# Platform-specific generated dirs (CI generates these)
+android/
+ios/
+macos/
+windows/
+linux/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# macOS
+.DS_Store
+
+# Obfuscation symbols (never commit these)
+symbols/
+
+# Generated
+*.g.dart

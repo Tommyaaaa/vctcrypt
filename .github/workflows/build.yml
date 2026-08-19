@@ -1,0 +1,500 @@
+name: Build VCTCrypt
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+  PROJECT_NAME: vctcrypt
+  ORG_NAME: com.tommy
+
+jobs:
+  # ============================================================
+  # Android APK
+  # ============================================================
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Generate platform scaffolding
+        run: flutter create --platforms=android --org ${{ env.ORG_NAME }} --project-name ${{ env.PROJECT_NAME }} .
+
+      - name: Fix broken android-35 platform jar
+        run: |
+          # GitHub Actions runner sometimes ships a corrupted android-35/android.jar
+          # Remove and reinstall it to fix aapt2 "Failed to load resources table" error
+          if [ -d "/usr/local/lib/android/sdk/platforms/android-35" ]; then
+            echo "Removing broken android-35 platform..."
+            rm -rf /usr/local/lib/android/sdk/platforms/android-35
+          fi
+          yes | sdkmanager --install "platforms;android-35" 2>/dev/null || true
+          # Verify the jar is valid
+          if [ -f "/usr/local/lib/android/sdk/platforms/android-35/android.jar" ]; then
+            echo "android-35 platform reinstalled successfully"
+            ls -la /usr/local/lib/android/sdk/platforms/android-35/android.jar
+          else
+            echo "WARNING: android-35 still missing, will try SDK 34 fallback"
+          fi
+
+      - name: Configure Android SDK 35 + Kotlin 1.9.24 + R8
+        run: |
+          # Fix: flutter_plugin_android_lifecycle requires SDK 35
+          sed -i 's/compileSdk = 34/compileSdk = 35/' android/app/build.gradle
+          # Fix: Kotlin version mismatch — use Python for robust regex replacement
+          python3 -c "
+          import re, os
+
+          # --- settings.gradle (new Flutter plugin DSL format) ---
+          sfile = 'android/settings.gradle'
+          if os.path.exists(sfile):
+              with open(sfile, 'r') as f:
+                  content = f.read()
+              # Match: id \"org.jetbrains.kotlin.android\" version \"X.Y.Z\"
+              content = re.sub(
+                  r'(org\.jetbrains\.kotlin\.android[\"\\s]+version\s+)[\"\\'][^\"\\'\"]+[\"\\']',
+                  r'\g<1>\"1.9.24\"',
+                  content
+              )
+              with open(sfile, 'w') as f:
+                  f.write(content)
+              print('settings.gradle patched')
+
+          # --- build.gradle (old-style ext.kotlin_version) ---
+          bfile = 'android/build.gradle'
+          if os.path.exists(bfile):
+              with open(bfile, 'r') as f:
+                  content = f.read()
+              # Match single or double quotes: ext.kotlin_version = 'X.Y.Z' or \"X.Y.Z\"
+              content = re.sub(
+                  r\"ext\.kotlin_version\s*=\s*['\\\"]([^'\\\"]*)['\\\"]\",
+                  \"ext.kotlin_version = '1.9.24'\",
+                  content
+              )
+              with open(bfile, 'w') as f:
+                  f.write(content)
+              print('build.gradle patched')
+          "
+
+          # Verify the replacement worked
+          echo '=== settings.gradle Kotlin ==='
+          grep -i kotlin android/settings.gradle || echo 'NOT FOUND in settings.gradle'
+          echo '=== build.gradle Kotlin ==='
+          grep -i kotlin_version android/build.gradle 2>/dev/null || echo 'NOT FOUND in build.gradle'
+
+          # Suppress Kotlin metadata version warnings (non-fatal)
+          echo 'kotlin.jvm.target.validation.mode=warning' >> android/gradle.properties
+
+          # Enable R8 shrinking for anti-decompilation
+          sed -i 's/minifyEnabled false/minifyEnabled true/g' android/app/build.gradle
+          sed -i 's/shrinkResources false/shrinkResources true/g' android/app/build.gradle
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release --obfuscate --split-debug-info=./symbols
+
+      - name: Rename artifact
+        run: cp build/app/outputs/flutter-apk/app-release.apk VCTCrypt-Android.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VCTCrypt-Android-APK
+          path: VCTCrypt-Android.apk
+          retention-days: 90
+
+  # ============================================================
+  # Windows EXE
+  # ============================================================
+  windows:
+    name: Windows EXE
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Generate platform scaffolding
+        run: flutter create --platforms=windows --org ${{ env.ORG_NAME }} --project-name ${{ env.PROJECT_NAME }} .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release --obfuscate --split-debug-info=./symbols
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $releaseDir = "build\windows\x64\runner\Release"
+          if (-not (Test-Path $releaseDir)) {
+            $altDir = Get-ChildItem -Path "build\windows" -Recurse -Filter "vctcrypt.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($altDir) { $releaseDir = $altDir.DirectoryName }
+          }
+          Compress-Archive -Path "$releaseDir\*" -DestinationPath VCTCrypt-Windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VCTCrypt-Windows-EXE
+          path: VCTCrypt-Windows-x64.zip
+          retention-days: 90
+
+  # ============================================================
+  # macOS DMG
+  # ============================================================
+  macos:
+    name: macOS DMG
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Generate platform scaffolding
+        run: flutter create --platforms=macos --org ${{ env.ORG_NAME }} --project-name ${{ env.PROJECT_NAME }} .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build macOS
+        run: flutter build macos --release --obfuscate --split-debug-info=./symbols
+
+      - name: Create DMG
+        run: |
+          APP_PATH=$(find build/macos/Build/Products/Release -name "*.app" -maxdepth 1 | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: No .app found in build output"
+            find build/macos -name "*.app" -type d
+            exit 1
+          fi
+          echo "Found app: $APP_PATH"
+          # Remove any existing DMG to avoid interactive prompt
+          rm -f VCTCrypt-macOS.dmg
+          hdiutil create -volname "VCTCrypt" -srcfolder "$APP_PATH" -ov -format UDZO VCTCrypt-macOS.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VCTCrypt-macOS-DMG
+          path: VCTCrypt-macOS.dmg
+          retention-days: 90
+
+  # ============================================================
+  # iOS IPA (unsigned)
+  # ============================================================
+  ios:
+    name: iOS IPA (unsigned)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Generate platform scaffolding
+        run: flutter create --platforms=ios --org ${{ env.ORG_NAME }} --project-name ${{ env.PROJECT_NAME }} .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Configure Xcode for unsigned build
+        run: |
+          cd ios
+          python3 -c "
+          import re
+
+          with open('Runner.xcodeproj/project.pbxproj', 'r') as f:
+              content = f.read()
+
+          # 1) Set DEVELOPMENT_TEAM everywhere (insert if missing, replace if present)
+          #    Use a dummy 10-char team ID to satisfy Flutter's check
+          if 'DEVELOPMENT_TEAM' in content:
+              content = re.sub(r'DEVELOPMENT_TEAM\s*=\s*[^;]*;', 'DEVELOPMENT_TEAM = 0000000000;', content)
+          else:
+              # Insert before every PRODUCT_BUNDLE_IDENTIFIER line
+              content = re.sub(
+                  r'(PRODUCT_BUNDLE_IDENTIFIER\s*=)',
+                  'DEVELOPMENT_TEAM = 0000000000; \\\\1',
+                  content
+              )
+
+          # 2) Clear CODE_SIGN_IDENTITY
+          content = re.sub(r'CODE_SIGN_IDENTITY\s*=\s*\"?[^;\"]*\"?;', 'CODE_SIGN_IDENTITY = \"\";', content)
+
+          # 3) Disable code signing requirement
+          if 'CODE_SIGNING_ALLOWED' not in content:
+              content = re.sub(
+                  r'(PRODUCT_BUNDLE_IDENTIFIER\s*=)',
+                  'CODE_SIGNING_ALLOWED = NO; \\\\1',
+                  content
+              )
+          else:
+              content = re.sub(r'CODE_SIGNING_ALLOWED\s*=\s*[^;]*;', 'CODE_SIGNING_ALLOWED = NO;', content)
+
+          # 4) Clear PROVISIONING_PROFILE
+          content = re.sub(r'PROVISIONING_PROFILE\s*=\s*\"?[^;\"]*\"?;', 'PROVISIONING_PROFILE = \"\";', content)
+
+          with open('Runner.xcodeproj/project.pbxproj', 'w') as f:
+              f.write(content)
+
+          print('Patched pbxproj: DEVELOPMENT_TEAM=0000000000, CODE_SIGNING_ALLOWED=NO, CODE_SIGN_IDENTITY=empty')
+          "
+
+      - name: Build iOS (unsigned)
+        run: |
+          # Try flutter build first; if it fails, use xcodebuild directly
+          flutter build ios --release --no-codesign --obfuscate --split-debug-info=./symbols || {
+            echo "=== flutter build ios failed, falling back to xcodebuild ==="
+            cd ios && pod install && cd ..
+            xcodebuild \
+              -workspace ios/Runner.xcworkspace \
+              -scheme Runner \
+              -configuration Release \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -derivedDataPath build/ios/derived \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              DEVELOPMENT_TEAM=0000000000 \
+              -quiet
+            mkdir -p build/ios/iphoneos
+            cp -r build/ios/derived/Build/Products/Release-iphoneos/Runner.app build/ios/iphoneos/
+          }
+
+      - name: Create IPA
+        run: |
+          mkdir -p Payload
+          APP_PATH=$(find build/ios/iphoneos -name "*.app" -maxdepth 1 | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: No .app found in build output"
+            find build/ios -name "*.app" -type d
+            exit 1
+          fi
+          echo "Found app: $APP_PATH"
+          cp -r "$APP_PATH" Payload/
+          zip -r VCTCrypt-iOS-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VCTCrypt-iOS-IPA-unsigned
+          path: VCTCrypt-iOS-unsigned.ipa
+          retention-days: 90
+
+  # ============================================================
+  # Linux AppImage
+  # ============================================================
+  linux:
+    name: Linux AppImage
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ninja-build libgtk-3-dev libblkid-dev liblzma-dev libfuse2 wget
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Generate platform scaffolding
+        run: flutter create --platforms=linux --org ${{ env.ORG_NAME }} --project-name ${{ env.PROJECT_NAME }} .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Linux
+        run: flutter build linux --release --obfuscate --split-debug-info=./symbols
+
+      - name: Create AppImage
+        run: |
+          # Download appimagetool
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+
+          # Set up AppDir structure
+          mkdir -p AppDir/usr/bin
+          cp -r build/linux/x64/release/bundle/* AppDir/usr/bin/
+
+          # Find the actual binary name
+          BINARY=$(find AppDir/usr/bin -maxdepth 1 -type f -executable ! -name "*.so" | head -1)
+          BINARY_NAME=$(basename "$BINARY")
+          echo "Found binary: $BINARY ($BINARY_NAME)"
+
+          # Generate 256x256 app icon (shield shape with "V" letter)
+          python3 -c "
+          import struct, zlib
+
+          def create_png(width, height, pixels):
+              def chunk(ctype, data):
+                  c = ctype + data
+                  return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+
+              raw = b''
+              for y in range(height):
+                  raw += b'\x00'
+                  for x in range(width):
+                      raw += bytes(pixels[y * width + x])
+
+              ihdr = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
+              return (b'\x89PNG\r\n\x1a\n' +
+                      chunk(b'IHDR', ihdr) +
+                      chunk(b'IDAT', zlib.compress(raw)) +
+                      chunk(b'IEND', b''))
+
+          W, H = 256, 256
+          px = []
+          cx, cy = 128, 128
+
+          # Shield polygon points (top-left, top-right, bottom)
+          for y in range(H):
+              for x in range(W):
+                  # Shield shape: top corners at (48,40),(208,40), narrows to (128,224)
+                  if y < 40 or y > 224:
+                      px.append((0,0,0,0))
+                      continue
+                  # interpolate shield width
+                  t = (y - 40) / 184.0
+                  half_w = int(80 * (1 - t * t * 0.3))
+                  if t > 0.85:
+                      half_w = int(half_w * (1 - (t - 0.85) / 0.15 * 0.8))
+                  if abs(x - cx) <= half_w:
+                      # Deep indigo gradient
+                      r = int(74 + (x - cx) * 0.3)
+                      g = int(20 + (y - cy) * 0.1)
+                      b = int(140 + (cx - x) * 0.3)
+                      r, g, b = max(0,min(255,r)), max(0,min(255,g)), max(0,min(255,b))
+
+                      # Draw 'V' shape
+                      vx = abs(x - cx)
+                      vy = y - 60
+                      if vy > 0 and vy < 130:
+                          # left stroke of V
+                          left_x = cx - vy * 0.6
+                          right_x = cx + vy * 0.6
+                          bottom_y = 60 + 100
+                          if y > bottom_y:
+                              t2 = (y - bottom_y) / 30.0
+                              left_x = cx - 60 * (1 - t2)
+                              right_x = cx + 60 * (1 - t2)
+                          stroke = 8
+                          if abs(x - left_x) < stroke or abs(x - right_x) < stroke:
+                              r, g, b = 255, 255, 255
+
+                      px.append((r, g, b, 255))
+                  else:
+                      px.append((0, 0, 0, 0))
+
+          with open('AppDir/vctcrypt.png', 'wb') as f:
+              f.write(create_png(W, H, px))
+          print('Icon generated: 256x256')
+          "
+
+          # Also install icon to standard locations
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+          cp AppDir/vctcrypt.png AppDir/usr/share/icons/hicolor/256x256/apps/vctcrypt.png
+
+          # Create .desktop file
+          cat > AppDir/vctcrypt.desktop <<DESKTOP
+          [Desktop Entry]
+          Name=VCTCrypt
+          Comment=VCT File Encryption Tool
+          Exec=$BINARY_NAME
+          Icon=vctcrypt
+          Terminal=false
+          Type=Application
+          Categories=Utility;System;
+          DESKTOP
+
+          # Create AppRun script (hardcode binary name at build time)
+          cat > AppDir/AppRun <<RUN
+          #!/bin/bash
+          HERE="\$(dirname "\$(readlink -f "\${0}")")"
+          exec "\${HERE}/usr/bin/$BINARY_NAME" "\$@"
+          RUN
+          chmod +x AppDir/AppRun
+
+          # Build AppImage (fallback to --appimage-extract-and-run if FUSE fails)
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage AppDir VCTCrypt-Linux-x86_64.AppImage || \
+            ARCH=x86_64 ./appimagetool-x86_64.AppImage --appimage-extract-and-run AppDir VCTCrypt-Linux-x86_64.AppImage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VCTCrypt-Linux-AppImage
+          path: VCTCrypt-Linux-x86_64.AppImage
+          retention-days: 90
+
+  # ============================================================
+  # GitHub Release (on tag push)
+  # ============================================================
+  release:
+    name: Publish Release
+    needs: [android, windows, macos, ios, linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: VCTCrypt ${{ github.ref_name }}
+          body: |
+            ## VCTCrypt ${{ github.ref_name }}
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | Windows | VCTCrypt-Windows-x64.zip |
+            | macOS | VCTCrypt-macOS.dmg |
+            | iOS (unsigned) | VCTCrypt-iOS-unsigned.ipa |
+            | Android | VCTCrypt-Android.apk |
+            | Linux | VCTCrypt-Linux-x86_64.AppImage |
+
+            ### What's New in v1.1.0
+            - 🔥 **Duress Password**: entering it during decryption PERMANENTLY destroys the encrypted file (irreversible)
+            - 🎭 **Decoy Partition**: a second password decrypts to an innocent decoy file (plausible deniability - every V2 file looks identical whether or not these features are used)
+            - 🧹 **Secure Shred**: overwrite the original file with random data after verified encryption
+            - ⏱️ **Auto-Lock**: automatically clears entered passwords after inactivity
+            - 🔒 VCT format v2 (VCTCRYPT2) with 3-way constant-time password verification; v1 files remain fully decryptable
+
+            ### Algorithm
+            VCT-Crypt v1.1: Triple AES-256-GCM + PBKDF2 (600K iterations)
+
+            Author: Tommy
+          files: |
+            artifacts/*/*.apk
+            artifacts/*/*.zip
+            artifacts/*/*.dmg
+            artifacts/*/*.ipa
+            artifacts/*/*.AppImage
+          fail_on_unmatched_files: false
