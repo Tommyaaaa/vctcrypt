@@ -3,6 +3,8 @@
 /// v1.1.0: advanced security options (decoy partition, duress password,
 /// secure shred of the original file).
 
+import 'dart:io' show Platform;
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -543,6 +545,16 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                   color: theme.colorScheme.onPrimaryContainer,
                                 ),
                               ),
+                            if (Platform.isIOS || Platform.isAndroid) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                strings.mobileEncHint,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
                             if (_resultDecoy || _resultDuress || _resultShredded)
                               const SizedBox(height: 8),
                             Wrap(

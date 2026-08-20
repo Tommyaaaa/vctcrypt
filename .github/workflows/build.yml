@@ -31,74 +31,20 @@ jobs:
       - name: Generate platform scaffolding
         run: flutter create --platforms=android --org ${{ env.ORG_NAME }} --project-name ${{ env.PROJECT_NAME }} .
 
-      - name: Fix broken android-35 platform jar
+      - name: Configure Android (Kotlin 1.9.24, compileSdk 35, R8)
         run: |
-          # GitHub Actions runner sometimes ships a corrupted android-35/android.jar
-          # Remove and reinstall it to fix aapt2 "Failed to load resources table" error
+          # Fix broken android-35 platform jar on GitHub runners:
+          # aapt2 fails with "Failed to load resources table" otherwise.
           if [ -d "/usr/local/lib/android/sdk/platforms/android-35" ]; then
             echo "Removing broken android-35 platform..."
             rm -rf /usr/local/lib/android/sdk/platforms/android-35
           fi
           yes | sdkmanager --install "platforms;android-35" 2>/dev/null || true
-          # Verify the jar is valid
           if [ -f "/usr/local/lib/android/sdk/platforms/android-35/android.jar" ]; then
-            echo "android-35 platform reinstalled successfully"
-            ls -la /usr/local/lib/android/sdk/platforms/android-35/android.jar
-          else
-            echo "WARNING: android-35 still missing, will try SDK 34 fallback"
+            echo "android-35 platform ready"
           fi
-
-      - name: Configure Android SDK 35 + Kotlin 1.9.24 + R8
-        run: |
-          # Fix: flutter_plugin_android_lifecycle requires SDK 35
-          sed -i 's/compileSdk = 34/compileSdk = 35/' android/app/build.gradle
-          # Fix: Kotlin version mismatch — use Python for robust regex replacement
-          python3 -c "
-          import re, os
-
-          # --- settings.gradle (new Flutter plugin DSL format) ---
-          sfile = 'android/settings.gradle'
-          if os.path.exists(sfile):
-              with open(sfile, 'r') as f:
-                  content = f.read()
-              # Match: id \"org.jetbrains.kotlin.android\" version \"X.Y.Z\"
-              content = re.sub(
-                  r'(org\.jetbrains\.kotlin\.android[\"\\s]+version\s+)[\"\\'][^\"\\'\"]+[\"\\']',
-                  r'\g<1>\"1.9.24\"',
-                  content
-              )
-              with open(sfile, 'w') as f:
-                  f.write(content)
-              print('settings.gradle patched')
-
-          # --- build.gradle (old-style ext.kotlin_version) ---
-          bfile = 'android/build.gradle'
-          if os.path.exists(bfile):
-              with open(bfile, 'r') as f:
-                  content = f.read()
-              # Match single or double quotes: ext.kotlin_version = 'X.Y.Z' or \"X.Y.Z\"
-              content = re.sub(
-                  r\"ext\.kotlin_version\s*=\s*['\\\"]([^'\\\"]*)['\\\"]\",
-                  \"ext.kotlin_version = '1.9.24'\",
-                  content
-              )
-              with open(bfile, 'w') as f:
-                  f.write(content)
-              print('build.gradle patched')
-          "
-
-          # Verify the replacement worked
-          echo '=== settings.gradle Kotlin ==='
-          grep -i kotlin android/settings.gradle || echo 'NOT FOUND in settings.gradle'
-          echo '=== build.gradle Kotlin ==='
-          grep -i kotlin_version android/build.gradle 2>/dev/null || echo 'NOT FOUND in build.gradle'
-
-          # Suppress Kotlin metadata version warnings (non-fatal)
-          echo 'kotlin.jvm.target.validation.mode=warning' >> android/gradle.properties
-
-          # Enable R8 shrinking for anti-decompilation
-          sed -i 's/minifyEnabled false/minifyEnabled true/g' android/app/build.gradle
-          sed -i 's/shrinkResources false/shrinkResources true/g' android/app/build.gradle
+          # Patch Kotlin / compileSdk / R8 with a self-verifying script
+          python3 scripts/fix_android.py
 
       - name: Install dependencies
         run: flutter pub get
@@ -212,6 +158,12 @@ jobs:
 
       - name: Generate platform scaffolding
         run: flutter create --platforms=ios --org ${{ env.ORG_NAME }} --project-name ${{ env.PROJECT_NAME }} .
+
+      - name: Register .VCT document type in Info.plist
+        run: |
+          # Declares the custom UTI for .vct so iOS recognises VCT files
+          # (system file pickers grey out extensions without a UTI).
+          python3 scripts/fix_ios.py
 
       - name: Install dependencies
         run: flutter pub get

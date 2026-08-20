@@ -157,6 +157,12 @@ class AppStrings {
   String get originalFile => lang == AppLanguage.english
       ? 'Original file'
       : '原始文件';
+  String get mobileOutputHint => lang == AppLanguage.english
+      ? 'Saved to the VCTCrypt folder - open the Files app to find it.'
+      : '已保存到 VCTCrypt 文件夹，请打开系统“文件”App 查看。';
+  String get mobileEncHint => lang == AppLanguage.english
+      ? 'The .VCT file is saved to the VCTCrypt folder - open the Files app to find it.'
+      : '加密产物已保存到 VCTCrypt 文件夹，请打开系统“文件”App 查看。';
   String get fileSize => lang == AppLanguage.english ? 'Size' : '大小';
   String get bytes => lang == AppLanguage.english ? 'bytes' : '字节';
   String get resultDecoyUsed => lang == AppLanguage.english

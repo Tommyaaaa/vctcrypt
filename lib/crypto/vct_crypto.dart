@@ -36,6 +36,7 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 // ---- Constants ----
 const _magicV1 = 'VCTCRYPT1\x00\x00\x00'; // 12 bytes (matches C: "VCTCRYPT1\0\0" + implicit C null)
@@ -243,16 +244,75 @@ bool isVctFile(String path) {
   }
 }
 
-String _buildEncPath(String input) {
-  final dir = p.dirname(input);
+/// Encrypted output file name for [input]: "photo.jpg" -> "photo.VCT".
+String _encFileName(String input) {
   final base = p.basename(input);
   final ext = p.extension(base);
   final name = ext.isNotEmpty ? base.substring(0, base.length - ext.length) : base;
-  return p.join(dir, '${name}_decrypt.VCT');
+  return '$name.VCT';
 }
 
-String _getDir(String path) {
-  return p.dirname(path);
+/// Decide where an output file should be written.
+///
+/// Desktop: next to the input file (classic behaviour).
+///
+/// Mobile: the system pickers hand us a COPY inside the app sandbox tmp
+/// (iOS Inbox / Android cache). Writing "next to the input" would bury
+/// the result where no file manager can see it, so we write to:
+///   iOS     -> Documents (visible in the Files app via UIFileSharingEnabled)
+///   Android -> external app files dir (visible to file managers / USB)
+///
+/// Never silently overwrites an existing file: appends " (n)" before the
+/// extension. Also refuses to overwrite the input itself.
+Future<String> _chooseOutputPath(String fileName, String inputPath) async {
+  if (!Platform.isIOS && !Platform.isAndroid) {
+    var out = p.join(p.dirname(inputPath), fileName);
+    // Re-encrypting a .VCT must not clobber the source file.
+    if (p.equals(out, inputPath)) {
+      final dot = fileName.lastIndexOf('.');
+      final stem = dot > 0 ? fileName.substring(0, dot) : fileName;
+      final ext = dot > 0 ? fileName.substring(dot) : '';
+      out = p.join(p.dirname(inputPath), '${stem}_enc$ext');
+    }
+    return out;
+  }
+
+  String baseDir;
+  try {
+    if (Platform.isIOS) {
+      baseDir = (await getApplicationDocumentsDirectory()).path;
+    } else {
+      final extDirs = await getExternalStorageDirectories();
+      baseDir = (extDirs != null && extDirs.isNotEmpty)
+          ? extDirs.first.path
+          : (await getApplicationDocumentsDirectory()).path;
+    }
+  } catch (_) {
+    // Path provider unavailable - fall back to old behaviour.
+    return p.join(p.dirname(inputPath), fileName);
+  }
+
+  var out = p.join(baseDir, fileName);
+  if (p.equals(out, inputPath)) {
+    final dot = fileName.lastIndexOf('.');
+    final stem = dot > 0 ? fileName.substring(0, dot) : fileName;
+    final ext = dot > 0 ? fileName.substring(dot) : '';
+    out = p.join(baseDir, '${stem}_enc$ext');
+  }
+
+  // name, name (1), name (2), ...
+  final dir = p.dirname(out);
+  final base = p.basename(out);
+  final dot = base.lastIndexOf('.');
+  final stem = dot > 0 ? base.substring(0, dot) : base;
+  final ext = dot > 0 ? base.substring(dot) : '';
+  var candidate = out;
+  var i = 1;
+  while (File(candidate).existsSync()) {
+    candidate = p.join(dir, '$stem ($i)$ext');
+    i++;
+  }
+  return candidate;
 }
 
 // ---- Partition encrypt/decrypt ----
@@ -460,11 +520,11 @@ Future<bool> _verifyDuressHmac(
   return _constantTimeEq(computed, storedHmac);
 }
 
-/// Write decrypted bytes to disk next to the .VCT file.
-DecryptResult _writeDecrypted(String vctPath, _InternalResult internal) {
-  final dir = _getDir(vctPath);
+/// Write decrypted bytes to a user-visible location.
+/// (Desktop: next to the .VCT file. Mobile: app Documents / external files.)
+Future<DecryptResult> _writeDecrypted(String vctPath, _InternalResult internal) async {
   final origName = internal.originalName ?? 'decrypted_file';
-  final outPath = p.join(dir, origName);
+  final outPath = await _chooseOutputPath(origName, vctPath);
   _writeFile(outPath, internal.fileBytes!);
   return DecryptResult(
     success: true,
@@ -669,7 +729,7 @@ Future<EncryptResult> encryptFile(
     output.add(decoyPart.ct);
     output.add(decoyPart.tag);
 
-    final outPath = _buildEncPath(filePath);
+    final outPath = await _chooseOutputPath(_encFileName(filePath), filePath);
     _writeFile(outPath, output.toBytes());
 
     // ---- Optional: shred the original after verifying the output ----
@@ -798,7 +858,7 @@ Future<DecryptResult> _decryptV2(
     if (!internal.success) {
       return DecryptResult(success: false, error: internal.error);
     }
-    return _writeDecrypted(filePath, internal);
+    return await _writeDecrypted(filePath, internal);
   }
 
   // ---- Decoy password (identical success behavior - deniability) ----
@@ -811,7 +871,7 @@ Future<DecryptResult> _decryptV2(
     if (!internal.success) {
       return DecryptResult(success: false, error: internal.error);
     }
-    final result = _writeDecrypted(filePath, internal);
+    final result = await _writeDecrypted(filePath, internal);
     return DecryptResult(
       success: true,
       outputPath: result.outputPath,
@@ -889,7 +949,7 @@ Future<DecryptResult> _decryptV1(
   if (!internal.success) {
     return DecryptResult(success: false, error: internal.error);
   }
-  return _writeDecrypted(filePath, internal);
+  return await _writeDecrypted(filePath, internal);
 }
 
 Future<DecryptResult> decryptFile(

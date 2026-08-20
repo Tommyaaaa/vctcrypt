@@ -1,6 +1,8 @@
 /// VCTCrypt - Decrypt Screen
 /// VCT file selection + password + triple AES-256-GCM decryption
 
+import 'dart:io' show Platform;
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -58,9 +60,16 @@ class _DecryptScreenState extends State<DecryptScreen> {
   AppStrings get _strings => VCTCryptApp.of(context).strings;
 
   Future<void> _pickFile() async {
+    // Desktop dialogs support extension masks (.VCT / .vct) natively.
+    // On iOS the picker filters by system UTI types - ".vct" has no
+    // registered UTI, so every file would be greyed out and unselectable
+    // (Android's MIME mapping has the same gap for unknown extensions).
+    // There we allow any file; the decrypt engine validates the VCT
+    // magic bytes and reports a clear error for non-VCT picks.
+    final isMobile = Platform.isIOS || Platform.isAndroid;
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['VCT', 'vct'],
+      type: isMobile ? FileType.any : FileType.custom,
+      allowedExtensions: isMobile ? null : ['VCT', 'vct'],
     );
     if (result != null && result.files.isNotEmpty) {
       setState(() {
@@ -281,6 +290,16 @@ class _DecryptScreenState extends State<DecryptScreen> {
                                   color: theme.colorScheme.onPrimaryContainer,
                                 ),
                               ),
+                            if (Platform.isIOS || Platform.isAndroid) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                strings.mobileOutputHint,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
                           ],
                         ],
                       ),
