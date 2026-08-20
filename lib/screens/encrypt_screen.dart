@@ -17,6 +17,7 @@ import '../main.dart';
 import '../utils/password_generator.dart';
 import '../utils/usage_stats.dart';
 import '../widgets/file_drop_zone.dart';
+import 'help_screen.dart';
 
 class EncryptScreen extends StatefulWidget {
   const EncryptScreen({super.key});
@@ -26,7 +27,8 @@ class EncryptScreen extends StatefulWidget {
 }
 
 class _EncryptScreenState extends State<EncryptScreen> {
-  String? _filePath;
+  // v1.3.0: batch support - all selected files share one password.
+  final List<String> _files = [];
   final _pwController = TextEditingController();
   final _pw2Controller = TextEditingController();
   bool _obscurePw = true;
@@ -37,6 +39,10 @@ class _EncryptScreenState extends State<EncryptScreen> {
   bool _isError = false;
   String? _outputPath;
   int? _outputSize;
+  int _okCount = 0;
+  int _failCount = 0;
+  int _totalBytes = 0;
+  List<String> _failures = [];
   bool _resultDecoy = false;
   bool _resultDuress = false;
   bool _resultShredded = false;
@@ -131,12 +137,25 @@ class _EncryptScreenState extends State<EncryptScreen> {
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles();
-    if (result != null && result.files.isNotEmpty) {
-      setState(() {
-        _filePath = result.files.first.path;
-        _resultText = null;
-      });
+    // v1.3.0: multi-select for batch encryption.
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result != null) {
+      final paths = result.paths.whereType<String>().toList();
+      if (paths.isNotEmpty) {
+        setState(() {
+          _files
+            ..clear()
+            ..addAll(paths);
+          // The decoy partition only supports single-file mode.
+          if (paths.length > 1) {
+            _decoyPwController.clear();
+            _decoyPw2Controller.clear();
+            _decoyFilePath = null;
+          }
+          _resultText = null;
+          _failures = [];
+        });
+      }
     }
   }
 
@@ -177,7 +196,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
     final decoyPw = _decoyPwController.text;
     final duressPw = _duressPwController.text;
 
-    if (_filePath == null) {
+    if (_files.isEmpty) {
       _showSnackBar(strings.errNotFound, isError: true);
       return;
     }
@@ -192,6 +211,11 @@ class _EncryptScreenState extends State<EncryptScreen> {
 
     // ---- Advanced option validation ----
     if (decoyPw.isNotEmpty) {
+      // v1.3.0: the decoy partition is single-file only.
+      if (_files.length > 1) {
+        _showSnackBar(strings.errDecoyBatch, isError: true);
+        return;
+      }
       if (decoyPw.length < 4) {
         _showSnackBar(strings.errPwShort, isError: true);
         return;
@@ -235,51 +259,94 @@ class _EncryptScreenState extends State<EncryptScreen> {
       _isError = false;
     });
 
-    final result = await crypto.encryptFile(
-      _filePath!,
-      mainPw,
-      (msg) {
-        if (mounted) setState(() => _statusText = _strings.progressMessage(msg));
-      },
-      options: crypto.EncryptOptions(
-        decoyPassword: decoyPw.isNotEmpty ? decoyPw : null,
-        decoyFilePath: decoyPw.isNotEmpty ? _decoyFilePath : null,
-        duressPassword: duressPw.isNotEmpty ? duressPw : null,
-        shredOriginal: _shredOriginal,
-      ),
+    final options = crypto.EncryptOptions(
+      decoyPassword: decoyPw.isNotEmpty ? decoyPw : null,
+      decoyFilePath: decoyPw.isNotEmpty ? _decoyFilePath : null,
+      duressPassword: duressPw.isNotEmpty ? duressPw : null,
+      shredOriginal: _shredOriginal,
     );
+
+    // v1.3.0: batch loop - encrypt every selected file in sequence.
+    var okCount = 0, failCount = 0, totalBytes = 0;
+    final failures = <String>[];
+    String? firstError;
+    String? singleOutputPath;
+    int? singleOutputSize;
+    var anyDecoy = false, anyDuress = false, anyShredded = false;
+
+    for (var i = 0; i < _files.length; i++) {
+      if (mounted) {
+        setState(() =>
+            _statusText = strings.batchEncrypting(i + 1, _files.length));
+      }
+      final result = await crypto.encryptFile(
+        _files[i],
+        mainPw,
+        (msg) {
+          if (mounted) {
+            setState(() => _statusText = _strings.progressMessage(msg));
+          }
+        },
+        options: options,
+      );
+      if (result.success) {
+        okCount++;
+        totalBytes += result.outputSize ?? 0;
+        singleOutputPath = result.outputPath;
+        singleOutputSize = result.outputSize;
+        anyDecoy = anyDecoy || result.usedDecoy;
+        anyDuress = anyDuress || result.usedDuress;
+        anyShredded = anyShredded || result.shreddedOriginal;
+        // v1.2.0: local usage statistics (no names/paths recorded).
+        unawaited(UsageStats.recordEncrypt(
+          bytes: result.outputSize ?? 0,
+          decoy: result.usedDecoy,
+          duress: result.usedDuress,
+          shredded: result.shreddedOriginal,
+        ));
+      } else {
+        failCount++;
+        firstError ??= result.error;
+        failures.add(
+            '${p.basename(_files[i])} — ${strings.errorMessage(result.error ?? '')}');
+      }
+    }
 
     if (!mounted) return;
 
-    // v1.2.0: local usage statistics (no names/paths recorded).
-    if (result.success) {
-      unawaited(UsageStats.recordEncrypt(
-        bytes: result.outputSize ?? 0,
-        decoy: result.usedDecoy,
-        duress: result.usedDuress,
-        shredded: result.shreddedOriginal,
-      ));
-    }
-
     setState(() {
       _processing = false;
-      if (result.success) {
+      _okCount = okCount;
+      _failCount = failCount;
+      _totalBytes = totalBytes;
+      _failures = failures;
+      _resultDecoy = anyDecoy;
+      _resultDuress = anyDuress;
+      _resultShredded = anyShredded;
+      _isError = okCount == 0;
+
+      if (okCount == 0) {
+        _resultText = strings.errorMessage(firstError ?? '');
+      } else if (failCount > 0) {
+        _resultText = strings.batchPartial(okCount, failCount);
+      } else {
         _resultText = strings.encSuccess;
-        _isError = false;
-        _outputPath = result.outputPath;
-        _outputSize = result.outputSize;
-        _resultDecoy = result.usedDecoy;
-        _resultDuress = result.usedDuress;
-        _resultShredded = result.shreddedOriginal;
+      }
+
+      if (okCount == _files.length) {
+        // Everything succeeded: safe to drop the passwords.
         _pwController.clear();
         _pw2Controller.clear();
         _decoyPwController.clear();
         _decoyPw2Controller.clear();
         _duressPwController.clear();
         _duressPw2Controller.clear();
+        _outputPath = okCount == 1 ? singleOutputPath : null;
+        _outputSize = okCount == 1 ? singleOutputSize : totalBytes;
       } else {
-        _resultText = strings.errorMessage(result.error ?? '');
-        _isError = true;
+        // Keep the password so the user can retry the failed files.
+        _outputPath = null;
+        _outputSize = null;
       }
       _statusText = strings.statusReady;
     });
@@ -305,6 +372,14 @@ class _EncryptScreenState extends State<EncryptScreen> {
       appBar: AppBar(
         title: Text(strings.encryptTitle),
         actions: [
+          // v1.3.0: help & usage
+          IconButton(
+            tooltip: strings.helpTitle,
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HelpScreen()),
+            ),
+          ),
           // v1.2.0: panic lock - wipe all entered passwords at once
           IconButton(
             tooltip: strings.panicLock,
@@ -331,17 +406,72 @@ class _EncryptScreenState extends State<EncryptScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // File selection
+                // File selection (multi-select for batch mode)
                 FileSelectionCard(
-                  filePath: _filePath,
+                  filePath: _files.length == 1 ? _files.first : null,
+                  multiLabel: _files.length > 1
+                      ? strings.batchSelectedCount(_files.length)
+                      : null,
                   hint: strings.selectFile,
                   icon: Icons.upload_file,
                   onTap: _pickFile,
                   onFileDropped: (path) => setState(() {
-                    _filePath = path;
+                    _files
+                      ..clear()
+                      ..add(path);
                     _resultText = null;
+                    _failures = [];
                   }),
                 ),
+                // v1.3.0: batch file list with per-file removal
+                if (_files.length > 1) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < _files.length; i++)
+                          ListTile(
+                            dense: true,
+                            leading: SizedBox(
+                              width: 22,
+                              child: Text(
+                                '${i + 1}',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              p.basename(_files[i]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Text(
+                              _files[i],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () => setState(() {
+                                _files.removeAt(i);
+                                _resultText = null;
+                                _failures = [];
+                              }),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // Password field
@@ -457,22 +587,47 @@ class _EncryptScreenState extends State<EncryptScreen> {
                       ),
                       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       children: [
-                        // ---- Decoy partition ----
-                        _DecoySection(
-                          strings: strings,
-                          decoyPwController: _decoyPwController,
-                          decoyPw2Controller: _decoyPw2Controller,
-                          obscureDecoyPw: _obscureDecoyPw,
-                          obscureDecoyPw2: _obscureDecoyPw2,
-                          onToggleDecoyPw: () => setState(
-                              () => _obscureDecoyPw = !_obscureDecoyPw),
-                          onToggleDecoyPw2: () => setState(
-                              () => _obscureDecoyPw2 = !_obscureDecoyPw2),
-                          decoyFilePath: _decoyFilePath,
-                          onPickDecoyFile: _pickDecoyFile,
-                          onGenerate: _openGeneratorForDecoy,
-                          onChanged: () => setState(() {}),
-                        ),
+                        // ---- Decoy partition (single-file mode only) ----
+                        if (_files.length > 1)
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 18,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    strings.batchDecoyDisabled,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          _DecoySection(
+                            strings: strings,
+                            decoyPwController: _decoyPwController,
+                            decoyPw2Controller: _decoyPw2Controller,
+                            obscureDecoyPw: _obscureDecoyPw,
+                            obscureDecoyPw2: _obscureDecoyPw2,
+                            onToggleDecoyPw: () => setState(
+                                () => _obscureDecoyPw = !_obscureDecoyPw),
+                            onToggleDecoyPw2: () => setState(
+                                () => _obscureDecoyPw2 = !_obscureDecoyPw2),
+                            decoyFilePath: _decoyFilePath,
+                            onPickDecoyFile: _pickDecoyFile,
+                            onGenerate: _openGeneratorForDecoy,
+                            onChanged: () => setState(() {}),
+                          ),
                         const SizedBox(height: 16),
 
                         // ---- Duress password ----
@@ -606,21 +761,58 @@ class _EncryptScreenState extends State<EncryptScreen> {
                               ),
                             ],
                           ),
-                          if (!_isError && _outputPath != null) ...[
+                          if (!_isError) ...[
                             const SizedBox(height: 12),
-                            Text(
-                              '${strings.outputFile}: $_outputPath',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                            if (_outputSize != null)
+                            // v1.3.0: batch summary or single-file details
+                            if (_failCount > 0) ...[
                               Text(
-                                '${strings.fileSize}: ${_formatSize(_outputSize!)}',
+                                strings.batchPartial(_okCount, _failCount),
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onPrimaryContainer,
+                                  color:
+                                      theme.colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              Text(
+                                '${strings.fileSize}: ${_formatSize(_totalBytes)}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color:
+                                      theme.colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ] else if (_okCount > 1) ...[
+                              Text(
+                                strings.batchAllOk(_okCount),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color:
+                                      theme.colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                '${strings.fileSize}: ${_formatSize(_totalBytes)}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color:
+                                      theme.colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ] else if (_outputPath != null) ...[
+                              Text(
+                                '${strings.outputFile}: $_outputPath',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color:
+                                      theme.colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                              if (_outputSize != null)
+                                Text(
+                                  '${strings.fileSize}: ${_formatSize(_outputSize!)}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color:
+                                        theme.colorScheme.onPrimaryContainer,
+                                  ),
+                                ),
+                            ],
                             if (Platform.isIOS || Platform.isAndroid) ...[
                               const SizedBox(height: 8),
                               Text(
@@ -633,33 +825,70 @@ class _EncryptScreenState extends State<EncryptScreen> {
                             ],
                             if (_resultDecoy || _resultDuress || _resultShredded)
                               const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 4,
-                              children: [
-                                if (_resultDecoy)
-                                  _ResultChip(
-                                    icon: Icons.theater_comedy,
-                                    label: strings.resultDecoyUsed,
-                                    color:
-                                        theme.colorScheme.onPrimaryContainer,
+                            if (_resultDecoy || _resultDuress || _resultShredded)
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: [
+                                  if (_resultDecoy)
+                                    _ResultChip(
+                                      icon: Icons.theater_comedy,
+                                      label: strings.resultDecoyUsed,
+                                      color:
+                                          theme.colorScheme.onPrimaryContainer,
+                                    ),
+                                  if (_resultDuress)
+                                    _ResultChip(
+                                      icon: Icons.local_fire_department,
+                                      label: strings.resultDuressUsed,
+                                      color:
+                                          theme.colorScheme.onPrimaryContainer,
+                                    ),
+                                  if (_resultShredded)
+                                    _ResultChip(
+                                      icon: Icons.delete_forever,
+                                      label: strings.resultShredded,
+                                      color:
+                                          theme.colorScheme.onPrimaryContainer,
+                                    ),
+                                ],
+                              ),
+                            // v1.3.0: per-file failure list (partial success)
+                            if (_failures.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              for (final f in _failures.take(4))
+                                Text(
+                                  '• $f',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
                                   ),
-                                if (_resultDuress)
-                                  _ResultChip(
-                                    icon: Icons.local_fire_department,
-                                    label: strings.resultDuressUsed,
-                                    color:
-                                        theme.colorScheme.onPrimaryContainer,
+                                ),
+                              if (_failures.length > 4)
+                                Text(
+                                  '+${_failures.length - 4} …',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
                                   ),
-                                if (_resultShredded)
-                                  _ResultChip(
-                                    icon: Icons.delete_forever,
-                                    label: strings.resultShredded,
-                                    color:
-                                        theme.colorScheme.onPrimaryContainer,
-                                  ),
-                              ],
-                            ),
+                                ),
+                            ],
+                          ],
+                          // v1.3.0: per-file failure list (total failure)
+                          if (_isError && _failures.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            for (final f in _failures.take(4))
+                              Text(
+                                '• $f',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onErrorContainer,
+                                ),
+                              ),
+                            if (_failures.length > 4)
+                              Text(
+                                '+${_failures.length - 4} …',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onErrorContainer,
+                                ),
+                              ),
                           ],
                         ],
                       ),

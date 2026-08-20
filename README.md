@@ -16,6 +16,10 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 - **File inspector** (v1.2.0): read .VCT header metadata without any password (format, sizes, algorithm) — never leaks slot usage
 - **Usage statistics** (v1.2.0): local-only counters (files, bytes, decoys, duress triggers); no names, no paths, no telemetry
 - **Panic lock** (v1.2.0): one tap wipes every password field in the app
+- **Onboarding & help center** (v1.3.0): a 4-page first-launch guide plus an expandable FAQ covering every feature
+- **Batch encryption** (v1.3.0): encrypt many files in one run with per-file results and retry-friendly failures
+- **Clipboard auto-clear** (v1.3.0): KeePass-style — copied passwords are wiped from the clipboard automatically
+- **Personalization** (v1.3.0): 8 accent colors, choice of start page, bilingual UI
 - **Bilingual UI**: English / 简体中文, light / dark / system themes
 - **Desktop & mobile layouts**: NavigationRail on wide screens, NavigationBar on phones; drag-and-drop on desktop
 
@@ -41,6 +45,7 @@ flutter run          # or: flutter run -d windows / macos / linux / chrome
 
 ## Version history
 
+- **1.3.0** — Onboarding guide & help center · batch encryption · clipboard auto-clear · accent colors · start page preference
 - **1.2.0** — Password generator with entropy meter · passwordless .VCT file inspector · local usage statistics · panic lock
 - **1.1.0** — Decoy partition · duress password · secure shred · auto-lock · V2 file format
 - **1.0.x** — Flutter rewrite (Win32 GUI → Material 3), five-platform CI, V1/CLI format compatibility

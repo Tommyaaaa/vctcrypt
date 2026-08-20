@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'i18n/strings.dart';
@@ -19,12 +20,22 @@ void main() async {
   // Auto-lock: minutes of inactivity before clearing entered passwords.
   // -1 = off. Default: 5 minutes.
   final autoLockMinutes = prefs.getInt('autolock') ?? 5;
+  // v1.3.0 personalization.
+  final seedColorValue = prefs.getInt('seedColor');
+  final startTab = prefs.getInt('startTab') ?? 0;
+  final clipboardClearSeconds = prefs.getInt('clipClear') ?? 30;
+  final onboarded = prefs.getBool('onboarded') ?? false;
 
   runApp(VCTCryptApp(
     initialLang:
         langCode == 'zh' ? AppLanguage.chinese : AppLanguage.english,
     initialThemeIndex: themeIndex,
     initialAutoLockMinutes: autoLockMinutes,
+    initialSeedColor:
+        seedColorValue == null ? null : Color(seedColorValue),
+    initialStartTab: startTab,
+    initialClipboardClearSeconds: clipboardClearSeconds,
+    initialOnboarded: onboarded,
   ));
 }
 
@@ -32,12 +43,20 @@ class VCTCryptApp extends StatefulWidget {
   final AppLanguage initialLang;
   final int initialThemeIndex;
   final int initialAutoLockMinutes;
+  final Color? initialSeedColor;
+  final int initialStartTab;
+  final int initialClipboardClearSeconds;
+  final bool initialOnboarded;
 
   const VCTCryptApp({
     super.key,
     required this.initialLang,
     required this.initialThemeIndex,
     required this.initialAutoLockMinutes,
+    this.initialSeedColor,
+    this.initialStartTab = 0,
+    this.initialClipboardClearSeconds = 30,
+    this.initialOnboarded = false,
   });
 
   @override
@@ -49,11 +68,18 @@ class VCTCryptApp extends StatefulWidget {
 }
 
 class _VCTCryptAppState extends State<VCTCryptApp> {
+  static const Color _defaultSeedColor = Color(0xFF4A148C);
+
   late AppLanguage _lang;
   late int _themeIndex;
   late int _autoLockMinutes;
+  Color? _seedColor;
+  late int _startTab;
+  late int _clipboardClearSeconds;
+  late bool _onboarded;
   late SharedPreferences _prefs;
   Timer? _idleTimer;
+  Timer? _clipboardTimer;
 
   /// Pulses whenever the auto-lock fires. Screens listen to this and
   /// clear any password fields they hold.
@@ -65,6 +91,10 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
     _lang = widget.initialLang;
     _themeIndex = widget.initialThemeIndex;
     _autoLockMinutes = widget.initialAutoLockMinutes;
+    _seedColor = widget.initialSeedColor;
+    _startTab = widget.initialStartTab;
+    _clipboardClearSeconds = widget.initialClipboardClearSeconds;
+    _onboarded = widget.initialOnboarded;
     _loadPrefs();
     _resetIdleTimer();
   }
@@ -72,6 +102,7 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
   @override
   void dispose() {
     _idleTimer?.cancel();
+    _clipboardTimer?.cancel();
     lockPulse.dispose();
     super.dispose();
   }
@@ -83,6 +114,10 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
   AppLanguage get lang => _lang;
   int get themeIndex => _themeIndex;
   int get autoLockMinutes => _autoLockMinutes;
+  Color? get seedColor => _seedColor;
+  int get startTab => _startTab;
+  int get clipboardClearSeconds => _clipboardClearSeconds;
+  bool get onboarded => _onboarded;
   AppStrings get strings => AppStrings.of(_lang);
 
   Future<void> changeLanguage(AppLanguage lang) async {
@@ -99,6 +134,50 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
     setState(() => _autoLockMinutes = minutes);
     await _prefs.setInt('autolock', minutes);
     _resetIdleTimer();
+  }
+
+  /// v1.3.0: change the accent (seed) color; null resets to default.
+  Future<void> setSeedColor(Color? color) async {
+    setState(() => _seedColor = color);
+    final prefs = await SharedPreferences.getInstance();
+    if (color == null) {
+      await prefs.remove('seedColor');
+    } else {
+      await prefs.setInt('seedColor', color.value);
+    }
+  }
+
+  /// v1.3.0: which tab the app opens on (0=encrypt, 1=decrypt, 2=settings).
+  Future<void> setStartTab(int index) async {
+    setState(() => _startTab = index);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('startTab', index);
+  }
+
+  /// v1.3.0: clipboard auto-clear delay in seconds; -1 = off.
+  Future<void> setClipboardClearSeconds(int seconds) async {
+    setState(() => _clipboardClearSeconds = seconds);
+    if (seconds <= 0) _clipboardTimer?.cancel();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('clipClear', seconds);
+  }
+
+  /// v1.3.0: mark the onboarding as seen (stored locally).
+  Future<void> markOnboarded() async {
+    if (_onboarded) return;
+    _onboarded = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarded', true);
+  }
+
+  /// v1.3.0: KeePass-style clipboard protection - after copying a
+  /// generated password, wipe the clipboard once the delay elapses.
+  void armClipboardClear() {
+    _clipboardTimer?.cancel();
+    if (_clipboardClearSeconds <= 0) return;
+    _clipboardTimer = Timer(Duration(seconds: _clipboardClearSeconds), () {
+      Clipboard.setData(const ClipboardData(text: ''));
+    });
   }
 
   /// Call on any user activity (pointer events) to postpone auto-lock.
@@ -136,13 +215,14 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
 
   @override
   Widget build(BuildContext context) {
-    // M3 color scheme - deep indigo seed for "crypto/security" aesthetic
+    // M3 color scheme - user-selectable seed (v1.3.0), deep indigo default
+    final seed = _seedColor ?? _defaultSeedColor;
     final lightScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF4A148C),
+      seedColor: seed,
       brightness: Brightness.light,
     );
     final darkScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF4A148C),
+      seedColor: seed,
       brightness: Brightness.dark,
     );
 
@@ -204,7 +284,9 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
       home: Listener(
         onPointerDown: (_) => registerActivity(),
         onPointerHover: (_) => registerActivity(),
-        child: const HomeScreen(),
+        // Not const so app-state changes (language, accent color)
+        // propagate down to the screens immediately.
+        child: HomeScreen(),
       ),
     );
   }

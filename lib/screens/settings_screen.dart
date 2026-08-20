@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../i18n/strings.dart';
 import '../main.dart';
 import '../utils/usage_stats.dart';
+import '../widgets/onboarding.dart';
+import 'help_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   final AppStrings strings;
@@ -82,6 +84,55 @@ class SettingsScreen extends StatelessWidget {
                     appState.changeTheme(selected.first);
                   },
                 ),
+                const SizedBox(height: 16),
+                // v1.3.0: accent (seed) color picker
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.colorize,
+                              size: 20,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              strings.accentColorLabel,
+                              style: theme.textTheme.titleSmall,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          strings.accentColorHint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            for (final c in _kSeedColors)
+                              _SeedSwatch(
+                                color: c,
+                                selected:
+                                    (appState.seedColor ?? _defaultSeed)
+                                        .value ==
+                                        c.value,
+                                onTap: () => appState.setSeedColor(c),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 32),
 
                 // ---- Security / Auto-lock (v1.1.0) ----
@@ -146,6 +197,148 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _StatsCard(strings: strings),
+                const SizedBox(height: 32),
+
+                // ---- Personalization (v1.3.0) ----
+                _SectionHeader(
+                  icon: Icons.tune,
+                  title: strings.behaviorSection,
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.start,
+                              size: 20,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              strings.startPageLabel,
+                              style: theme.textTheme.titleSmall,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          strings.startPageHint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (var i = 0; i < 3; i++)
+                              ChoiceChip(
+                                label: Text(i == 0
+                                    ? strings.navEncrypt
+                                    : i == 1
+                                        ? strings.navDecrypt
+                                        : strings.navSettings),
+                                selected: appState.startTab == i,
+                                onSelected: (_) => appState.setStartTab(i),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.content_paste,
+                              size: 20,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              strings.clipboardClearLabel,
+                              style: theme.textTheme.titleSmall,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          strings.clipboardClearHint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final seconds in const [-1, 15, 30, 60])
+                              ChoiceChip(
+                                label: seconds < 0
+                                    ? Text(strings.autoLockOff)
+                                    : Text(strings.clipSeconds(seconds)),
+                                selected:
+                                    appState.clipboardClearSeconds == seconds,
+                                onSelected: (_) =>
+                                    appState.setClipboardClearSeconds(seconds),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // ---- Guide & help (v1.3.0) ----
+                _SectionHeader(
+                  icon: Icons.school,
+                  title: strings.guideSection,
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(
+                          Icons.replay,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: Text(strings.showOnboardingBtn),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => showOnboarding(context),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(
+                          Icons.menu_book_outlined,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: Text(strings.helpTitle),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const HelpScreen()),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 32),
 
                 // ---- About ----
@@ -315,6 +508,58 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// v1.3.0: selectable accent (seed) colors.
+const Color _defaultSeed = Color(0xFF4A148C);
+const List<Color> _kSeedColors = [
+  Color(0xFF4A148C), // deep purple (default)
+  Color(0xFF1A237E), // indigo
+  Color(0xFF01579B), // blue
+  Color(0xFF00695C), // teal
+  Color(0xFF1B5E20), // green
+  Color(0xFFE65100), // orange
+  Color(0xFF8D6E63), // brown
+  Color(0xFFAD1457), // pink
+];
+
+/// v1.3.0: one circular color swatch in the accent color picker.
+class _SeedSwatch extends StatelessWidget {
+  final Color color;
+  final bool selected;
+  final ValueChanged<Color> onTap;
+
+  const _SeedSwatch({
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () => onTap(color),
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: selected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outlineVariant,
+            width: selected ? 3 : 1,
+          ),
+        ),
+        child: selected
+            ? const Icon(Icons.check, color: Colors.white, size: 20)
+            : null,
+      ),
     );
   }
 }

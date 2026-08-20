@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../main.dart';
+import '../widgets/onboarding.dart';
 import 'encrypt_screen.dart';
 import 'decrypt_screen.dart';
 import 'settings_screen.dart';
@@ -19,14 +20,32 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    final app = VCTCryptApp.of(context);
+    // v1.3.0: user-selected start page.
+    _currentIndex = app.startTab.clamp(0, 2);
+    // v1.3.0: show the onboarding guide once, on first launch.
+    if (!app.onboarded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await showOnboarding(context, firstLaunch: true);
+        await VCTCryptApp.of(context).markOnboarded();
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final appState = VCTCryptApp.of(context);
     final strings = appState.strings;
     final theme = Theme.of(context);
 
+    // Not const: rebuilds when the app state (language, accent color)
+    // changes so the screens pick up fresh strings.
     final screens = <Widget>[
-      const EncryptScreen(),
-      const DecryptScreen(),
+      EncryptScreen(),
+      DecryptScreen(),
       SettingsScreen(strings: strings),
     ];
 

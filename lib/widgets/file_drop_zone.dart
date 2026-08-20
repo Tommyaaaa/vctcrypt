@@ -8,6 +8,10 @@ import 'package:path/path.dart' as p;
 
 class FileSelectionCard extends StatefulWidget {
   final String? filePath;
+
+  /// v1.3.0: when non-null, the card shows "selected" state with this
+  /// label instead of a single file name (batch mode).
+  final String? multiLabel;
   final String hint;
   final IconData icon;
   final VoidCallback onTap;
@@ -16,6 +20,7 @@ class FileSelectionCard extends StatefulWidget {
   const FileSelectionCard({
     super.key,
     this.filePath,
+    this.multiLabel,
     required this.hint,
     this.icon = Icons.upload_file,
     required this.onTap,
@@ -33,12 +38,14 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasFile = widget.filePath != null && widget.filePath!.isNotEmpty;
+    final isMulti = widget.multiLabel != null;
+    final selected = hasFile || isMulti;
     final fileName = hasFile ? p.basename(widget.filePath!) : null;
 
     Color bgColor;
     if (_isDragging) {
       bgColor = theme.colorScheme.primaryContainer;
-    } else if (hasFile) {
+    } else if (selected) {
       bgColor = theme.colorScheme.secondaryContainer;
     } else {
       bgColor = theme.colorScheme.surfaceContainerHighest;
@@ -79,9 +86,9 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  hasFile ? Icons.check_circle_rounded : widget.icon,
+                  selected ? Icons.check_circle_rounded : widget.icon,
                   size: 48,
-                  color: hasFile
+                  color: selected
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
                 ),
@@ -106,6 +113,15 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ] else if (isMulti) ...[
+                  Text(
+                    widget.multiLabel!,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ] else ...[
                   Text(

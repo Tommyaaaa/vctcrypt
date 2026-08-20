@@ -14,6 +14,7 @@ import '../main.dart';
 import '../utils/usage_stats.dart';
 import '../widgets/file_drop_zone.dart';
 import '../widgets/file_info_dialog.dart';
+import 'help_screen.dart';
 
 class DecryptScreen extends StatefulWidget {
   const DecryptScreen({super.key});
@@ -153,6 +154,14 @@ class _DecryptScreenState extends State<DecryptScreen> {
       appBar: AppBar(
         title: Text(strings.decryptTitle),
         actions: [
+          // v1.3.0: help & usage
+          IconButton(
+            tooltip: strings.helpTitle,
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HelpScreen()),
+            ),
+          ),
           // v1.2.0: panic lock - wipe the entered password immediately
           IconButton(
             tooltip: strings.panicLock,

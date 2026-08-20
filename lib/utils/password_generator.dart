@@ -243,11 +243,17 @@ class _GeneratorSheetState extends State<_GeneratorSheet> {
                 onPressed: () {
                   Clipboard.setData(
                       ClipboardData(text: _controller.text));
+                  // v1.3.0: arm the clipboard auto-clear timer.
+                  final app = VCTCryptApp.of(context);
+                  app.armClipboardClear();
+                  final secs = app.clipboardClearSeconds;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(strings.genCopied),
+                      content: Text(secs > 0
+                          ? strings.genCopiedAuto(secs)
+                          : strings.genCopied),
                       behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 1),
+                      duration: const Duration(seconds: 2),
                     ),
                   );
                 },

@@ -18,7 +18,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v1.2.0';
+  String get appVersion => 'v1.3.0';
   String get guiVersion => lang == AppLanguage.english
       ? '[GUI Version]'
       : '[图形界面版]';
@@ -27,8 +27,8 @@ class AppStrings {
       ? 'Algorithm: VCT-Crypt (AES-256 x3)'
       : '算法: VCT-Crypt (AES-256 x3)';
   String get whatsNew => lang == AppLanguage.english
-      ? 'New in v1.2.0: Password generator · File inspector · Usage stats · Panic lock'
-      : 'v1.2.0 新特性：密码生成器 · 文件检查器 · 使用统计 · 紧急锁定';
+      ? 'New in v1.3.0: Onboarding & help center · batch encryption · clipboard auto-clear · accent colors · start page'
+      : 'v1.3.0 新特性：新手引导与帮助中心 · 批量加密 · 剪贴板自动清除 · 主题色个性化 · 启动页偏好';
 
   // ---- Navigation ----
   String get navEncrypt => lang == AppLanguage.english ? 'Encrypt' : '加密';
@@ -428,6 +428,69 @@ class AppStrings {
   String get statsPrivacyNote => lang == AppLanguage.english
       ? 'Statistics are stored locally on this device only. No file names, passwords or paths are ever recorded.'
       : '统计数据仅保存在本设备，不记录任何文件名、密码或路径。';
+
+  // ---- Batch encryption (v1.3.0) ----
+  String batchSelectedCount(int n) => lang == AppLanguage.english
+      ? '$n files selected'
+      : '已选择 $n 个文件';
+  String get batchDecoyDisabled => lang == AppLanguage.english
+      ? 'Batch mode: the decoy partition is unavailable here. Encrypt files one by one to use a decoy.'
+      : '批量模式：此处无法使用伪装分区，如需伪装请逐个加密。';
+  String get errDecoyBatch => lang == AppLanguage.english
+      ? 'The decoy partition is not available in batch mode.'
+      : '批量模式下无法使用伪装分区。';
+  String batchEncrypting(int i, int n) => lang == AppLanguage.english
+      ? 'Encrypting $i of $n...'
+      : '正在加密 $i / $n...';
+  String batchAllOk(int n) => lang == AppLanguage.english
+      ? 'All $n files encrypted.'
+      : '全部 $n 个文件加密完成。';
+  String batchPartial(int ok, int fail) => lang == AppLanguage.english
+      ? '$ok succeeded, $fail failed.'
+      : '$ok 个成功，$fail 个失败。';
+
+  // ---- Settings: personalization & guide (v1.3.0) ----
+  String get behaviorSection => lang == AppLanguage.english
+      ? 'Personalization'
+      : '个性化';
+  String get accentColorLabel => lang == AppLanguage.english
+      ? 'Accent color'
+      : '主题色';
+  String get accentColorHint => lang == AppLanguage.english
+      ? 'Pick the palette you like. Applies instantly.'
+      : '选择你喜欢的配色，立即生效。';
+  String get startPageLabel => lang == AppLanguage.english
+      ? 'Start page'
+      : '启动页';
+  String get startPageHint => lang == AppLanguage.english
+      ? 'Which screen the app opens on.'
+      : '启动应用时默认打开的页面。';
+  String get clipboardClearLabel => lang == AppLanguage.english
+      ? 'Clipboard auto-clear'
+      : '剪贴板自动清除';
+  String get clipboardClearHint => lang == AppLanguage.english
+      ? 'After you copy a generated password, the clipboard is wiped automatically.'
+      : '复制生成的密码后，到时自动清空剪贴板。';
+  String clipSeconds(int n) => lang == AppLanguage.english
+      ? '$n s'
+      : '$n 秒';
+  String get guideSection => lang == AppLanguage.english
+      ? 'Guide & Help'
+      : '引导与帮助';
+  String get showOnboardingBtn => lang == AppLanguage.english
+      ? 'View beginner guide'
+      : '查看新手引导';
+  String get helpTitle => lang == AppLanguage.english
+      ? 'Help & Usage'
+      : '使用说明';
+  String get obSkip => lang == AppLanguage.english ? 'Skip' : '跳过';
+  String get obNext => lang == AppLanguage.english ? 'Next' : '下一步';
+  String get obDone => lang == AppLanguage.english
+      ? 'Get started'
+      : '开始使用';
+  String genCopiedAuto(int n) => lang == AppLanguage.english
+      ? 'Copied. Clipboard clears in $n s.'
+      : '已复制，$n 秒后自动清空剪贴板。';
 
   /// Map error code to localized message
   String errorMessage(String code) {
