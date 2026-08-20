@@ -23,6 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # AGP 8.5 requires JDK 17
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -31,20 +37,33 @@ jobs:
       - name: Generate platform scaffolding
         run: flutter create --platforms=android --org ${{ env.ORG_NAME }} --project-name ${{ env.PROJECT_NAME }} .
 
-      - name: Configure Android (Kotlin 1.9.24, compileSdk 35, R8)
+      - name: Install Android platform 35 + build-tools 35
         run: |
-          # Fix broken android-35 platform jar on GitHub runners:
-          # aapt2 fails with "Failed to load resources table" otherwise.
-          if [ -d "/usr/local/lib/android/sdk/platforms/android-35" ]; then
-            echo "Removing broken android-35 platform..."
-            rm -rf /usr/local/lib/android/sdk/platforms/android-35
-          fi
-          yes | sdkmanager --install "platforms;android-35" 2>/dev/null || true
-          if [ -f "/usr/local/lib/android/sdk/platforms/android-35/android.jar" ]; then
-            echo "android-35 platform ready"
-          fi
-          # Patch Kotlin / compileSdk / R8 with a self-verifying script
-          python3 scripts/fix_android.py
+          # aapt2 from build-tools <= 34 cannot parse the android-35
+          # android.jar resources table; build-tools 35 reads it fine.
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMGR="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMGR" ] || SDKMGR=sdkmanager
+          echo "Using sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --sdk_root="$SDK" --install \
+            "platforms;android-35" "build-tools;35.0.0" || true
+          ls "$SDK/platforms/android-35/android.jar" \
+             "$SDK/build-tools/35.0.0/aapt2" 2>&1
+          python3 - "$SDK/platforms/android-35/android.jar" <<'PY'
+          import sys, zipfile
+          jar = sys.argv[1]
+          try:
+              bad = zipfile.ZipFile(jar).testzip()
+              if bad:
+                  raise RuntimeError(f"corrupt entry: {bad}")
+              print(f"android.jar integrity OK")
+          except Exception as e:
+              print(f"FATAL: android.jar invalid: {e}")
+              sys.exit(1)
+          PY
+
+      - name: Configure Android (Gradle 8.9, AGP 8.5, Kotlin 1.9.24, SDK 35)
+        run: python3 scripts/fix_android.py
 
       - name: Install dependencies
         run: flutter pub get
