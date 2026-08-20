@@ -18,7 +18,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v1.1.0';
+  String get appVersion => 'v1.2.0';
   String get guiVersion => lang == AppLanguage.english
       ? '[GUI Version]'
       : '[图形界面版]';
@@ -27,8 +27,8 @@ class AppStrings {
       ? 'Algorithm: VCT-Crypt (AES-256 x3)'
       : '算法: VCT-Crypt (AES-256 x3)';
   String get whatsNew => lang == AppLanguage.english
-      ? 'New in v1.1.0: Duress password · Decoy partition · Secure shred · Auto-lock'
-      : 'v1.1.0 新特性：胁迫密码 · 伪装分区 · 安全擦除 · 自动锁定';
+      ? 'New in v1.2.0: Password generator · File inspector · Usage stats · Panic lock'
+      : 'v1.2.0 新特性：密码生成器 · 文件检查器 · 使用统计 · 紧急锁定';
 
   // ---- Navigation ----
   String get navEncrypt => lang == AppLanguage.english ? 'Encrypt' : '加密';
@@ -278,6 +278,9 @@ class AppStrings {
   String get aboutAlgoValue => lang == AppLanguage.english
       ? 'VCT-Crypt v1.1\nTriple AES-256-GCM + PBKDF2\n600,000 iterations\n+ Decoy / Duress partitions'
       : 'VCT-Crypt v1.1\n三层 AES-256-GCM + PBKDF2\n60万次迭代\n+ 伪装分区 / 胁迫销毁';
+  String get aboutFormatValue => lang == AppLanguage.english
+      ? 'VCT format v1 & v2\nv2: deniable partitions'
+      : 'VCT 格式 v1 与 v2\nv2：可否认分区';
 
   // ---- Misc ----
   String get passwordStrengthWeak => lang == AppLanguage.english
@@ -295,6 +298,136 @@ class AppStrings {
   String get fileSelected => lang == AppLanguage.english
       ? 'Selected'
       : '已选择';
+  String get dialogOk => lang == AppLanguage.english ? 'OK' : '好';
+
+  // ---- Password generator (v1.2.0) ----
+  String get generatorTitle => lang == AppLanguage.english
+      ? 'Password Generator'
+      : '密码生成器';
+  String get genLength => lang == AppLanguage.english
+      ? 'Length'
+      : '长度';
+  String get genCopy => lang == AppLanguage.english
+      ? 'Copy to clipboard'
+      : '复制到剪贴板';
+  String get genCopied => lang == AppLanguage.english
+      ? 'Copied to clipboard'
+      : '已复制到剪贴板';
+  String get genUse => lang == AppLanguage.english
+      ? 'Use this password'
+      : '使用此密码';
+  String get genRegenerate => lang == AppLanguage.english
+      ? 'Regenerate'
+      : '重新生成';
+  String genEntropy(int bits) => lang == AppLanguage.english
+      ? '~$bits bits'
+      : '约 $bits 位熵';
+  String get genQualityExcellent => lang == AppLanguage.english
+      ? 'Excellent'
+      : '极强';
+  String get genExcludeAmbiguous => lang == AppLanguage.english
+      ? 'No 0O1lI'
+      : '排除 0O1lI';
+  String get genNoClassError => lang == AppLanguage.english
+      ? 'Select at least one character type.'
+      : '请至少选择一种字符类型。';
+  String get genApplied => lang == AppLanguage.english
+      ? 'Password generated'
+      : '已生成密码';
+
+  // ---- File inspector (v1.2.0) ----
+  String get inspectTitle => lang == AppLanguage.english
+      ? 'File Info'
+      : '文件信息';
+  String get infoFileName => lang == AppLanguage.english
+      ? 'File name'
+      : '文件名';
+  String get infoFormat => lang == AppLanguage.english
+      ? 'Format'
+      : '格式';
+  String get infoFormatV1 => lang == AppLanguage.english
+      ? 'V1 (classic)'
+      : 'V1（经典格式）';
+  String get infoFormatV2 => lang == AppLanguage.english
+      ? 'V2 (advanced slots)'
+      : 'V2（支持高级分区）';
+  String get infoFormatInvalid => lang == AppLanguage.english
+      ? 'Not a VCT file'
+      : '不是 VCT 文件';
+  String get infoFileSize => lang == AppLanguage.english
+      ? 'File size'
+      : '文件大小';
+  String get infoPayload => lang == AppLanguage.english
+      ? 'Encrypted payload'
+      : '加密数据';
+  String get infoHeader => lang == AppLanguage.english
+      ? 'Header size (bytes)'
+      : '头部大小（字节）';
+  String get infoAlgo => lang == AppLanguage.english
+      ? 'Cipher'
+      : '加密算法';
+  String get infoKdf => lang == AppLanguage.english
+      ? 'Key derivation'
+      : '密钥派生';
+  String get infoKdfValue => 'PBKDF2-SHA256 · 600K';
+  String get infoModified => lang == AppLanguage.english
+      ? 'Last modified'
+      : '修改时间';
+  String get infoDeniableNote => lang == AppLanguage.english
+      ? 'V2 files always contain all advanced slots. It is impossible to tell from this file whether a decoy or duress password is set - that is by design.'
+      : 'V2 文件始终包含全部高级分区。仅凭此文件无法判断是否设置了伪装或胁迫密码——这是有意为之的设计。';
+
+  // ---- Panic lock (v1.2.0) ----
+  String get panicLock => lang == AppLanguage.english
+      ? 'Panic lock: clear all passwords now'
+      : '紧急锁定：立即清空所有密码';
+  String get panicLocked => lang == AppLanguage.english
+      ? 'All passwords cleared.'
+      : '已清空所有密码。';
+
+  // ---- Usage statistics (v1.2.0) ----
+  String get statsSection => lang == AppLanguage.english
+      ? 'Usage Statistics'
+      : '使用统计';
+  String get statsEncrypted => lang == AppLanguage.english
+      ? 'Files encrypted'
+      : '已加密文件';
+  String get statsDecrypted => lang == AppLanguage.english
+      ? 'Files decrypted'
+      : '已解密文件';
+  String get statsDataEnc => lang == AppLanguage.english
+      ? 'Data encrypted'
+      : '已加密数据量';
+  String get statsDataDec => lang == AppLanguage.english
+      ? 'Data decrypted'
+      : '已解密数据量';
+  String get statsDecoy => lang == AppLanguage.english
+      ? 'Decoy partitions'
+      : '伪装分区';
+  String get statsDuressArmed => lang == AppLanguage.english
+      ? 'Duress traps armed'
+      : '胁迫陷阱';
+  String get statsDuressTriggered => lang == AppLanguage.english
+      ? 'Duress wipes triggered'
+      : '胁迫销毁触发';
+  String get statsShredded => lang == AppLanguage.english
+      ? 'Files shredded'
+      : '已擦除文件';
+  String get statsEmpty => lang == AppLanguage.english
+      ? 'No operations recorded yet.'
+      : '暂无操作记录。';
+  String get statsReset => lang == AppLanguage.english
+      ? 'Reset statistics'
+      : '重置统计';
+  String get statsResetConfirmTitle => lang == AppLanguage.english
+      ? 'Reset statistics?'
+      : '重置统计？';
+  String get statsResetConfirmBody => lang == AppLanguage.english
+      ? 'All counters will be cleared. This cannot be undone.'
+      : '所有计数将被清零，此操作不可撤销。';
+  String get statsPrivacyNote => lang == AppLanguage.english
+      ? 'Statistics are stored locally on this device only. No file names, passwords or paths are ever recorded.'
+      : '统计数据仅保存在本设备，不记录任何文件名、密码或路径。';
 
   /// Map error code to localized message
   String errorMessage(String code) {

@@ -3,6 +3,7 @@
 /// v1.1.0: advanced security options (decoy partition, duress password,
 /// secure shred of the original file).
 
+import 'dart:async' show unawaited;
 import 'dart:io' show Platform;
 
 import 'package:file_picker/file_picker.dart';
@@ -13,6 +14,8 @@ import 'package:path/path.dart' as p;
 import '../crypto/vct_crypto.dart' as crypto;
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../utils/password_generator.dart';
+import '../utils/usage_stats.dart';
 import '../widgets/file_drop_zone.dart';
 
 class EncryptScreen extends StatefulWidget {
@@ -87,6 +90,45 @@ class _EncryptScreenState extends State<EncryptScreen> {
   }
 
   AppStrings get _strings => VCTCryptApp.of(context).strings;
+
+  /// v1.2.0: open the password generator and fill main + confirm fields.
+  Future<void> _openGeneratorForMain() async {
+    final pw = await showPasswordGeneratorSheet(context);
+    if (pw == null || pw.isEmpty || !mounted) return;
+    setState(() {
+      _pwController.text = pw;
+      _pw2Controller.text = pw;
+    });
+    _showSnackBar(_strings.genApplied);
+  }
+
+  /// v1.2.0: open the generator and fill the decoy password fields.
+  Future<void> _openGeneratorForDecoy() async {
+    final pw = await showPasswordGeneratorSheet(context);
+    if (pw == null || pw.isEmpty || !mounted) return;
+    setState(() {
+      _decoyPwController.text = pw;
+      _decoyPw2Controller.text = pw;
+    });
+    _showSnackBar(_strings.genApplied);
+  }
+
+  /// v1.2.0: open the generator and fill the duress password fields.
+  Future<void> _openGeneratorForDuress() async {
+    final pw = await showPasswordGeneratorSheet(context);
+    if (pw == null || pw.isEmpty || !mounted) return;
+    setState(() {
+      _duressPwController.text = pw;
+      _duressPw2Controller.text = pw;
+    });
+    _showSnackBar(_strings.genApplied);
+  }
+
+  /// v1.2.0: panic lock - clear every password field immediately.
+  void _panicLock() {
+    VCTCryptApp.of(context).panicLock();
+    _showSnackBar(_strings.panicLocked);
+  }
 
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles();
@@ -209,6 +251,16 @@ class _EncryptScreenState extends State<EncryptScreen> {
 
     if (!mounted) return;
 
+    // v1.2.0: local usage statistics (no names/paths recorded).
+    if (result.success) {
+      unawaited(UsageStats.recordEncrypt(
+        bytes: result.outputSize ?? 0,
+        decoy: result.usedDecoy,
+        duress: result.usedDuress,
+        shredded: result.shreddedOriginal,
+      ));
+    }
+
     setState(() {
       _processing = false;
       if (result.success) {
@@ -250,7 +302,18 @@ class _EncryptScreenState extends State<EncryptScreen> {
     final pwStrength = _passwordStrength(_pwController.text);
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.encryptTitle)),
+      appBar: AppBar(
+        title: Text(strings.encryptTitle),
+        actions: [
+          // v1.2.0: panic lock - wipe all entered passwords at once
+          IconButton(
+            tooltip: strings.panicLock,
+            icon: const Icon(Icons.gpp_maybe_outlined),
+            onPressed: _panicLock,
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -289,12 +352,23 @@ class _EncryptScreenState extends State<EncryptScreen> {
                     labelText: strings.passwordLabel,
                     hintText: strings.passwordHint,
                     prefixIcon: const Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscurePw
-                          ? Icons.visibility_off
-                          : Icons.visibility),
-                      onPressed: () =>
-                          setState(() => _obscurePw = !_obscurePw),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // v1.2.0: password generator
+                        IconButton(
+                          tooltip: strings.generatorTitle,
+                          icon: const Icon(Icons.casino_outlined),
+                          onPressed: _openGeneratorForMain,
+                        ),
+                        IconButton(
+                          icon: Icon(_obscurePw
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () =>
+                              setState(() => _obscurePw = !_obscurePw),
+                        ),
+                      ],
                     ),
                     border: const OutlineInputBorder(),
                   ),
@@ -396,6 +470,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
                               () => _obscureDecoyPw2 = !_obscureDecoyPw2),
                           decoyFilePath: _decoyFilePath,
                           onPickDecoyFile: _pickDecoyFile,
+                          onGenerate: _openGeneratorForDecoy,
                           onChanged: () => setState(() {}),
                         ),
                         const SizedBox(height: 16),
@@ -411,6 +486,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
                               () => _obscureDuressPw = !_obscureDuressPw),
                           onToggleDuressPw2: () => setState(
                               () => _obscureDuressPw2 = !_obscureDuressPw2),
+                          onGenerate: _openGeneratorForDuress,
                           onChanged: () => setState(() {}),
                         ),
                         const SizedBox(height: 16),
@@ -661,6 +737,7 @@ class _DecoySection extends StatelessWidget {
   final VoidCallback onToggleDecoyPw2;
   final String? decoyFilePath;
   final VoidCallback onPickDecoyFile;
+  final VoidCallback onGenerate;
   final VoidCallback onChanged;
 
   const _DecoySection({
@@ -673,6 +750,7 @@ class _DecoySection extends StatelessWidget {
     required this.onToggleDecoyPw2,
     required this.decoyFilePath,
     required this.onPickDecoyFile,
+    required this.onGenerate,
     required this.onChanged,
   });
 
@@ -716,11 +794,21 @@ class _DecoySection extends StatelessWidget {
                 labelText: strings.decoyPwLabel,
                 hintText: strings.optionalHint,
                 prefixIcon: const Icon(Icons.theater_comedy),
-                suffixIcon: IconButton(
-                  icon: Icon(obscureDecoyPw
-                      ? Icons.visibility_off
-                      : Icons.visibility),
-                  onPressed: onToggleDecoyPw,
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: strings.generatorTitle,
+                      icon: const Icon(Icons.casino_outlined),
+                      onPressed: onGenerate,
+                    ),
+                    IconButton(
+                      icon: Icon(obscureDecoyPw
+                          ? Icons.visibility_off
+                          : Icons.visibility),
+                      onPressed: onToggleDecoyPw,
+                    ),
+                  ],
                 ),
                 border: const OutlineInputBorder(),
               ),
@@ -796,6 +884,7 @@ class _DuressSection extends StatelessWidget {
   final bool obscureDuressPw2;
   final VoidCallback onToggleDuressPw;
   final VoidCallback onToggleDuressPw2;
+  final VoidCallback onGenerate;
   final VoidCallback onChanged;
 
   const _DuressSection({
@@ -806,6 +895,7 @@ class _DuressSection extends StatelessWidget {
     required this.obscureDuressPw2,
     required this.onToggleDuressPw,
     required this.onToggleDuressPw2,
+    required this.onGenerate,
     required this.onChanged,
   });
 
@@ -852,11 +942,21 @@ class _DuressSection extends StatelessWidget {
                 labelText: strings.duressSection,
                 hintText: strings.optionalHint,
                 prefixIcon: const Icon(Icons.local_fire_department),
-                suffixIcon: IconButton(
-                  icon: Icon(obscureDuressPw
-                      ? Icons.visibility_off
-                      : Icons.visibility),
-                  onPressed: onToggleDuressPw,
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: strings.generatorTitle,
+                      icon: const Icon(Icons.casino_outlined),
+                      onPressed: onGenerate,
+                    ),
+                    IconButton(
+                      icon: Icon(obscureDuressPw
+                          ? Icons.visibility_off
+                          : Icons.visibility),
+                      onPressed: onToggleDuressPw,
+                    ),
+                  ],
                 ),
                 border: const OutlineInputBorder(),
               ),

@@ -108,6 +108,13 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
     }
   }
 
+  /// v1.2.0 panic lock: immediately clear every password field in the
+  /// app (same pulse the auto-lock uses, fired on demand).
+  void panicLock() {
+    _resetIdleTimer();
+    lockPulse.value++;
+  }
+
   void _resetIdleTimer() {
     _idleTimer?.cancel();
     if (_autoLockMinutes <= 0) return;

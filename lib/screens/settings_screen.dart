@@ -1,10 +1,11 @@
 /// VCTCrypt - Settings Screen
-/// Language, Theme, About
+/// Language, Theme, Security, Usage Statistics, About
 
 import 'package:flutter/material.dart';
 
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../utils/usage_stats.dart';
 
 class SettingsScreen extends StatelessWidget {
   final AppStrings strings;
@@ -136,6 +137,15 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 32),
+
+                // ---- Usage statistics (v1.2.0) ----
+                _SectionHeader(
+                  icon: Icons.bar_chart,
+                  title: strings.statsSection,
+                ),
+                const SizedBox(height: 12),
+                _StatsCard(strings: strings),
                 const SizedBox(height: 32),
 
                 // ---- About ----
@@ -305,6 +315,220 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// v1.2.0: local usage statistics card. Loads counters from
+/// SharedPreferences and renders them with a reset action.
+class _StatsCard extends StatefulWidget {
+  final AppStrings strings;
+
+  const _StatsCard({required this.strings});
+
+  @override
+  State<_StatsCard> createState() => _StatsCardState();
+}
+
+class _StatsCardState extends State<_StatsCard> {
+  UsageStats? _stats;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  Future<void> _reload() async {
+    final stats = await UsageStats.load();
+    if (mounted) setState(() => _stats = stats);
+  }
+
+  Future<void> _confirmReset() async {
+    final theme = Theme.of(context);
+    final strings = widget.strings;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(strings.statsResetConfirmTitle),
+        content: Text(strings.statsResetConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(strings.statsReset),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await UsageStats.reset();
+      await _reload();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final strings = widget.strings;
+    final stats = _stats;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (stats == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (stats.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  strings.statsEmpty,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else ...[
+              _StatRow(
+                icon: Icons.lock,
+                label: strings.statsEncrypted,
+                value: '${stats.filesEncrypted}',
+              ),
+              _StatRow(
+                icon: Icons.lock_open,
+                label: strings.statsDecrypted,
+                value: '${stats.filesDecrypted}',
+              ),
+              _StatRow(
+                icon: Icons.cloud_upload_outlined,
+                label: strings.statsDataEnc,
+                value: UsageStats.formatBytes(
+                    stats.bytesEncrypted, strings.bytes),
+              ),
+              _StatRow(
+                icon: Icons.cloud_download_outlined,
+                label: strings.statsDataDec,
+                value: UsageStats.formatBytes(
+                    stats.bytesDecrypted, strings.bytes),
+              ),
+              if (stats.decoyPartitions > 0)
+                _StatRow(
+                  icon: Icons.theater_comedy,
+                  label: strings.statsDecoy,
+                  value: '${stats.decoyPartitions}',
+                ),
+              if (stats.duressArmed > 0)
+                _StatRow(
+                  icon: Icons.local_fire_department_outlined,
+                  label: strings.statsDuressArmed,
+                  value: '${stats.duressArmed}',
+                ),
+              if (stats.duressTriggered > 0)
+                _StatRow(
+                  icon: Icons.local_fire_department,
+                  label: strings.statsDuressTriggered,
+                  value: '${stats.duressTriggered}',
+                  highlight: true,
+                ),
+              if (stats.filesShredded > 0)
+                _StatRow(
+                  icon: Icons.delete_forever_outlined,
+                  label: strings.statsShredded,
+                  value: '${stats.filesShredded}',
+                ),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _confirmReset,
+                  icon: const Icon(Icons.restart_alt, size: 18),
+                  label: Text(strings.statsReset),
+                ),
+              ),
+            ],
+            const Divider(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.privacy_tip_outlined,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    strings.statsPrivacyNote,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One label/value row inside the statistics card.
+class _StatRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool highlight;
+
+  const _StatRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = highlight ? theme.colorScheme.error : null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: color ?? theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(color: color),
+            ),
+          ),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

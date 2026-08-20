@@ -244,6 +244,97 @@ bool isVctFile(String path) {
   }
 }
 
+/// Metadata extracted from a VCT file header WITHOUT any password
+/// (v1.2.0 "Inspect" feature).
+///
+/// Deniability guarantee: only format-level facts are exposed. A V2
+/// file ALWAYS contains all three slots (real/decoy/duress) whether or
+/// not those features were used, so the inspector can never tell
+/// whether a decoy or duress password exists.
+class VctFileInfo {
+  /// One of [fmtV1], [fmtV1Old], [fmtV2] or [fmtNone].
+  final int format;
+
+  /// Total file size in bytes.
+  final int fileSize;
+
+  /// File modification time.
+  final DateTime modified;
+
+  /// Size of the encrypted real payload (V2 only; null for V1).
+  final int? realCtLen;
+
+  /// Header size in bytes (V2: 332, V1/V1-old: 128).
+  final int headerLen;
+
+  const VctFileInfo({
+    required this.format,
+    required this.fileSize,
+    required this.modified,
+    this.realCtLen,
+    required this.headerLen,
+  });
+
+  bool get isValid => format != fmtNone;
+  bool get isV2 => format == fmtV2;
+}
+
+/// Read only the header of [path] and return its public metadata.
+/// Throws FileSystemException on IO errors.
+VctFileInfo inspectVctFile(String path) {
+  final f = File(path);
+  final size = f.lengthSync();
+  final modified = f.lastModifiedSync();
+
+  final raf = f.openSync(mode: FileMode.read);
+  Uint8List head;
+  try {
+    final n = size < _v2HeaderLen ? size : _v2HeaderLen;
+    head = raf.readSync(n);
+  } finally {
+    raf.closeSync();
+  }
+
+  final format = detectFormat(head);
+  if (format == fmtNone) {
+    return VctFileInfo(
+      format: fmtNone,
+      fileSize: size,
+      modified: modified,
+      headerLen: 0,
+    );
+  }
+
+  if (format == fmtV2) {
+    // Guard: a truncated V2 file (< header size) has no readable
+    // payload length - report the format but skip the length field.
+    if (head.length >= _v2HeaderLen) {
+      final ctLen = _readU64LE(head, _v2RealCtLenOff);
+      return VctFileInfo(
+        format: format,
+        fileSize: size,
+        modified: modified,
+        realCtLen: ctLen,
+        headerLen: _v2HeaderLen,
+      );
+    }
+    return VctFileInfo(
+      format: format,
+      fileSize: size,
+      modified: modified,
+      headerLen: _v2HeaderLen,
+    );
+  }
+
+  // V1 / V1-old: magic 12 + salt 48 + nonces 36 + hmac 32 = 128
+  return VctFileInfo(
+    format: format,
+    fileSize: size,
+    modified: modified,
+    headerLen: 128,
+  );
+}
+
 /// Encrypted output file name for [input]: "photo.jpg" -> "photo.VCT".
 String _encFileName(String input) {
   final base = p.basename(input);

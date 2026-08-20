@@ -1,6 +1,7 @@
 /// VCTCrypt - Decrypt Screen
 /// VCT file selection + password + triple AES-256-GCM decryption
 
+import 'dart:async' show unawaited;
 import 'dart:io' show Platform;
 
 import 'package:file_picker/file_picker.dart';
@@ -10,7 +11,9 @@ import 'package:flutter/services.dart';
 import '../crypto/vct_crypto.dart' as crypto;
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../utils/usage_stats.dart';
 import '../widgets/file_drop_zone.dart';
+import '../widgets/file_info_dialog.dart';
 
 class DecryptScreen extends StatefulWidget {
   const DecryptScreen({super.key});
@@ -106,6 +109,14 @@ class _DecryptScreenState extends State<DecryptScreen> {
 
     if (!mounted) return;
 
+    // v1.2.0: local usage statistics (aggregate numbers only).
+    if (result.success) {
+      unawaited(UsageStats.recordDecrypt(bytes: result.outputSize ?? 0));
+    } else if (result.duressTriggered) {
+      // Silent by design (deniability) - only the local counter knows.
+      unawaited(UsageStats.recordDuressTrigger());
+    }
+
     setState(() {
       _processing = false;
       if (result.success) {
@@ -139,7 +150,21 @@ class _DecryptScreenState extends State<DecryptScreen> {
     final strings = _strings;
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.decryptTitle)),
+      appBar: AppBar(
+        title: Text(strings.decryptTitle),
+        actions: [
+          // v1.2.0: panic lock - wipe the entered password immediately
+          IconButton(
+            tooltip: strings.panicLock,
+            icon: const Icon(Icons.gpp_maybe_outlined),
+            onPressed: () {
+              VCTCryptApp.of(context).panicLock();
+              _showSnackBar(strings.panicLocked);
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -173,7 +198,19 @@ class _DecryptScreenState extends State<DecryptScreen> {
                     }
                   },
                 ),
-                const SizedBox(height: 24),
+                // v1.2.0: file inspector - header metadata, no password
+                if (_filePath != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () => showFileInfoDialog(context, _filePath!),
+                      icon: const Icon(Icons.info_outline, size: 18),
+                      label: Text(strings.inspectTitle),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
 
                 // Password field
                 TextField(
