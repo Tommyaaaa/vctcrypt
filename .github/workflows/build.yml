@@ -457,12 +457,14 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
-            ### What's New in v1.1.0
-            - 🔥 **Duress Password**: entering it during decryption PERMANENTLY destroys the encrypted file (irreversible)
-            - 🎭 **Decoy Partition**: a second password decrypts to an innocent decoy file (plausible deniability - every V2 file looks identical whether or not these features are used)
-            - 🧹 **Secure Shred**: overwrite the original file with random data after verified encryption
-            - ⏱️ **Auto-Lock**: automatically clears entered passwords after inactivity
-            - 🔒 VCT format v2 (VCTCRYPT2) with 3-way constant-time password verification; v1 files remain fully decryptable
+            ### What's New in v1.5.0
+            - 📝 **Secure Notes**: encrypt text directly into a .VCT file; decrypted notes stay in memory only (nothing touches disk)
+            - 📊 **Password strength meter**: live entropy estimate under every password field
+            - ⌨️ **Desktop shortcuts**: Ctrl+1..4 switch tabs, Ctrl+L panic lock (Cmd on macOS)
+            - 📤 **Full-width Share button** on every result card - the reliable way to export on iOS/Android
+            - 🎭 Decoy partition, duress password, secure shred, auto-lock, batch encryption and the file inspector from earlier releases all included
+
+            100% offline. No analytics, no ads, no network code - keys never leave your device.
 
             ### Algorithm
             VCT-Crypt v1.1: Triple AES-256-GCM + PBKDF2 (600K iterations)

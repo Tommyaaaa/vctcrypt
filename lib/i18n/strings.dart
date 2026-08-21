@@ -18,7 +18,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v1.4.0';
+  String get appVersion => 'v1.5.0';
   String get guiVersion => lang == AppLanguage.english
       ? '[GUI Version]'
       : '[图形界面版]';
@@ -27,18 +27,64 @@ class AppStrings {
       ? 'Algorithm: VCT-Crypt (AES-256 x3)'
       : '算法: VCT-Crypt (AES-256 x3)';
   String get whatsNew => lang == AppLanguage.english
-      ? 'New in v1.4.0: iOS Files app fix · new app icon & name · share/save sheet · atomic writes'
-      : 'v1.4.0 新特性：修复 iOS 文件 App 空文件夹 · 全新图标与名称 · 分享/存储 · 原子写入';
+      ? 'New in v1.5.0: Secure Notes (encrypt text, decrypt in memory) · live password strength · desktop shortcuts · bigger share button'
+      : 'v1.5.0 新特性：安全笔记（文本加密、内存解密）· 密码强度实时评估 · 桌面端快捷键 · 更醒目的分享按钮';
 
   /// v1.4.0: share / save button label (mobile result cards).
   String get shareBtn => lang == AppLanguage.english
       ? 'Share / Save'
       : '分享 / 存储';
 
+  // ---- Secure Notes (v1.5.0) ----
+  String get notesTitle => lang == AppLanguage.english
+      ? 'Secure Notes'
+      : '安全笔记';
+  String get noteEncrypt => lang == AppLanguage.english
+      ? 'Encrypt Note'
+      : '加密笔记';
+  String get noteDecrypt => lang == AppLanguage.english
+      ? 'Decrypt Note'
+      : '解密笔记';
+  String get noteHint => lang == AppLanguage.english
+      ? 'The text becomes a normal .VCT file. Decrypted text stays in memory only - it is never written to disk.'
+      : '文本将加密为标准 .VCT 文件。解密后的文本只保留在内存中，绝不写入磁盘。';
+  String get noteContentLabel => lang == AppLanguage.english
+      ? 'Note content'
+      : '笔记内容';
+  String get noteEmpty => lang == AppLanguage.english
+      ? 'The note is empty'
+      : '笔记内容为空';
+  String get noteEncrypted => lang == AppLanguage.english
+      ? 'Note encrypted'
+      : '笔记已加密';
+  String get noteEncryptedMobile => lang == AppLanguage.english
+      ? 'Saved to the app Documents folder. Use Share / Save below to store it anywhere (iCloud Drive included).'
+      : '已保存到应用文稿目录。用下方“分享 / 存储”可存到任意位置（含 iCloud 云盘）。';
+  String get noteDecrypted => lang == AppLanguage.english
+      ? 'Note decrypted'
+      : '笔记已解密';
+  String get noteSavedAs => lang == AppLanguage.english
+      ? 'Saved'
+      : '已保存';
+  String get noteSaveAsFile => lang == AppLanguage.english
+      ? 'Save as file'
+      : '另存为文件';
+  String get noteNotText => lang == AppLanguage.english
+      ? 'This file does not contain readable text. If it was encrypted on the Encrypt tab, decrypt it there instead.'
+      : '该文件不含可读文本。如果它是在“加密”页加密的普通文件，请回到“解密”页进行解密。';
+  String get strengthLabel => lang == AppLanguage.english
+      ? 'Strength'
+      : '强度';
+  String get strengthGood => lang == AppLanguage.english
+      ? 'Good'
+      : '良好';
+  String get strengthBits => lang == AppLanguage.english ? ' bits' : ' 位';
+
   // ---- Navigation ----
   String get navEncrypt => lang == AppLanguage.english ? 'Encrypt' : '加密';
   String get navDecrypt => lang == AppLanguage.english ? 'Decrypt' : '解密';
   String get navSettings => lang == AppLanguage.english ? 'Settings' : '设置';
+  String get navNotes => lang == AppLanguage.english ? 'Notes' : '笔记';
 
   // ---- Encrypt screen ----
   String get encryptTitle => lang == AppLanguage.english
@@ -503,6 +549,7 @@ class AppStrings {
       case 'PASSWORD_TOO_SHORT': return errPwShort;
       case 'EMPTY_FILE': return errEmpty;
       case 'NOT_VCT': return errNotVct;
+      case 'NOT_TEXT': return noteNotText;
       case 'FILE_TOO_SMALL': return errSmall;
       case 'CORRUPT': return errCorrupt;
       case 'PAYLOAD_CORRUPT': return errPayload;

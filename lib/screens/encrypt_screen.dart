@@ -16,6 +16,7 @@ import '../crypto/vct_crypto.dart' as crypto;
 import '../i18n/strings.dart';
 import '../main.dart';
 import '../utils/password_generator.dart';
+import '../widgets/password_strength.dart';
 import '../utils/usage_stats.dart';
 import '../widgets/file_drop_zone.dart';
 import 'help_screen.dart';
@@ -544,7 +545,10 @@ class _EncryptScreenState extends State<EncryptScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        pwStrength,
+                        // v1.5.0: append the live entropy estimate.
+                        '$pwStrength '
+                        '(${PasswordStrength.estimateBits(_pwController.text).round()}'
+                        '${strings.strengthBits})',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: _strengthColor(pwStrength),
                           fontWeight: FontWeight.bold,
@@ -891,9 +895,12 @@ class _EncryptScreenState extends State<EncryptScreen> {
                             if ((Platform.isIOS || Platform.isAndroid) &&
                                 _okPaths.isNotEmpty) ...[
                               const SizedBox(height: 12),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: OutlinedButton.icon(
+                              // v1.5.0: primary full-width action on
+                              // mobile - the guaranteed way to get the
+                              // outputs out (Files app flakiness).
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.tonalIcon(
                                   onPressed: _shareOutputs,
                                   icon: const Icon(Icons.share_outlined),
                                   label: Text(strings.shareBtn),

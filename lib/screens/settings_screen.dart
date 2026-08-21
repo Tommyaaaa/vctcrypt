@@ -237,13 +237,15 @@ class SettingsScreen extends StatelessWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            for (var i = 0; i < 3; i++)
+                            for (var i = 0; i < 4; i++)
                               ChoiceChip(
                                 label: Text(i == 0
                                     ? strings.navEncrypt
                                     : i == 1
                                         ? strings.navDecrypt
-                                        : strings.navSettings),
+                                        : i == 2
+                                            ? strings.navNotes
+                                            : strings.navSettings),
                                 selected: appState.startTab == i,
                                 onSelected: (_) => appState.setStartTab(i),
                               ),

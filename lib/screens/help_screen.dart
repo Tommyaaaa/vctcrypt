@@ -97,6 +97,37 @@ class HelpScreen extends StatelessWidget {
                 '解密在“解密”页操作，方式相同。桌面端还支持把文件拖放到卡片上。',
       ),
       _HelpEntry(
+        Icons.note_outlined,
+        en ? 'Secure Notes' : '安全笔记',
+        en
+            ? 'The Notes tab encrypts text directly into a .VCT file - no need to create a text file first. Notes are standard .VCT files, fully compatible with the Encrypt/Decrypt tabs, the desktop apps and all VCTCrypt versions.\n\n'
+                'When you decrypt a note, the text is shown in memory only: it is never written to disk, and the temporary buffer is securely shredded. Copy it, share it, or (on desktop) save it as a file.'
+            : '“笔记”页可将文本直接加密为 .VCT 文件，无需先创建文本文件。笔记是标准 .VCT 文件，与加密/解密页、桌面端及所有 VCTCrypt 版本完全兼容。\n\n'
+                '解密笔记时，文本只在内存中显示：不会写入磁盘，临时缓冲区也会被安全擦除。可复制、分享，或（桌面端）另存为文件。',
+      ),
+      _HelpEntry(
+        Icons.speed,
+        en ? 'Password strength meter' : '密码强度指示条',
+        en
+            ? 'Every password field now shows a live strength meter based on entropy (character pool × length), not just length.\n\n'
+                'Rough guide: Weak < 40 bits, Fair < 60, Good < 80, Strong 80+. For files that matter, aim for Good or better - or just use the generator.'
+            : '所有密码框下方现在都有实时强度指示条，基于熵值（字符池 × 长度）评估，而不只是看长度。\n\n'
+                '大致标准：弱 < 40 位，一般 < 60 位，良好 < 80 位，强 80 位以上。重要文件建议达到“良好”以上，或直接使用密码生成器。',
+      ),
+      _HelpEntry(
+        Icons.keyboard,
+        en ? 'Desktop shortcuts' : '桌面端快捷键',
+        en
+            ? 'On Windows, macOS and Linux:\n\n'
+                'Ctrl+1 / 2 / 3 / 4 (macOS: Cmd+1..4): jump to Encrypt / Decrypt / Notes / Settings\n'
+                'Ctrl+L (macOS: Cmd+L): panic lock - instantly wipes every password field in the app.\n\n'
+                'The same panic lock is available on mobile via the shield button in the toolbar.'
+            : 'Windows、macOS 与 Linux 通用：\n\n'
+                'Ctrl+1 / 2 / 3 / 4（macOS 为 Cmd+1..4）：切换到 加密 / 解密 / 笔记 / 设置\n'
+                'Ctrl+L（macOS 为 Cmd+L）：紧急锁定——立即清空全应用的密码输入框。\n\n'
+                '移动端可通过顶栏的盾牌按钮使用同样的紧急锁定。',
+      ),
+      _HelpEntry(
         Icons.theater_comedy,
         en ? 'Decoy partition' : '伪装分区',
         en
@@ -204,10 +235,12 @@ class HelpScreen extends StatelessWidget {
         Icons.phone_iphone,
         en ? 'Where are my files on mobile?' : '手机上文件在哪里？',
         en
-            ? 'On iOS and Android, encrypted and decrypted files are written to the VCTCrypt folder.\n\n'
-                'Open the system Files app (iOS: "On My iPhone → VCTCrypt"; Android: Documents/VCTCrypt) to find them.'
-            : '在 iOS 与 Android 上，加密与解密的产物都保存在 VCTCrypt 文件夹中。\n\n'
-                '打开系统“文件”App（iOS：“我的 iPhone → VCTCrypt”；Android：Documents/VCTCrypt）即可找到。',
+            ? 'After encrypting or decrypting, a full-width Share button appears on the result card - this is the most reliable way to export: it opens the system share sheet, where you can save to Files, send via AirDrop / nearby share, or hand off to any app.\n\n'
+                'Files are also written to the VCTCrypt folder. On Android, open Documents/VCTCrypt in any file manager. On iOS the system Files app sometimes fails to refresh its "On My iPhone → VCTCrypt" view - pull down to refresh, or simply use the Share button.\n\n'
+                'Tip: for short text, the Notes tab can share the decrypted content directly without touching the file system at all.'
+            : '加密或解密完成后，结果卡片上会出现一个通栏“分享”按钮——这是最可靠的导出方式：它会调起系统分享面板，可以存到“文件”、通过隔空投送/邻近分享发送，或交给任意 App。\n\n'
+                '文件同时也会写入 VCTCrypt 文件夹。Android 上可在任意文件管理器打开 Documents/VCTCrypt；iOS 的系统“文件”App 有时不刷新“我的 iPhone → VCTCrypt”视图——下拉刷新即可，或直接使用分享按钮。\n\n'
+                '提示：短文本可用“笔记”页，解密内容可直接分享，完全不经文件系统。',
       ),
       _HelpEntry(
         Icons.privacy_tip_outlined,

@@ -632,9 +632,13 @@ Future<bool> _verifyDuressHmac(
 
 /// Write decrypted bytes to a user-visible location.
 /// (Desktop: next to the .VCT file. Mobile: app Documents / external files.)
-Future<DecryptResult> _writeDecrypted(String vctPath, _InternalResult internal) async {
+/// [outputPath], when given, bypasses the location chooser (used by the
+/// Secure Notes feature to keep plaintext out of Documents).
+Future<DecryptResult> _writeDecrypted(String vctPath, _InternalResult internal,
+    {String? outputPath}) async {
   final origName = internal.originalName ?? 'decrypted_file';
-  final outPath = await _chooseOutputPath(origName, vctPath);
+  final outPath =
+      outputPath ?? await _chooseOutputPath(origName, vctPath);
   _writeFile(outPath, internal.fileBytes!);
   return DecryptResult(
     success: true,
@@ -741,6 +745,7 @@ Future<EncryptResult> encryptFile(
   String password,
   ProgressCallback? onProgress, {
   EncryptOptions? options,
+  String? outputPath,
 }) async {
   try {
     if (password.length < 4) {
@@ -839,7 +844,8 @@ Future<EncryptResult> encryptFile(
     output.add(decoyPart.ct);
     output.add(decoyPart.tag);
 
-    final outPath = await _chooseOutputPath(_encFileName(filePath), filePath);
+    final outPath = outputPath ??
+        await _chooseOutputPath(_encFileName(filePath), filePath);
     _writeFile(outPath, output.toBytes());
 
     // ---- Optional: shred the original after verifying the output ----
@@ -900,8 +906,9 @@ Future<DecryptResult> _decryptV2(
   Uint8List fileData,
   String filePath,
   String password,
-  ProgressCallback? onProgress,
-) async {
+  ProgressCallback? onProgress, {
+  String? outputPath,
+}) async {
   if (fileData.length < _v2HeaderLen + _tagSize + _tagSize) {
     return DecryptResult(success: false, error: 'FILE_TOO_SMALL');
   }
@@ -968,7 +975,7 @@ Future<DecryptResult> _decryptV2(
     if (!internal.success) {
       return DecryptResult(success: false, error: internal.error);
     }
-    return await _writeDecrypted(filePath, internal);
+    return await _writeDecrypted(filePath, internal, outputPath: outputPath);
   }
 
   // ---- Decoy password (identical success behavior - deniability) ----
@@ -981,7 +988,7 @@ Future<DecryptResult> _decryptV2(
     if (!internal.success) {
       return DecryptResult(success: false, error: internal.error);
     }
-    final result = await _writeDecrypted(filePath, internal);
+    final result = await _writeDecrypted(filePath, internal, outputPath: outputPath);
     return DecryptResult(
       success: true,
       outputPath: result.outputPath,
@@ -1012,8 +1019,9 @@ Future<DecryptResult> _decryptV1(
   String filePath,
   String password,
   int magicLen,
-  ProgressCallback? onProgress,
-) async {
+  ProgressCallback? onProgress, {
+  String? outputPath,
+}) async {
   final minSize = magicLen + _saltSize + _nonceSize * 3 + _hmacSize + _tagSize;
   if (fileData.length < minSize) {
     return DecryptResult(success: false, error: 'FILE_TOO_SMALL');
@@ -1059,14 +1067,15 @@ Future<DecryptResult> _decryptV1(
   if (!internal.success) {
     return DecryptResult(success: false, error: internal.error);
   }
-  return await _writeDecrypted(filePath, internal);
+  return await _writeDecrypted(filePath, internal, outputPath: outputPath);
 }
 
 Future<DecryptResult> decryptFile(
   String filePath,
   String password,
-  ProgressCallback? onProgress,
-) async {
+  ProgressCallback? onProgress, {
+  String? outputPath,
+}) async {
   try {
     final fileData = _readFile(filePath);
     final format = detectFormat(fileData);
@@ -1076,26 +1085,143 @@ Future<DecryptResult> decryptFile(
     }
 
     if (format == fmtV2) {
-      return await _decryptV2(fileData, filePath, password, onProgress);
+      return await _decryptV2(fileData, filePath, password, onProgress,
+        outputPath: outputPath);
     }
 
     if (format == fmtV1) {
       final result =
-          await _decryptV1(fileData, filePath, password, 12, onProgress);
+          await _decryptV1(fileData, filePath, password, 12, onProgress,
+            outputPath: outputPath);
       // Edge case: old buggy file where salt[0] happened to be 0x00.
       // The 12-byte magic check passes (false positive), but data is
       // shifted - retry with the 11-byte offset.
       if (!result.success && result.error == 'WRONG_PASSWORD') {
         final result11 =
-            await _decryptV1(fileData, filePath, password, 11, onProgress);
+            await _decryptV1(fileData, filePath, password, 11, onProgress,
+            outputPath: outputPath);
         if (result11.success) return result11;
       }
       return result;
     }
 
     // fmtV1Old: 11-byte buggy magic
-    return await _decryptV1(fileData, filePath, password, 11, onProgress);
+    return await _decryptV1(fileData, filePath, password, 11, onProgress,
+            outputPath: outputPath);
   } catch (e) {
     return DecryptResult(success: false, error: e.toString());
   }
 }
+
+// ---- Secure Notes (v1.5.0) ----
+
+/// Marker prefix for the embedded payload name of Secure Notes. The note
+/// itself is a completely ordinary VCT file - the marker only lets the
+/// Notes screen recognize its own notes.
+const noteNamePrefix = 'VCTCrypt-Note-';
+
+/// Encrypt an in-memory text note into a normal .VCT file (format-
+/// compatible with every VCTCrypt release and the CLI).
+///
+/// [outputPath] is REQUIRED on desktop (chosen via the save dialog); on
+/// mobile leave it null and the output lands in Documents like a regular
+/// encryption.
+Future<EncryptResult> encryptText(
+  String text,
+  String password,
+  ProgressCallback? onProgress, {
+  EncryptOptions? options,
+  String? outputPath,
+}) async {
+  final ts = DateTime.now();
+  final stamp = '${ts.year}${_two(ts.month)}${_two(ts.day)}-'
+      '${_two(ts.hour)}${_two(ts.minute)}${_two(ts.second)}';
+  final tmp = File(p.join(
+    Directory.systemTemp.path,
+    '$noteNamePrefix$stamp.txt',
+  ));
+  try {
+    tmp.writeAsStringSync(text, flush: true);
+    return await encryptFile(
+      tmp.path,
+      password,
+      onProgress,
+      options: options,
+      outputPath: outputPath,
+    );
+  } finally {
+    if (tmp.existsSync()) tmp.deleteSync();
+  }
+}
+
+/// Result of [decryptFileToText]: the note text plus the flags the UI
+/// needs for identical-success decoy handling.
+class TextDecryptResult {
+  final bool success;
+  final String? text;
+  final String? originalName;
+  final String? error;
+  final bool isDecoy;
+  final bool duressTriggered;
+  const TextDecryptResult({
+    this.success = false,
+    this.text,
+    this.originalName,
+    this.error,
+    this.isDecoy = false,
+    this.duressTriggered = false,
+  });
+}
+
+/// Decrypt a .VCT file to TEXT in memory. The plaintext is written to a
+/// temporary location ONLY transiently, then shredded - it never lands
+/// in Documents / next to the .VCT file. Nothing is left on disk.
+Future<TextDecryptResult> decryptFileToText(
+  String vctPath,
+  String password,
+  ProgressCallback? onProgress,
+) async {
+  final tmp = File(p.join(
+    Directory.systemTemp.path,
+    'vctcrypt_textout_${DateTime.now().microsecondsSinceEpoch}.tmp',
+  ));
+  try {
+    final result = await decryptFile(
+      vctPath,
+      password,
+      onProgress,
+      outputPath: tmp.path,
+    );
+    if (!result.success) {
+      return TextDecryptResult(
+        success: false,
+        error: result.error,
+        duressTriggered: result.duressTriggered,
+      );
+    }
+    final text = utf8.decode(tmp.readAsBytesSync(), allowMalformed: true);
+    return TextDecryptResult(
+      success: true,
+      text: text,
+      originalName: result.originalName,
+      isDecoy: result.isDecoy,
+    );
+  } on FormatException {
+    // utf8.decode with allowMalformed never throws, but stay defensive.
+    return TextDecryptResult(success: false, error: 'NOT_TEXT');
+  } catch (e) {
+    return TextDecryptResult(success: false, error: e.toString());
+  } finally {
+    if (tmp.existsSync()) {
+      try {
+        await _shredFile(tmp.path);
+      } catch (_) {
+        try {
+          tmp.deleteSync();
+        } catch (_) {}
+      }
+    }
+  }
+}
+
+String _two(int n) => n.toString().padLeft(2, '0');

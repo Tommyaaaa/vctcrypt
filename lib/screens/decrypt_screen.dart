@@ -347,14 +347,18 @@ class _DecryptScreenState extends State<DecryptScreen> {
                                 ),
                               ),
                               // v1.4.0: share / save the decrypted file
+                              // (v1.5.0: primary full-width action)
                               const SizedBox(height: 8),
-                              OutlinedButton.icon(
-                                onPressed: () => Share.shareXFiles(
-                                  [XFile(_outputPath!)],
-                                  text: _originalName,
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.tonalIcon(
+                                  onPressed: () => Share.shareXFiles(
+                                    [XFile(_outputPath!)],
+                                    text: _originalName,
+                                  ),
+                                  icon: const Icon(Icons.share_outlined),
+                                  label: Text(strings.shareBtn),
                                 ),
-                                icon: const Icon(Icons.share_outlined),
-                                label: Text(strings.shareBtn),
                               ),
                             ],
                           ],

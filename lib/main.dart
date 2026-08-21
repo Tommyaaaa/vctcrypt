@@ -22,7 +22,14 @@ void main() async {
   final autoLockMinutes = prefs.getInt('autolock') ?? 5;
   // v1.3.0 personalization.
   final seedColorValue = prefs.getInt('seedColor');
-  final startTab = prefs.getInt('startTab') ?? 0;
+  var startTab = prefs.getInt('startTab') ?? 0;
+  // v1.5.0 migration: a Notes tab was inserted at index 2, Settings
+  // moved to 3. Remap old stored "2 = Settings" to 3.
+  if (startTab == 2 && !prefs.containsKey('startTab.v15')) {
+    startTab = 3;
+    await prefs.setInt('startTab', 3);
+  }
+  await prefs.setBool('startTab.v15', true);
   final clipboardClearSeconds = prefs.getInt('clipClear') ?? 30;
   final onboarded = prefs.getBool('onboarded') ?? false;
 
