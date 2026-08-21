@@ -301,7 +301,7 @@ class _NotesScreenState extends State<NotesScreen> {
                       ),
                       ButtonSegment(
                         value: false,
-                        icon: const Icon(Icons.lock_open_outline),
+                        icon: const Icon(Icons.lock_open_outlined),
                         label: Text(strings.noteDecrypt),
                       ),
                     ],
@@ -392,7 +392,7 @@ class _NotesScreenState extends State<NotesScreen> {
           controller: _pw2Controller,
           obscureText: _obscurePw,
           decoration: InputDecoration(
-            labelText: strings.pwConfirmLabel,
+            labelText: strings.confirmPasswordLabel,
             border: const OutlineInputBorder(),
           ),
         ),
@@ -448,7 +448,7 @@ class _NotesScreenState extends State<NotesScreen> {
           width: double.infinity,
           child: FilledButton.icon(
             onPressed: _decryptNote,
-            icon: const Icon(Icons.lock_open_outline),
+            icon: const Icon(Icons.lock_open_outlined),
             label: Text(strings.navDecrypt),
           ),
         ),

@@ -57,39 +57,30 @@ class _HomeScreenState extends State<HomeScreen> {
       SettingsScreen(strings: strings),
     ];
 
-    // v1.5.0: desktop keyboard shortcuts.
-    final shortcuts = <ShortcutActivator, Intent>{
-      const SingleActivator(LogicalKeyboardKey.digit1): _SwitchTabIntent(0),
-      const SingleActivator(LogicalKeyboardKey.digit2): _SwitchTabIntent(1),
-      const SingleActivator(LogicalKeyboardKey.digit3): _SwitchTabIntent(2),
-      const SingleActivator(LogicalKeyboardKey.digit4): _SwitchTabIntent(3),
-      const SingleActivator(LogicalKeyboardKey.keyL): const _PanicLockIntent(),
-    };
-
+    // v1.5.0: desktop keyboard shortcuts. CallbackShortcuts takes
+    // plain void callbacks (not Intents). `control` maps to Cmd on
+    // macOS automatically. Bare digits are NOT bound so typing in
+    // password fields can never switch tabs.
     Widget withShortcuts(Widget child) {
       if (Platform.isIOS || Platform.isAndroid) return child;
-      return Actions(
-        actions: <Type, Action<Intent>>{
-          _SwitchTabIntent: CallbackAction<_SwitchTabIntent>(
-            onInvoke: (intent) {
-              setState(() => _currentIndex = intent.index.clamp(0, 3));
-              return null;
-            },
-          ),
-          _PanicLockIntent: CallbackAction<_PanicLockIntent>(
-            onInvoke: (_) {
-              VCTCryptApp.of(context).panicLock();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(strings.panicLocked)),
-              );
-              return null;
-            },
-          ),
+      return CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.digit1, control: true):
+              () => _switchTab(0),
+          const SingleActivator(LogicalKeyboardKey.digit2, control: true):
+              () => _switchTab(1),
+          const SingleActivator(LogicalKeyboardKey.digit3, control: true):
+              () => _switchTab(2),
+          const SingleActivator(LogicalKeyboardKey.digit4, control: true):
+              () => _switchTab(3),
+          const SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
+            VCTCryptApp.of(context).panicLock();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(strings.panicLocked)),
+            );
+          },
         },
-        child: CallbackShortcuts(
-          bindings: shortcuts,
-          child: Focus(autofocus: true, child: child),
-        ),
+        child: Focus(autofocus: true, child: child),
       );
     }
 
@@ -190,13 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-}
-
-class _SwitchTabIntent extends Intent {
-  final int index;
-  const _SwitchTabIntent(this.index);
-}
-
-class _PanicLockIntent extends Intent {
-  const _PanicLockIntent();
+  void _switchTab(int index) {
+    setState(() => _currentIndex = index.clamp(0, 3));
+  }
 }
