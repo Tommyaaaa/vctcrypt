@@ -18,7 +18,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v1.3.0';
+  String get appVersion => 'v1.4.0';
   String get guiVersion => lang == AppLanguage.english
       ? '[GUI Version]'
       : '[图形界面版]';
@@ -27,8 +27,13 @@ class AppStrings {
       ? 'Algorithm: VCT-Crypt (AES-256 x3)'
       : '算法: VCT-Crypt (AES-256 x3)';
   String get whatsNew => lang == AppLanguage.english
-      ? 'New in v1.3.0: Onboarding & help center · batch encryption · clipboard auto-clear · accent colors · start page'
-      : 'v1.3.0 新特性：新手引导与帮助中心 · 批量加密 · 剪贴板自动清除 · 主题色个性化 · 启动页偏好';
+      ? 'New in v1.4.0: iOS Files app fix · new app icon & name · share/save sheet · atomic writes'
+      : 'v1.4.0 新特性：修复 iOS 文件 App 空文件夹 · 全新图标与名称 · 分享/存储 · 原子写入';
+
+  /// v1.4.0: share / save button label (mobile result cards).
+  String get shareBtn => lang == AppLanguage.english
+      ? 'Share / Save'
+      : '分享 / 存储';
 
   // ---- Navigation ----
   String get navEncrypt => lang == AppLanguage.english ? 'Encrypt' : '加密';

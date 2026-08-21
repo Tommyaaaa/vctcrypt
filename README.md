@@ -20,6 +20,8 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 - **Batch encryption** (v1.3.0): encrypt many files in one run with per-file results and retry-friendly failures
 - **Clipboard auto-clear** (v1.3.0): KeePass-style — copied passwords are wiped from the clipboard automatically
 - **Personalization** (v1.3.0): 8 accent colors, choice of start page, bilingual UI
+- **iOS Files app fix + share sheet** (v1.4.0): outputs now use atomic writes (temp file + rename) so iOS's Files app reliably shows them in *On My iPhone → VCTCrypt*; a share/save button on the result cards stores files anywhere via the system sheet
+- **App icon & name** (v1.4.0): Material Design shield, black on white; display name unified to VCTCrypt on all platforms
 - **Bilingual UI**: English / 简体中文, light / dark / system themes
 - **Desktop & mobile layouts**: NavigationRail on wide screens, NavigationBar on phones; drag-and-drop on desktop
 
@@ -45,6 +47,7 @@ flutter run          # or: flutter run -d windows / macos / linux / chrome
 
 ## Version history
 
+- **1.4.0** — iOS Files app visibility fix (atomic writes) · share/save sheet on mobile · new app icon (black shield on white) · display name VCTCrypt
 - **1.3.0** — Onboarding guide & help center · batch encryption · clipboard auto-clear · accent colors · start page preference
 - **1.2.0** — Password generator with entropy meter · passwordless .VCT file inspector · local usage statistics · panic lock
 - **1.1.0** — Decoy partition · duress password · secure shred · auto-lock · V2 file format

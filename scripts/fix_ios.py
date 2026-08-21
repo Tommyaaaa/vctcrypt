@@ -60,6 +60,12 @@ plist["CFBundleDocumentTypes"] = [
 plist["UIFileSharingEnabled"] = True
 plist["LSSupportsOpeningDocumentsInPlace"] = True
 
+# --- Display name (v1.4.0): VCTCrypt, not the lowercase bundle id ---
+# The Files app names the exposed folder after the display name, so
+# this also renames "On My iPhone/Vctcrypt" -> "VCTCrypt".
+plist["CFBundleDisplayName"] = "VCTCrypt"
+plist["CFBundleName"] = "VCTCrypt"
+
 with open(PLIST, "wb") as f:
     plistlib.dump(plist, f, sort_keys=True)
 
@@ -67,4 +73,5 @@ print("=== fix_ios.py report ===")
 print(f"Registered UTI {UTI} for extensions .vct/.VCT")
 print("CFBundleDocumentTypes, UIFileSharingEnabled, "
       "LSSupportsOpeningDocumentsInPlace set")
+print("Display name -> VCTCrypt")
 print(f"Patched: {PLIST}")

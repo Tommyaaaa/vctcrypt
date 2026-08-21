@@ -160,9 +160,28 @@ Uint8List _readFile(String path) {
   return bytes;
 }
 
+/// Atomic file write (v1.4.0): write to a sibling temp file, then
+/// rename over the destination.
+///
+/// Why: on iOS the Files app (fileproviderd) learns about changes in
+/// the app's Documents folder through file coordination. Writing in
+/// place with writeAsBytesSync leaves the Files app showing an EMPTY
+/// folder even though the file exists (visible in Filza). An atomic
+/// rename is the documented, reliably-observed pattern. It also
+/// prevents half-written outputs if the process dies mid-write.
 void _writeFile(String path, List<int> data) {
   final f = File(path);
-  f.writeAsBytesSync(data);
+  final tmp = File('$path.vctpart');
+  try {
+    tmp.writeAsBytesSync(data, flush: true);
+    // RenameSync atomically replaces the destination on iOS/Android/
+    // desktop; falls back to delete+rename on exotic filesystems.
+    tmp.renameSync(path);
+  } on FileSystemException {
+    // Fallback: direct write (temp may be on another volume, etc.)
+    if (tmp.existsSync()) tmp.deleteSync();
+    f.writeAsBytesSync(data);
+  }
 }
 
 /// Overwrite the entire file with random bytes (same length kept, so the

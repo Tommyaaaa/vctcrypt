@@ -68,6 +68,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate app icon (shield on white)
+        run: dart run flutter_launcher_icons
+
       - name: Build APK
         run: flutter build apk --release --obfuscate --split-debug-info=./symbols
 
@@ -186,6 +189,9 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate app icon (shield on white)
+        run: dart run flutter_launcher_icons
 
       - name: Configure Xcode for unsigned build
         run: |

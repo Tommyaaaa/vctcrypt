@@ -7,6 +7,7 @@ import 'dart:io' show Platform;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../crypto/vct_crypto.dart' as crypto;
 import '../i18n/strings.dart';
@@ -344,6 +345,16 @@ class _DecryptScreenState extends State<DecryptScreen> {
                                   color: theme.colorScheme.onPrimaryContainer,
                                   fontStyle: FontStyle.italic,
                                 ),
+                              ),
+                              // v1.4.0: share / save the decrypted file
+                              const SizedBox(height: 8),
+                              OutlinedButton.icon(
+                                onPressed: () => Share.shareXFiles(
+                                  [XFile(_outputPath!)],
+                                  text: _originalName,
+                                ),
+                                icon: const Icon(Icons.share_outlined),
+                                label: Text(strings.shareBtn),
                               ),
                             ],
                           ],

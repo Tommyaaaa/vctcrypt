@@ -10,6 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
+import 'package:share_plus/share_plus.dart';
 
 import '../crypto/vct_crypto.dart' as crypto;
 import '../i18n/strings.dart';
@@ -43,6 +44,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
   int _failCount = 0;
   int _totalBytes = 0;
   List<String> _failures = [];
+  List<String> _okPaths = [];
   bool _resultDecoy = false;
   bool _resultDuress = false;
   bool _resultShredded = false;
@@ -134,6 +136,17 @@ class _EncryptScreenState extends State<EncryptScreen> {
   void _panicLock() {
     VCTCryptApp.of(context).panicLock();
     _showSnackBar(_strings.panicLocked);
+  }
+
+  /// v1.4.0: share / save the encrypted outputs via the system sheet
+  /// (mobile). "Save to Files" there can store them anywhere, iCloud
+  /// Drive included - no need to hunt for the Documents folder.
+  Future<void> _shareOutputs() async {
+    if (_okPaths.isEmpty) return;
+    await Share.shareXFiles(
+      [for (final path in _okPaths) XFile(path)],
+      text: _strings.appName,
+    );
   }
 
   Future<void> _pickFile() async {
@@ -269,6 +282,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
     // v1.3.0: batch loop - encrypt every selected file in sequence.
     var okCount = 0, failCount = 0, totalBytes = 0;
     final failures = <String>[];
+    final okPaths = <String>[];
     String? firstError;
     String? singleOutputPath;
     int? singleOutputSize;
@@ -292,6 +306,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
       if (result.success) {
         okCount++;
         totalBytes += result.outputSize ?? 0;
+        okPaths.add(result.outputPath ?? _files[i]);
         singleOutputPath = result.outputPath;
         singleOutputSize = result.outputSize;
         anyDecoy = anyDecoy || result.usedDecoy;
@@ -320,6 +335,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
       _failCount = failCount;
       _totalBytes = totalBytes;
       _failures = failures;
+      _okPaths = okPaths;
       _resultDecoy = anyDecoy;
       _resultDuress = anyDuress;
       _resultShredded = anyShredded;
@@ -870,6 +886,19 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                     color: theme.colorScheme.error,
                                   ),
                                 ),
+                            ],
+                            // v1.4.0: share / save outputs (mobile)
+                            if ((Platform.isIOS || Platform.isAndroid) &&
+                                _okPaths.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: OutlinedButton.icon(
+                                  onPressed: _shareOutputs,
+                                  icon: const Icon(Icons.share_outlined),
+                                  label: Text(strings.shareBtn),
+                                ),
+                              ),
                             ],
                           ],
                           // v1.3.0: per-file failure list (total failure)

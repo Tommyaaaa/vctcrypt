@@ -34,6 +34,7 @@ AGP_VERSION = "8.5.0"
 GRADLE_VERSION = "8.9"
 COMPILE_SDK = "35"
 BUILD_TOOLS = "35.0.0"
+APP_LABEL = "VCTCrypt"
 
 errors = []
 
@@ -240,6 +241,19 @@ if "kotlin.jvm.target.validation.mode" not in gp:
         f.write("kotlin.jvm.target.validation.mode=warning\n")
 
 # ---------------------------------------------------------------
+# 8) App label -> VCTCrypt (v1.4.0)
+# ---------------------------------------------------------------
+label_ok = patch(
+    "android/app/src/main/AndroidManifest.xml",
+    [(r'android:label="[^"]*"', f'android:label="{APP_LABEL}"')],
+    "App label",
+    required=True,
+)
+label_xml = read("android/app/src/main/AndroidManifest.xml") or ""
+if f'android:label="{APP_LABEL}"' not in label_xml:
+    errors.append("App label not verified in AndroidManifest.xml")
+
+# ---------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------
 print("=== fix_android.py report ===")
@@ -250,6 +264,7 @@ print(f"compileSdk -> {COMPILE_SDK}: OK")
 print(f"buildToolsVersion -> {BUILD_TOOLS}: OK")
 print(f"subprojects Kotlin force: OK")
 print(f"R8 minify/shrink: " + ("patched" if r8_ok else "already set / not found"))
+print(f"App label -> {APP_LABEL}: " + ("OK" if label_ok else "FAILED"))
 
 print("\n--- settings.gradle (plugin versions) ---")
 for line in (settings_content or "(missing)").splitlines():
