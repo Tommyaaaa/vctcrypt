@@ -37,6 +37,11 @@ jobs:
         # Errors fail the build; lints/warnings are informational.
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
+      - name: Kernel tests
+        # Crypto roundtrips + V1/V2 format compatibility contract.
+        # Full PBKDF2 (600k x3) runs, so this takes a few minutes.
+        run: flutter test
+
   # ============================================================
   # Heavy 5-platform builds: ONLY on version tags (v*) or manual
   # dispatch. Plain main pushes stop at the analyze gate above -
