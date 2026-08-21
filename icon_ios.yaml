@@ -1,0 +1,8 @@
+# iOS-only icon config (v1.4.0)
+# Used in CI by the iOS job: dart run flutter_launcher_icons -f icon_ios.yaml
+# (a single shared config would fail: each CI job only generates its own
+#  platform scaffolding via `flutter create --platforms=...`)
+flutter_launcher_icons:
+  image_path: "assets/app_icon.png"
+  ios: true
+  remove_alpha_ios: true

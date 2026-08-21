@@ -23,14 +23,8 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
 
 # v1.4.0 app icon: Material Design "shield", black on white.
-# Run in CI (android + ios jobs): dart run flutter_launcher_icons
-flutter_launcher_icons:
-  image_path: "assets/app_icon.png"
-  ios: true
-  android: true
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/app_icon_fg.png"
-  remove_alpha_ios: true
+# Config lives in icon_ios.yaml / icon_android.yaml so each CI job only
+# regenerates its own platform (the scaffolding is per-platform there).
 
 flutter:
   uses-material-design: true

@@ -69,7 +69,7 @@ jobs:
         run: flutter pub get
 
       - name: Generate app icon (shield on white)
-        run: dart run flutter_launcher_icons
+        run: dart run flutter_launcher_icons -f icon_android.yaml
 
       - name: Build APK
         run: flutter build apk --release --obfuscate --split-debug-info=./symbols
@@ -191,7 +191,7 @@ jobs:
         run: flutter pub get
 
       - name: Generate app icon (shield on white)
-        run: dart run flutter_launcher_icons
+        run: dart run flutter_launcher_icons -f icon_ios.yaml
 
       - name: Configure Xcode for unsigned build
         run: |

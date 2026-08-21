@@ -1,0 +1,7 @@
+# Android-only icon config (v1.4.0)
+# Used in CI by the Android job: dart run flutter_launcher_icons -f icon_android.yaml
+flutter_launcher_icons:
+  image_path: "assets/app_icon.png"
+  android: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/app_icon_fg.png"
