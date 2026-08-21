@@ -15,10 +15,38 @@ env:
 
 jobs:
   # ============================================================
-  # Android APK
+  # Gate: static analysis first (cheap, ubuntu-only, ~2 min).
+  # Catches compile errors BEFORE 10x-billed macOS jobs spin up.
+  # Heavy builds below are chained on this via `needs`.
+  # ============================================================
+  analyze:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        # Errors fail the build; lints/warnings are informational.
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+  # ============================================================
+  # Heavy 5-platform builds: ONLY on version tags (v*) or manual
+  # dispatch. Plain main pushes stop at the analyze gate above -
+  # one 2-minute ubuntu job instead of a 5-platform burst that
+  # drains the Actions minutes quota (macOS bills at 10x).
   # ============================================================
   android:
     name: Android APK
+    needs: analyze
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,6 +116,8 @@ jobs:
   # ============================================================
   windows:
     name: Windows EXE
+    needs: analyze
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -127,6 +157,8 @@ jobs:
   # ============================================================
   macos:
     name: macOS DMG
+    needs: analyze
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -169,6 +201,8 @@ jobs:
   # ============================================================
   ios:
     name: iOS IPA (unsigned)
+    needs: analyze
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -282,6 +316,8 @@ jobs:
   # ============================================================
   linux:
     name: Linux AppImage
+    needs: analyze
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
