@@ -125,7 +125,7 @@ class SettingsScreen extends StatelessWidget {
                                     (appState.seedColor ?? _defaultSeed)
                                         .value ==
                                         c.value,
-                                onTap: () => appState.setSeedColor(c),
+                                onTap: (_) => appState.setSeedColor(c),
                               ),
                           ],
                         ),

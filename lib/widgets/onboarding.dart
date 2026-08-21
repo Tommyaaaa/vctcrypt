@@ -109,7 +109,7 @@ class _OnboardingDialogState extends State<_OnboardingDialog> {
 
   List<Widget> _pages(ThemeData theme, bool en) {
     return [
-      _page(
+      _buildPage(
         theme,
         icon: Icons.shield_outlined,
         title: en ? 'Welcome to VCTCrypt' : '欢迎使用 VCTCrypt',
@@ -125,7 +125,7 @@ class _OnboardingDialogState extends State<_OnboardingDialog> {
                 '全部运算在本机离线完成，不上传任何数据。',
               ],
       ),
-      _page(
+      _buildPage(
         theme,
         icon: Icons.enhanced_encryption,
         title: en ? 'Advanced security' : '高级安全',
@@ -143,7 +143,7 @@ class _OnboardingDialogState extends State<_OnboardingDialog> {
                 '所有 V2 文件结构完全一致，无人能证明伪装或胁迫密码的存在。',
               ],
       ),
-      _page(
+      _buildPage(
         theme,
         icon: Icons.bolt,
         title: en ? 'Everyday tools' : '日常工具',
@@ -161,7 +161,7 @@ class _OnboardingDialogState extends State<_OnboardingDialog> {
                 '本地使用统计，只记数字，不记文件名。',
               ],
       ),
-      _page(
+      _buildPage(
         theme,
         icon: Icons.palette_outlined,
         title: en ? 'Make it yours' : '个性化',
@@ -182,7 +182,7 @@ class _OnboardingDialogState extends State<_OnboardingDialog> {
     ];
   }
 
-  Widget _page(
+  Widget _buildPage(
     ThemeData theme, {
     required IconData icon,
     required String title,
