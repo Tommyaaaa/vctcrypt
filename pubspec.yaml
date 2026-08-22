@@ -1,7 +1,7 @@
 name: vctcrypt
 description: VCTCrypt - VCT File Encryption Tool with triple AES-256-GCM encryption.
 publish_to: "none"
-version: 1.5.0+6
+version: 1.6.0+7
 
 environment:
   sdk: ">=3.4.0 <4.0.0"

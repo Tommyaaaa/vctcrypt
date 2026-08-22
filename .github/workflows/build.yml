@@ -498,12 +498,12 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
-            ### What's New in v1.5.0
-            - 📝 **Secure Notes**: encrypt text directly into a .VCT file; decrypted notes stay in memory only (nothing touches disk)
-            - 📊 **Password strength meter**: live entropy estimate under every password field
-            - ⌨️ **Desktop shortcuts**: Ctrl+1..4 switch tabs, Ctrl+L panic lock (Cmd on macOS)
-            - 📤 **Full-width Share button** on every result card - the reliable way to export on iOS/Android
-            - 🎭 Decoy partition, duress password, secure shred, auto-lock, batch encryption and the file inspector from earlier releases all included
+            ### What's New in v1.6.0
+            - ⚙️ **Kernel rework**: all heavy crypto (PBKDF2 600K x3, triple AES-256-GCM, file shredding) now runs in background isolates - the UI never freezes, progress stays live, and Android no longer kills the app on large files
+            - 🎲 **4x faster CSPRNG**: random bytes are pulled 32 bits per engine call instead of one byte
+            - 📝 **Secure Notes fully in-memory**: note plaintext never touches disk in either direction, not even the temp directory
+            - 🧪 **Kernel test suite in CI**: 12 tests lock the V1/V2 format contract (built by an independent implementation) - format regressions can no longer ship silently
+            - 🧩 Byte format unchanged: every VCT file ever made still decrypts, and new files remain readable by older versions and the C CLI
 
             100% offline. No analytics, no ads, no network code - keys never leave your device.
 
