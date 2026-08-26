@@ -1,7 +1,7 @@
 name: vctcrypt
 description: VCTCrypt - VCT File Encryption Tool with triple AES-256-GCM encryption.
 publish_to: "none"
-version: 1.5.0+6
+version: 1.6.0+7
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -17,8 +17,14 @@ dependencies:
   path: ^1.9.0
   path_provider: ^2.1.0
   share_plus: ^7.2.2
+  # v1.6.0: ML-KEM-768 (FIPS 203) is vendored under lib/crypto/vendor/mlkem/
+  # (MIT, pqcrypto 0.4.1, unmodified algorithm code). Vendored because the
+  # published package needs Dart 3.10 while CI builds on Flutter 3.24/Dart 3.5.
+  # Pure Dart, zero dependencies, no network code.
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   flutter_lints: ^4.0.0
   flutter_launcher_icons: ^0.13.1
 

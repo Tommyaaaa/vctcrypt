@@ -3,6 +3,7 @@
 ///
 /// v1.5.0: fourth tab (Secure Notes) inserted at index 2; desktop
 /// keyboard shortcuts Ctrl+1..4 (switch tab) and Ctrl+L (panic lock).
+/// v1.6.0: fifth tab (Keys) inserted at index 2; shortcuts Ctrl+1..5.
 
 import 'dart:io' show Platform;
 
@@ -13,6 +14,7 @@ import '../main.dart';
 import '../widgets/onboarding.dart';
 import 'encrypt_screen.dart';
 import 'decrypt_screen.dart';
+import 'keys_screen.dart';
 import 'notes_screen.dart';
 import 'settings_screen.dart';
 
@@ -30,8 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     final app = VCTCryptApp.of(context);
-    // v1.3.0: user-selected start page. v1.5.0: 0..3 (Notes added).
-    _currentIndex = app.startTab.clamp(0, 3);
+    // v1.3.0: user-selected start page. v1.6.0: 0..4 (Keys added).
+    _currentIndex = app.startTab.clamp(0, 4);
     // v1.3.0: show the onboarding guide once, on first launch.
     if (!app.onboarded) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -53,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final screens = <Widget>[
       EncryptScreen(),
       DecryptScreen(),
+      const KeysScreen(),
       const NotesScreen(),
       SettingsScreen(strings: strings),
     ];
@@ -73,6 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
               () => _switchTab(2),
           const SingleActivator(LogicalKeyboardKey.digit4, control: true):
               () => _switchTab(3),
+          const SingleActivator(LogicalKeyboardKey.digit5, control: true):
+              () => _switchTab(4),
           const SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
             VCTCryptApp.of(context).panicLock();
             ScaffoldMessenger.of(context).showSnackBar(
@@ -128,6 +133,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         label: Text(strings.navDecrypt),
                       ),
                       NavigationRailDestination(
+                        icon: const Icon(Icons.vpn_key_outlined),
+                        selectedIcon: const Icon(Icons.key),
+                        label: Text(strings.navKeys),
+                      ),
+                      NavigationRailDestination(
                         icon: const Icon(Icons.sticky_note_2_outlined),
                         selectedIcon: const Icon(Icons.sticky_note_2),
                         label: Text(strings.navNotes),
@@ -166,6 +176,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: strings.navDecrypt,
               ),
               NavigationDestination(
+                icon: const Icon(Icons.vpn_key_outlined),
+                selectedIcon: const Icon(Icons.key),
+                label: strings.navKeys,
+              ),
+              NavigationDestination(
                 icon: const Icon(Icons.sticky_note_2_outlined),
                 selectedIcon: const Icon(Icons.sticky_note_2),
                 label: strings.navNotes,
@@ -182,6 +197,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   void _switchTab(int index) {
-    setState(() => _currentIndex = index.clamp(0, 3));
+    setState(() => _currentIndex = index.clamp(0, 4));
   }
 }

@@ -1,15 +1,19 @@
 /// VCTCrypt - Decrypt Screen
 /// VCT file selection + password + triple AES-256-GCM decryption
+/// v1.6.0: files encrypted to a recipient key (V3) can also be opened
+/// here with the matching .vctkey private key instead of a password.
 
 import 'dart:async' show unawaited;
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
 import '../crypto/vct_crypto.dart' as crypto;
+import '../crypto/vct_keys.dart' as keys;
 import '../i18n/strings.dart';
 import '../main.dart';
 import '../utils/usage_stats.dart';
@@ -38,6 +42,11 @@ class _DecryptScreenState extends State<DecryptScreen> {
   bool _lockBound = false;
   ValueNotifier<int>? _lockPulse;
 
+  // ---- Private-key unlock state (v1.6.0) ----
+  String? _keyPath;
+  final _keyPwController = TextEditingController();
+  bool _obscureKeyPw = true;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -52,13 +61,15 @@ class _DecryptScreenState extends State<DecryptScreen> {
   void dispose() {
     _lockPulse?.removeListener(_onAutoLock);
     _pwController.dispose();
+    _keyPwController.dispose();
     super.dispose();
   }
 
-  /// Auto-lock fired: clear the password field.
+  /// Auto-lock fired: clear both password fields.
   void _onAutoLock() {
     if (!mounted) return;
     _pwController.clear();
+    _keyPwController.clear();
     setState(() {});
   }
 
@@ -82,6 +93,122 @@ class _DecryptScreenState extends State<DecryptScreen> {
         _resultText = null;
       });
     }
+  }
+
+  /// v1.6.0: pick the recipient's .vctkey private key file. Mobile
+  /// pickers cannot filter unknown extensions, so any file is allowed
+  /// there and validated against the container magic + type byte.
+  Future<void> _pickKeyFile() async {
+    final strings = _strings;
+    final isMobile = Platform.isIOS || Platform.isAndroid;
+    final result = await FilePicker.platform.pickFiles(
+      type: isMobile ? FileType.any : FileType.custom,
+      allowedExtensions: isMobile ? null : ['vctkey', 'VCTKEY'],
+    );
+    if (result == null || result.files.isEmpty) return;
+    final path = result.files.first.path;
+    if (path == null) return;
+    try {
+      final bytes = File(path).readAsBytesSync();
+      if (keys.sniffKeyType(bytes) != keys.keyTypePrivate) {
+        _showSnackBar(strings.errBadKeyFile, isError: true);
+        return;
+      }
+      setState(() {
+        _keyPath = path;
+        _resultText = null;
+      });
+    } catch (_) {
+      _showSnackBar(strings.errBadKeyFile, isError: true);
+    }
+  }
+
+  void _clearKeyFile() {
+    setState(() {
+      _keyPath = null;
+      _resultText = null;
+    });
+  }
+
+  /// v1.6.0: unwrap the .vctkey container with its wrap password and
+  /// decrypt the selected V3 file through the ML-KEM channel.
+  Future<void> _decryptWithKey() async {
+    final strings = _strings;
+    if (_filePath == null) {
+      _showSnackBar(strings.errNotFound, isError: true);
+      return;
+    }
+    if (_keyPath == null) {
+      _showSnackBar(strings.errBadKeyFile, isError: true);
+      return;
+    }
+    if (_keyPwController.text.isEmpty) {
+      _showSnackBar(strings.errPwShort, isError: true);
+      return;
+    }
+
+    setState(() {
+      _processing = true;
+      _statusText = strings.statusProcessing;
+      _resultText = null;
+      _isError = false;
+    });
+
+    // ---- Unwrap the private key (PBKDF2 600K + AES-256-GCM) ----
+    keys.VctPrivateKey privateKey;
+    try {
+      final keyBytes = File(_keyPath!).readAsBytesSync();
+      privateKey = await keys.VctPrivateKey.parseWrapped(
+          keyBytes, _keyPwController.text);
+    } on keys.KeyFileException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _processing = false;
+        _resultText = strings.errorMessage(e.code);
+        _isError = true;
+        _statusText = strings.statusReady;
+      });
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _processing = false;
+        _resultText = strings.errBadKeyFile;
+        _isError = true;
+        _statusText = strings.statusReady;
+      });
+      return;
+    }
+
+    final result = await crypto.decryptFileWithKey(
+      _filePath!,
+      privateKey,
+      (msg) {
+        if (mounted) setState(() => _statusText = _strings.progressMessage(msg));
+      },
+    );
+
+    if (!mounted) return;
+
+    if (result.success) {
+      unawaited(UsageStats.recordDecrypt(bytes: result.outputSize ?? 0));
+    }
+
+    setState(() {
+      _processing = false;
+      if (result.success) {
+        _resultText = _strings.decSuccess;
+        _isError = false;
+        _outputPath = result.outputPath;
+        _originalName = result.originalName;
+        _outputSize = result.outputSize;
+        _keyPwController.clear();
+      } else {
+        _resultText = _strings.errorMessage(result.error ?? '');
+        _isError = true;
+      }
+      _statusText = _strings.statusReady;
+    });
   }
 
   Future<void> _decrypt() async {
@@ -241,6 +368,101 @@ class _DecryptScreenState extends State<DecryptScreen> {
                   inputFormatters: [
                     LengthLimitingTextInputFormatter(256),
                   ],
+                ),
+
+                // ---- Unlock with private key (v1.6.0) ----
+                const SizedBox(height: 16),
+                Card(
+                  margin: EdgeInsets.zero,
+                  clipBehavior: Clip.antiAlias,
+                  child: Theme(
+                    data: theme.copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      initiallyExpanded: false,
+                      leading: Icon(
+                        Icons.vpn_key_outlined,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(
+                        strings.keyUnlockSection,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      subtitle: Text(
+                        _keyPath != null
+                            ? strings.keyReady(p.basename(_keyPath!))
+                            : strings.keyFilePickHint,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: _keyPath != null
+                              ? theme.colorScheme.tertiary
+                              : theme.colorScheme.onSurfaceVariant,
+                          fontWeight:
+                              _keyPath != null ? FontWeight.w600 : null,
+                        ),
+                      ),
+                      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      children: [
+                        Text(
+                          strings.keyFilePickHint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _pickKeyFile,
+                                icon: const Icon(Icons.file_upload_outlined,
+                                    size: 18),
+                                label: Text(strings.keyFileLabel),
+                              ),
+                            ),
+                            if (_keyPath != null) ...[
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: _clearKeyFile,
+                                child: Text(strings.recipientClear),
+                              ),
+                            ],
+                          ],
+                        ),
+                        if (_keyPath != null) ...[
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _keyPwController,
+                            obscureText: _obscureKeyPw,
+                            decoration: InputDecoration(
+                              labelText: strings.keyPwLabel,
+                              prefixIcon: const Icon(Icons.key),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscureKeyPw
+                                    ? Icons.visibility_off
+                                    : Icons.visibility),
+                                onPressed: () => setState(
+                                    () => _obscureKeyPw = !_obscureKeyPw),
+                              ),
+                              border: const OutlineInputBorder(),
+                            ),
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(256),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.tonalIcon(
+                              onPressed: _processing ? null : _decryptWithKey,
+                              icon: const Icon(Icons.key),
+                              label: Text(strings.keyUnlockBtn),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 28),
 

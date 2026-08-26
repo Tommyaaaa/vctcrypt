@@ -203,6 +203,19 @@ class HelpScreen extends StatelessWidget {
                 '如有失败文件，密码会保留以便重试。',
       ),
       _HelpEntry(
+        Icons.vpn_key_outlined,
+        en ? 'Recipient keys (ML-KEM-768)' : '收件人密钥（ML-KEM-768）',
+        en
+            ? 'v1.6.0 adds optional post-quantum encryption. On the Keys tab you can generate a key pair: a .vctpub PUBLIC key to share freely, and a .vctkey PRIVATE key stored password-protected.\n\n'
+                'To encrypt TO someone: on the Encrypt tab, expand "Encrypt to a Public Key", choose their .vctpub and switch the option on. The password becomes optional - leave it empty for a key-only file, or set one for a dual-channel file (opens with EITHER the password OR the private key).\n\n'
+                'To open a file encrypted to you: on the Decrypt tab, expand "Unlock with Private Key", pick your .vctkey and enter its protection password.\n\n'
+                'ML-KEM-768 is the NIST FIPS 203 standard (NIST level 3). The private key password only protects the key FILE - losing it loses every file encrypted to that key.'
+            : 'v1.6.0 新增可选的后量子加密。在“密钥”页可生成密钥对：.vctpub 公钥可放心分享，.vctkey 私钥以密码保护形式存储。\n\n'
+                '向某人加密：在“加密”页展开“使用公钥加密”，选择对方的 .vctpub 并打开开关。此时密码变为可选——留空生成仅限私钥解开的文件，填写则生成双通道文件（密码或私钥任一即可解开）。\n\n'
+                '解开发给你的文件：在“解密”页展开“使用私钥解锁”，选择你的 .vctkey 并输入其保护密码。\n\n'
+                'ML-KEM-768 是 NIST FIPS 203 标准（NIST 第 3 级）。私钥保护密码只保护密钥文件本身——忘记它将无法解开用该密钥加密的所有文件。',
+      ),
+      _HelpEntry(
         Icons.description_outlined,
         en ? 'File formats & compatibility' : '文件格式与兼容性',
         en

@@ -38,10 +38,14 @@ import 'package:cryptography/cryptography.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'vct_keys.dart';
+import 'vendor/mlkem/mlkem.dart';
+
 // ---- Constants ----
 const _magicV1 = 'VCTCRYPT1\x00\x00\x00'; // 12 bytes (matches C: "VCTCRYPT1\0\0" + implicit C null)
 const _magicV1Old = 'VCTCRYPT1\x00\x00'; // 11 bytes - buggy old Flutter format (missing trailing \0)
 const _magicV2 = 'VCTCRYPT2\x00\x00\x00'; // 12 bytes
+const _magicV3 = 'VCTCRYPT3\x00\x00\x00'; // 12 bytes - hybrid ML-KEM mode (v1.6.0)
 const _magicLen = 12;
 const _saltSize = 48;
 const _nonceSize = 12;
@@ -63,11 +67,51 @@ const _v2DuressSaltOff = _v2DecoyHmacOff + _hmacSize; // 252
 const _v2DuressHmacOff = _v2DuressSaltOff + _saltSize; // 300
 const _v2HeaderLen = _v2DuressHmacOff + _hmacSize; // 332
 
+// ---- V3 layout (hybrid ML-KEM, v1.6.0) ----
+// Envelope: a random 32-byte CEK triple-encrypts the payload; the CEK
+// is wrapped by one or two independent channels:
+//   password channel : AES-GCM(PBKDF2("pw::V3", pwSalt), pwCt)
+//   KEM channel      : (kemCt, ss) = ML-KEM-768.Encaps(ek_recipient)
+//                      AES-GCM(HMAC(ss, "VCT3::KEM"||kemCt), kwCt)
+//
+// [magic 12][ver 1][flags 1][bodyCtLen 8]
+// [KEM slot:  kemCt 1088][kwNonce 12][kwCt 32][kwTag 16]   (1148, filler when off)
+// [PW slot:   pwSalt 48][pwNonce 12][pwCt 32][pwTag 16]    (108, filler when off)
+// [body hdr:  salt2 48][n1 12][n2 12][n3 12][hmac 32]      (116)
+// [bodyCt NB][bodyTag 16]
+//
+// flags bit0 = password channel active, bit1 = KEM channel active.
+// Both slots are ALWAYS present (random filler when unused) so the
+// file shape is uniform regardless of which channels are enabled.
+// Body keys: k_i = HMAC(cek, "VCT3::i" || salt2), vk = HMAC(cek, "VCT3::V" || salt2)
+// stored hmac = HMAC(vk, salt2 || n1 || n2 || n3)
+const _v3VerOff = _magicLen; // 12
+const _v3FlagsOff = _v3VerOff + 1; // 13
+const _v3CtLenOff = _v3FlagsOff + 1; // 14
+const _v3KemCtOff = _v3CtLenOff + 8; // 22
+const _v3KemCtLen = 1088;
+const _v3KwNonceOff = _v3KemCtOff + _v3KemCtLen; // 1110
+const _v3KwCtOff = _v3KwNonceOff + _nonceSize; // 1122
+const _v3KwTagOff = _v3KwCtOff + 32; // 1154
+const _v3PwSaltOff = _v3KwTagOff + _tagSize; // 1170
+const _v3PwNonceOff = _v3PwSaltOff + _saltSize; // 1218
+const _v3PwCtOff = _v3PwNonceOff + _nonceSize; // 1230
+const _v3PwTagOff = _v3PwCtOff + 32; // 1262
+const _v3Salt2Off = _v3PwTagOff + _tagSize; // 1278
+const _v3N1Off = _v3Salt2Off + _saltSize; // 1326
+const _v3HmacOff = _v3N1Off + _nonceSize * 3; // 1362
+const _v3HeaderLen = _v3HmacOff + _hmacSize; // 1394
+const _v3LayoutVer = 0x01;
+const _v3FlagPassword = 0x01;
+const _v3FlagKem = 0x02;
+const _kemCtLen = _v3KemCtLen;
+
 // ---- Format codes ----
 const fmtNone = 0;
 const fmtV1 = 1; // 12-byte V1 magic (CLI-compatible)
 const fmtV1Old = 2; // 11-byte buggy V1 magic (old Flutter builds)
 const fmtV2 = 3; // V2 with decoy/duress slots
+const fmtV3 = 4; // V3 hybrid envelope (password and/or ML-KEM-768)
 
 // ---- Crypto primitives ----
 
@@ -214,11 +258,21 @@ Future<void> _shredFile(String path) async {
 // ---- Format detection ----
 
 /// Detects file format:
-/// fmtNone (0) / fmtV1 (1) / fmtV1Old (2) / fmtV2 (3)
+/// fmtNone (0) / fmtV1 (1) / fmtV1Old (2) / fmtV2 (3) / fmtV3 (4)
 int detectFormat(Uint8List data) {
   if (data.length < 11) return fmtNone;
 
   if (data.length >= 12) {
+    final v3 = utf8.encode(_magicV3);
+    bool v3Match = true;
+    for (int i = 0; i < 12; i++) {
+      if (data[i] != v3[i]) {
+        v3Match = false;
+        break;
+      }
+    }
+    if (v3Match) return fmtV3;
+
     final v2 = utf8.encode(_magicV2);
     bool v2Match = true;
     for (int i = 0; i < 12; i++) {
@@ -271,7 +325,7 @@ bool isVctFile(String path) {
 /// not those features were used, so the inspector can never tell
 /// whether a decoy or duress password exists.
 class VctFileInfo {
-  /// One of [fmtV1], [fmtV1Old], [fmtV2] or [fmtNone].
+  /// One of [fmtV1], [fmtV1Old], [fmtV2], [fmtV3] or [fmtNone].
   final int format;
 
   /// Total file size in bytes.
@@ -280,11 +334,17 @@ class VctFileInfo {
   /// File modification time.
   final DateTime modified;
 
-  /// Size of the encrypted real payload (V2 only; null for V1).
+  /// Size of the encrypted real payload (V2/V3 only; null for V1).
   final int? realCtLen;
 
-  /// Header size in bytes (V2: 332, V1/V1-old: 128).
+  /// Header size in bytes (V3: 1394, V2: 332, V1/V1-old: 128).
   final int headerLen;
+
+  /// V3 only: the file carries an active ML-KEM recipient channel.
+  final bool hasKemChannel;
+
+  /// V3 only: the file carries an active password channel.
+  final bool hasPasswordChannel;
 
   const VctFileInfo({
     required this.format,
@@ -292,10 +352,13 @@ class VctFileInfo {
     required this.modified,
     this.realCtLen,
     required this.headerLen,
+    this.hasKemChannel = false,
+    this.hasPasswordChannel = false,
   });
 
   bool get isValid => format != fmtNone;
   bool get isV2 => format == fmtV2;
+  bool get isV3 => format == fmtV3;
 }
 
 /// Read only the header of [path] and return its public metadata.
@@ -308,7 +371,7 @@ VctFileInfo inspectVctFile(String path) {
   final raf = f.openSync(mode: FileMode.read);
   Uint8List head;
   try {
-    final n = size < _v2HeaderLen ? size : _v2HeaderLen;
+    final n = size < _v3HeaderLen ? size : _v3HeaderLen;
     head = raf.readSync(n);
   } finally {
     raf.closeSync();
@@ -321,6 +384,28 @@ VctFileInfo inspectVctFile(String path) {
       fileSize: size,
       modified: modified,
       headerLen: 0,
+    );
+  }
+
+  if (format == fmtV3) {
+    if (head.length < _v3HeaderLen) {
+      return VctFileInfo(
+        format: format,
+        fileSize: size,
+        modified: modified,
+        headerLen: _v3HeaderLen,
+      );
+    }
+    final ctLen = _readU64LE(head, _v3CtLenOff);
+    final flags = head[_v3FlagsOff];
+    return VctFileInfo(
+      format: format,
+      fileSize: size,
+      modified: modified,
+      realCtLen: ctLen,
+      headerLen: _v3HeaderLen,
+      hasKemChannel: (flags & _v3FlagKem) != 0,
+      hasPasswordChannel: (flags & _v3FlagPassword) != 0,
     );
   }
 
@@ -683,6 +768,9 @@ class EncryptResult {
   final bool usedDecoy;
   final bool usedDuress;
   final bool shreddedOriginal;
+
+  /// v1.6.0: the output is a V3 hybrid file with an ML-KEM recipient.
+  final bool usedKem;
   EncryptResult({
     this.success = true,
     this.outputPath,
@@ -691,6 +779,7 @@ class EncryptResult {
     this.usedDecoy = false,
     this.usedDuress = false,
     this.shreddedOriginal = false,
+    this.usedKem = false,
   });
 }
 
@@ -900,6 +989,411 @@ Future<bool> _verifyWrittenV2(String outPath, String password) async {
   }
 }
 
+// ---- Hybrid V3 encryption (v1.6.0, ML-KEM-768) ----
+
+/// Options for the hybrid envelope. At least ONE of [password] /
+/// [recipient] must be given; both may be given (dual-channel file:
+/// openable with the password OR the recipient's private key).
+class HybridEncryptOptions {
+  final String? password;
+  final VctPublicKey? recipient;
+  final bool shredOriginal;
+  const HybridEncryptOptions({
+    this.password,
+    this.recipient,
+    this.shredOriginal = false,
+  });
+}
+
+/// Derive the body key set from the CEK (HMAC-based, mirroring the
+/// V2 PBKDF2 key split: three AES keys + one verification key).
+Future<_Keys> _v3DeriveBodyKeys(List<int> cek, List<int> salt2) async {
+  Future<List<int>> k(String label) =>
+      _hmacSha256(cek, utf8.encode(label).followedBy(salt2).toList());
+  return _Keys(await k('VCT3::1'), await k('VCT3::2'), await k('VCT3::3'),
+      await k('VCT3::V'));
+}
+
+/// Encrypt [payload] with the triple-GCM body under CEK-derived keys.
+/// Returns the body header material + ciphertext + tag.
+Future<({
+  List<int> salt2,
+  List<int> n1,
+  List<int> n2,
+  List<int> n3,
+  List<int> hmac,
+  List<int> ct,
+  List<int> tag,
+})> _v3EncryptBody(List<int> cek, List<int> payload) async {
+  final salt2 = await _secureRandom(_saltSize);
+  final n1 = await _secureRandom(_nonceSize);
+  final n2 = await _secureRandom(_nonceSize);
+  final n3 = await _secureRandom(_nonceSize);
+  final keys = await _v3DeriveBodyKeys(cek, salt2);
+
+  final l1 = await _aesGcmEncrypt(keys.k1, n1, payload);
+  final l1b = BytesBuilder()..add(l1.tag)..add(l1.cipherText);
+  final l2 = await _aesGcmEncrypt(keys.k2, n2, l1b.toBytes());
+  final l2b = BytesBuilder()..add(l2.tag)..add(l2.cipherText);
+  final l3 = await _aesGcmEncrypt(keys.k3, n3, l2b.toBytes());
+
+  final hData = BytesBuilder()
+    ..add(salt2)
+    ..add(n1)
+    ..add(n2)
+    ..add(n3);
+  final hmacVal = await _hmacSha256(keys.vk, hData.toBytes());
+
+  return (
+    salt2: salt2,
+    n1: n1,
+    n2: n2,
+    n3: n3,
+    hmac: hmacVal,
+    ct: l3.cipherText,
+    tag: l3.tag,
+  );
+}
+
+/// Wrap the CEK into both channels and assemble the V3 container.
+Future<Uint8List> _v3Assemble({
+  required List<int> cek,
+  required List<int> body,
+  required ({List<int> salt2, List<int> n1, List<int> n2, List<int> n3,
+      List<int> hmac, List<int> ct, List<int> tag}) enc,
+  required bool usePassword,
+  required bool useKem,
+  String? password,
+  VctPublicKey? recipient,
+}) async {
+  // --- KEM slot ---
+  List<int> kemCt, kwNonce, kwCt, kwTag;
+  if (useKem) {
+    final (ct, ss) = _kem768.encapsulate(recipient!.ek);
+    kemCt = ct;
+    final wrapK = await _hmacSha256(
+        ss, utf8.encode('VCT3::KEM').followedBy(ct).toList());
+    final nonce = await _secureRandom(_nonceSize);
+    final box = await _aesGcmEncrypt(wrapK, nonce, cek);
+    kwNonce = nonce;
+    kwCt = box.cipherText;
+    kwTag = box.tag;
+  } else {
+    kemCt = await _secureRandom(_v3KemCtLen);
+    kwNonce = await _secureRandom(_nonceSize);
+    kwCt = await _secureRandom(32);
+    kwTag = await _secureRandom(_tagSize);
+  }
+
+  // --- Password slot ---
+  List<int> pwSalt, pwNonce, pwCt, pwTag;
+  if (usePassword) {
+    pwSalt = await _secureRandom(_saltSize);
+    final wrap = await _pbkdf2('${password!}::V3', pwSalt, _pbkdf2Iters, 32);
+    final nonce = await _secureRandom(_nonceSize);
+    final box = await _aesGcmEncrypt(wrap, nonce, cek);
+    pwNonce = nonce;
+    pwCt = box.cipherText;
+    pwTag = box.tag;
+  } else {
+    pwSalt = await _secureRandom(_saltSize);
+    pwNonce = await _secureRandom(_nonceSize);
+    pwCt = await _secureRandom(32);
+    pwTag = await _secureRandom(_tagSize);
+  }
+
+  var flags = 0;
+  if (usePassword) flags |= _v3FlagPassword;
+  if (useKem) flags |= _v3FlagKem;
+
+  final out = BytesBuilder();
+  out.add(utf8.encode(_magicV3));
+  out.addByte(_v3LayoutVer);
+  out.addByte(flags);
+  _writeU64LE(out, enc.ct.length);
+  out.add(kemCt);
+  out.add(kwNonce);
+  out.add(kwCt);
+  out.add(kwTag);
+  out.add(pwSalt);
+  out.add(pwNonce);
+  out.add(pwCt);
+  out.add(pwTag);
+  out.add(enc.salt2);
+  out.add(enc.n1);
+  out.add(enc.n2);
+  out.add(enc.n3);
+  out.add(enc.hmac);
+  out.add(enc.ct);
+  out.add(enc.tag);
+  return out.toBytes();
+}
+
+final _kem768 = PqcKem.kyber768;
+
+/// Self-consistency proof of a freshly written V3 file BEFORE the
+/// original may be shredded: re-read, re-parse, and re-check the body
+/// HMAC with the CEK we still hold in memory.
+Future<bool> _verifyWrittenV3(String outPath, List<int> cek) async {
+  try {
+    final data = _readFile(outPath);
+    if (detectFormat(data) != fmtV3) return false;
+    if (data.length < _v3HeaderLen + _tagSize) return false;
+    if (data[_v3VerOff] != _v3LayoutVer) return false;
+
+    final salt2 = data.sublist(_v3Salt2Off, _v3Salt2Off + _saltSize);
+    final n1 = data.sublist(_v3N1Off, _v3N1Off + _nonceSize);
+    final n2 = data.sublist(_v3N1Off + _nonceSize, _v3N1Off + _nonceSize * 2);
+    final n3 = data.sublist(
+        _v3N1Off + _nonceSize * 2, _v3N1Off + _nonceSize * 3);
+    final stored = data.sublist(_v3HmacOff, _v3HmacOff + _hmacSize);
+
+    final keys = await _v3DeriveBodyKeys(cek, salt2);
+    final hData = BytesBuilder()
+      ..add(salt2)
+      ..add(n1)
+      ..add(n2)
+      ..add(n3);
+    final computed = await _hmacSha256(keys.vk, hData.toBytes());
+    return _constantTimeEq(computed, stored);
+  } catch (_) {
+    return false;
+  }
+}
+
+/// Encrypt [filePath] into a V3 hybrid file. At least one channel
+/// (password and/or recipient public key) must be active.
+Future<EncryptResult> encryptFileHybrid(
+  String filePath,
+  HybridEncryptOptions options,
+  ProgressCallback? onProgress, {
+  String? outputPath,
+}) async {
+  try {
+    final password = options.password;
+    final recipient = options.recipient;
+    final usePassword = password != null && password.isNotEmpty;
+    final useKem = recipient != null;
+
+    if (!usePassword && !useKem) {
+      return EncryptResult(success: false, error: 'NO_UNLOCK_CHANNEL');
+    }
+    if (usePassword && password.length < 4) {
+      return EncryptResult(success: false, error: 'PASSWORD_TOO_SHORT');
+    }
+
+    final fileData = _readFile(filePath);
+    if (fileData.isEmpty) {
+      return EncryptResult(success: false, error: 'EMPTY_FILE');
+    }
+    final payload = _buildPayload(filePath, fileData);
+
+    // Fresh random CEK - never derived from anything guessable.
+    final cek = await _secureRandom(32);
+
+    onProgress?.call('DERIVING');
+
+    // Encapsulate FIRST so an invalid recipient key fails before any
+    // expensive body work (also keeps 'ENCRYPTING' semantics intact).
+    Uint8List assembled;
+    try {
+      final enc = await _v3EncryptBody(cek, payload);
+      onProgress?.call('ENCRYPTING');
+      assembled = await _v3Assemble(
+        cek: cek,
+        body: payload,
+        enc: enc,
+        usePassword: usePassword,
+        useKem: useKem,
+        password: password,
+        recipient: recipient,
+      );
+    } on ArgumentError {
+      return EncryptResult(success: false, error: 'BAD_KEY_FILE');
+    }
+
+    final outPath = outputPath ??
+        await _chooseOutputPath(_encFileName(filePath), filePath);
+    _writeFile(outPath, assembled);
+
+    var shredded = false;
+    if (options.shredOriginal) {
+      onProgress?.call('SHREDDING');
+      final ok = await _verifyWrittenV3(outPath, cek);
+      if (!ok) {
+        return EncryptResult(success: false, error: 'SHRED_VERIFY_FAILED');
+      }
+      await _shredFile(filePath);
+      shredded = true;
+    }
+
+    return EncryptResult(
+      success: true,
+      outputPath: outPath,
+      outputSize: assembled.length,
+      shreddedOriginal: shredded,
+      usedKem: useKem,
+    );
+  } catch (e) {
+    return EncryptResult(success: false, error: e.toString());
+  }
+}
+
+/// Recover the CEK from the KEM channel with the recipient's private
+/// key, then verify + decrypt the body.
+Future<DecryptResult> _decryptV3WithKey(
+  Uint8List fileData,
+  String filePath,
+  VctPrivateKey privateKey,
+  ProgressCallback? onProgress, {
+  String? outputPath,
+}) async {
+  final flags = fileData[_v3FlagsOff];
+  if ((flags & _v3FlagKem) == 0) {
+    return DecryptResult(success: false, error: 'KEY_NOT_APPLICABLE');
+  }
+
+  onProgress?.call('VERIFYING');
+  final kemCt = fileData.sublist(_v3KemCtOff, _v3KemCtOff + _v3KemCtLen);
+  final ss = privateKey.dk.length == 2400
+      ? _kem768.decapsulate(privateKey.dk, kemCt)
+      : throw const FormatException('bad dk');
+  final wrapK = await _hmacSha256(
+      ss, utf8.encode('VCT3::KEM').followedBy(kemCt).toList());
+  final kwNonce = fileData.sublist(_v3KwNonceOff, _v3KwNonceOff + _nonceSize);
+  final kwCt = fileData.sublist(_v3KwCtOff, _v3KwCtOff + 32);
+  final kwTag = fileData.sublist(_v3KwTagOff, _v3KwTagOff + _tagSize);
+
+  List<int> cek;
+  try {
+    cek = await _aesGcmDecrypt(wrapK, kwNonce, kwCt, kwTag);
+  } catch (_) {
+    return DecryptResult(success: false, error: 'WRONG_KEY');
+  }
+
+  return await _v3DecryptBody(cek, fileData, filePath, onProgress,
+      outputPath: outputPath);
+}
+
+/// Shared V3 tail: verify body HMAC under the CEK, decrypt, write out.
+Future<DecryptResult> _v3DecryptBody(
+  List<int> cek,
+  Uint8List fileData,
+  String filePath,
+  ProgressCallback? onProgress, {
+  String? outputPath,
+}) async {
+  onProgress?.call('VERIFIED');
+  onProgress?.call('DECRYPTING');
+
+  final salt2 = fileData.sublist(_v3Salt2Off, _v3Salt2Off + _saltSize);
+  final n1 = fileData.sublist(_v3N1Off, _v3N1Off + _nonceSize);
+  final n2 =
+      fileData.sublist(_v3N1Off + _nonceSize, _v3N1Off + _nonceSize * 2);
+  final n3 =
+      fileData.sublist(_v3N1Off + _nonceSize * 2, _v3N1Off + _nonceSize * 3);
+  final storedHmac =
+      fileData.sublist(_v3HmacOff, _v3HmacOff + _hmacSize);
+
+  final keys = await _v3DeriveBodyKeys(cek, salt2);
+  final hData = BytesBuilder()
+    ..add(salt2)
+    ..add(n1)
+    ..add(n2)
+    ..add(n3);
+  final computed = await _hmacSha256(keys.vk, hData.toBytes());
+  if (!_constantTimeEq(computed, storedHmac)) {
+    return DecryptResult(success: false, error: 'CORRUPT');
+  }
+
+  final ctLen = _readU64LE(fileData, _v3CtLenOff);
+  final bodyStart = _v3HeaderLen;
+  final ctEnd = bodyStart + ctLen;
+  if (ctLen <= 0 || ctEnd + _tagSize > fileData.length) {
+    return DecryptResult(success: false, error: 'CORRUPT');
+  }
+  final bodyCt = fileData.sublist(bodyStart, ctEnd);
+  final bodyTag = fileData.sublist(ctEnd, ctEnd + _tagSize);
+
+  final internal =
+      await _decryptBody(keys, n1, n2, n3, bodyCt, bodyTag);
+  if (!internal.success) {
+    return DecryptResult(success: false, error: internal.error);
+  }
+  return await _writeDecrypted(filePath, internal, outputPath: outputPath);
+}
+
+/// Decrypt a V3 file with the password channel.
+Future<DecryptResult> _decryptV3WithPassword(
+  Uint8List fileData,
+  String filePath,
+  String password,
+  ProgressCallback? onProgress, {
+  String? outputPath,
+}) async {
+  final flags = fileData[_v3FlagsOff];
+
+  onProgress?.call('DERIVING');
+
+  // Uniform work: always run the full PBKDF2 even when the channel is
+  // inactive, so timing does not reveal which channels a file has.
+  final pwSalt = fileData.sublist(_v3PwSaltOff, _v3PwSaltOff + _saltSize);
+  final wrap = await _pbkdf2('${password}::V3', pwSalt, _pbkdf2Iters, 32);
+
+  if ((flags & _v3FlagPassword) != 0) {
+    final pwNonce =
+        fileData.sublist(_v3PwNonceOff, _v3PwNonceOff + _nonceSize);
+    final pwCt = fileData.sublist(_v3PwCtOff, _v3PwCtOff + 32);
+    final pwTag = fileData.sublist(_v3PwTagOff, _v3PwTagOff + _tagSize);
+    try {
+      final cek = await _aesGcmDecrypt(wrap, pwNonce, pwCt, pwTag);
+      return await _v3DecryptBody(cek, fileData, filePath, onProgress,
+          outputPath: outputPath);
+    } on SecretBoxAuthenticationError {
+      return DecryptResult(success: false, error: 'WRONG_PASSWORD');
+    } catch (_) {
+      return DecryptResult(success: false, error: 'CORRUPT');
+    }
+  }
+
+  // Password channel inactive: this file needs the private key.
+  return DecryptResult(success: false, error: 'KEY_REQUIRED');
+}
+
+/// Public: decrypt a V3 file using a private key object (already
+/// unwrapped from its .vctkey container by the UI layer).
+Future<DecryptResult> decryptFileWithKey(
+  String filePath,
+  VctPrivateKey privateKey,
+  ProgressCallback? onProgress, {
+  String? outputPath,
+}) async {
+  try {
+    final fileData = _readFile(filePath);
+    final format = detectFormat(fileData);
+    if (format == fmtNone) {
+      return DecryptResult(success: false, error: 'NOT_VCT');
+    }
+    if (format != fmtV3) {
+      return DecryptResult(success: false, error: 'KEY_NOT_APPLICABLE');
+    }
+    if (fileData.length < _v3HeaderLen + _tagSize) {
+      return DecryptResult(success: false, error: 'FILE_TOO_SMALL');
+    }
+    if (fileData[_v3VerOff] != _v3LayoutVer) {
+      return DecryptResult(success: false, error: 'UNSUPPORTED_FORMAT');
+    }
+    return await _decryptV3WithKey(fileData, filePath, privateKey, onProgress,
+        outputPath: outputPath);
+  } on FormatException {
+    return DecryptResult(success: false, error: 'BAD_KEY_FILE');
+  } on ArgumentError {
+    return DecryptResult(success: false, error: 'BAD_KEY_FILE');
+  } catch (e) {
+    return DecryptResult(success: false, error: e.toString());
+  }
+}
+
 // ---- Decryption ----
 
 Future<DecryptResult> _decryptV2(
@@ -1082,6 +1576,18 @@ Future<DecryptResult> decryptFile(
 
     if (format == fmtNone) {
       return DecryptResult(success: false, error: 'NOT_VCT');
+    }
+
+    if (format == fmtV3) {
+      if (fileData.length < _v3HeaderLen + _tagSize) {
+        return DecryptResult(success: false, error: 'FILE_TOO_SMALL');
+      }
+      if (fileData[_v3VerOff] != _v3LayoutVer) {
+        return DecryptResult(success: false, error: 'UNSUPPORTED_FORMAT');
+      }
+      return await _decryptV3WithPassword(fileData, filePath, password,
+          onProgress,
+          outputPath: outputPath);
     }
 
     if (format == fmtV2) {

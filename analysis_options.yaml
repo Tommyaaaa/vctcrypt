@@ -1,5 +1,12 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # Vendored, unmodified upstream code (pqcrypto 0.4.1, MIT).
+    # Style lints do not apply to it; algorithm correctness is guarded
+    # by the interop + roundtrip tests in test/.
+    - lib/crypto/vendor/**
+
 linter:
   rules:
     prefer_const_constructors: true

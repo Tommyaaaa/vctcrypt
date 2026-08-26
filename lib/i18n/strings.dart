@@ -18,17 +18,17 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v1.5.0';
+  String get appVersion => 'v1.6.0';
   String get guiVersion => lang == AppLanguage.english
       ? '[GUI Version]'
       : '[图形界面版]';
   String get author => 'Tommy';
   String get algorithm => lang == AppLanguage.english
-      ? 'Algorithm: VCT-Crypt (AES-256 x3)'
-      : '算法: VCT-Crypt (AES-256 x3)';
+      ? 'Algorithm: VCT-Crypt (AES-256 x3 + ML-KEM-768)'
+      : '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)';
   String get whatsNew => lang == AppLanguage.english
-      ? 'New in v1.5.0: Secure Notes (encrypt text, decrypt in memory) · live password strength · desktop shortcuts · bigger share button'
-      : 'v1.5.0 新特性：安全笔记（文本加密、内存解密）· 密码强度实时评估 · 桌面端快捷键 · 更醒目的分享按钮';
+      ? 'New in v1.6.0: ML-KEM-768 recipient keys - encrypt to a public key, decrypt with your private key (post-quantum, optional alongside passwords)'
+      : 'v1.6.0 新特性：ML-KEM-768 收件人公钥加密——可用公钥加密、私钥解密（后量子安全，可与密码并用）';
 
   /// v1.4.0: share / save button label (mobile result cards).
   String get shareBtn => lang == AppLanguage.english
@@ -85,6 +85,73 @@ class AppStrings {
   String get navDecrypt => lang == AppLanguage.english ? 'Decrypt' : '解密';
   String get navSettings => lang == AppLanguage.english ? 'Settings' : '设置';
   String get navNotes => lang == AppLanguage.english ? 'Notes' : '笔记';
+  String get navKeys => lang == AppLanguage.english ? 'Keys' : '密钥';
+
+  // ---- Keys screen (v1.6.0, ML-KEM-768) ----
+  String get keysTitle => lang == AppLanguage.english
+      ? 'Recipient Keys (ML-KEM-768)'
+      : '收件人密钥（ML-KEM-768）';
+  String get keysSubtitle => lang == AppLanguage.english
+      ? 'Generate, import and share post-quantum key pairs'
+      : '生成、导入并分享后量子密钥对';
+  String get keysIntro => lang == AppLanguage.english
+      ? 'A .vctpub PUBLIC key is what others use to encrypt files TO you - share it freely. A .vctkey PRIVATE key unlocks those files - keep it secret; it is stored password-protected.'
+      : '.vctpub 公钥供他人向你加密文件时使用，可放心分享；.vctkey 私钥用于解开这些文件，务必保密，它以密码保护形式存储。';
+  String get genKeyBtn => lang == AppLanguage.english
+      ? 'Generate Key Pair'
+      : '生成密钥对';
+  String get importKeyBtn => lang == AppLanguage.english
+      ? 'Import Key File'
+      : '导入密钥文件';
+  String get keyNameLabel => lang == AppLanguage.english
+      ? 'Key name'
+      : '密钥名称';
+  String get keyNameHint => lang == AppLanguage.english
+      ? 'e.g. "Laptop" or "Tommy" (shown to senders)'
+      : '例如“笔记本电脑”或“Tommy”（发送方会看到）';
+  String get keyPwLabel => lang == AppLanguage.english
+      ? 'Private-key password'
+      : '私钥保护密码';
+  String get keyPwHint => lang == AppLanguage.english
+      ? 'Protects the .vctkey file only. Losing it loses every file encrypted to this key.'
+      : '仅用于保护 .vctkey 文件本身。忘记它将无法解开用此密钥加密的所有文件。';
+  String get keyGenOk => lang == AppLanguage.english
+      ? 'Key pair generated'
+      : '密钥对已生成';
+  String keyGenOkBody(String dir) => lang == AppLanguage.english
+      ? 'Saved to $dir. Share the .vctpub file with anyone who should encrypt files to you.'
+      : '已保存到 $dir。把 .vctpub 文件发给需要向你加密文件的人。';
+  String get keyFingerprint => lang == AppLanguage.english
+      ? 'Fingerprint'
+      : '指纹';
+  String get keyTypePublicLabel => lang == AppLanguage.english
+      ? 'Public key (.vctpub) - share freely'
+      : '公钥（.vctpub）——可自由分享';
+  String get keyTypePrivateLabel => lang == AppLanguage.english
+      ? 'Private key (.vctkey) - keep secret'
+      : '私钥（.vctkey）——务必保密';
+  String get keyInvalidFile => lang == AppLanguage.english
+      ? 'Not a valid VCTCrypt key file'
+      : '不是有效的 VCTCrypt 密钥文件';
+  String get noKeysYet => lang == AppLanguage.english
+      ? 'No key files yet. Generate a pair or import existing .vctpub / .vctkey files.'
+      : '还没有密钥文件。可生成一对，或导入已有的 .vctpub / .vctkey 文件。';
+  String get deleteKeyBtn => lang == AppLanguage.english
+      ? 'Delete' : '删除';
+  String get deleteKeyConfirmTitle => lang == AppLanguage.english
+      ? 'Delete key file?'
+      : '删除密钥文件？';
+  String deleteKeyConfirmBody(String name) => lang == AppLanguage.english
+      ? '"$name" will be deleted from this device. Files already encrypted with it are NOT affected, but a deleted private key can never decrypt them again. This cannot be undone.'
+      : '“$name”将从本设备删除。已用它加密的文件不受影响，但私钥一旦删除，那些文件将永远无法解开。此操作不可撤销。';
+  String get keyImported => lang == AppLanguage.english
+      ? 'Key imported'
+      : '密钥已导入';
+  String get keyDeleted => lang == AppLanguage.english
+      ? 'Key deleted'
+      : '密钥已删除';
+  String get mlkemLabel => 'ML-KEM-768';
+
 
   // ---- Encrypt screen ----
   String get encryptTitle => lang == AppLanguage.english
@@ -158,6 +225,63 @@ class AppStrings {
   String get optionalHint => lang == AppLanguage.english
       ? 'Leave empty to disable'
       : '留空则不启用';
+
+  // ---- Recipient public key / hybrid mode (v1.6.0) ----
+  String get recipientSection => lang == AppLanguage.english
+      ? 'Encrypt to a Public Key (ML-KEM-768)'
+      : '使用公钥加密（ML-KEM-768）';
+  String get recipientHint => lang == AppLanguage.english
+      ? 'Post-quantum recipient encryption. With a recipient key the password becomes optional - leave it empty for key-only files.'
+      : '后量子收件人加密。选择公钥后密码变为可选——留空即生成仅限私钥解开的文件。';
+  String get recipientPickBtn => lang == AppLanguage.english
+      ? 'Choose .vctpub'
+      : '选择 .vctpub';
+  String get recipientNone => lang == AppLanguage.english
+      ? 'No recipient selected'
+      : '未选择收件人';
+  String get recipientClear => lang == AppLanguage.english
+      ? 'Clear' : '清除';
+  String get recipientUseKey => lang == AppLanguage.english
+      ? 'Encrypt to this public key (password becomes optional)'
+      : '用此公钥加密（密码变为可选）';
+  String get hybridPwOptional => lang == AppLanguage.english
+      ? 'Password is optional now: with a password the file opens with EITHER the password or the private key; without it, ONLY the private key works.'
+      : '密码现在是可选的：填写密码时，密码或私钥都能解开文件；留空则只有私钥能解开。';
+  String get hybridAdvancedDisabled => lang == AppLanguage.english
+      ? 'The decoy partition and duress password are unavailable when encrypting to a public key.'
+      : '使用公钥加密时，伪装分区与胁迫密码不可用。';
+  String get errHybridAdvanced => lang == AppLanguage.english
+      ? 'Decoy / duress options cannot be combined with a recipient key. Clear them or remove the recipient.'
+      : '伪装/胁迫选项不能与收件人公钥同时使用，请清除其一。';
+  String get errRecipientRequired => lang == AppLanguage.english
+      ? 'Select a valid .vctpub recipient key or turn the option off.'
+      : '请选择有效的 .vctpub 公钥，或关闭该选项。';
+  String get resultKemUsed => lang == AppLanguage.english
+      ? 'ML-KEM recipient'
+      : 'ML-KEM 收件人';
+
+  // ---- Decrypt with private key (v1.6.0) ----
+  String get keyUnlockSection => lang == AppLanguage.english
+      ? 'Unlock with Private Key'
+      : '使用私钥解锁';
+  String get keyFileLabel => lang == AppLanguage.english
+      ? 'Private key file (.vctkey)'
+      : '私钥文件（.vctkey）';
+  String get keyFilePickHint => lang == AppLanguage.english
+      ? 'Pick the .vctkey file and enter its password'
+      : '选择 .vctkey 文件并输入其保护密码';
+  String get keyUnlockBtn => lang == AppLanguage.english
+      ? 'Decrypt with Key'
+      : '用私钥解密';
+  String keyReady(String name) => lang == AppLanguage.english
+      ? 'Private key loaded: $name'
+      : '私钥已加载：$name';
+  String get v3KeyChannelHint => lang == AppLanguage.english
+      ? 'This file carries an ML-KEM recipient channel - it can be opened with the recipient private key.'
+      : '此文件包含 ML-KEM 收件人通道，可用收件人私钥解开。';
+  String get v3PasswordOnlyHint => lang == AppLanguage.english
+      ? 'This file has no password channel - only the recipient private key can open it.'
+      : '此文件没有密码通道，只能用收件人私钥解开。';
 
   // ---- Decrypt screen ----
   String get decryptTitle => lang == AppLanguage.english
@@ -294,6 +418,29 @@ class AppStrings {
       ? 'Output verification failed - original file was NOT shredded.'
       : '加密产物校验失败，原文件未被擦除。';
 
+  // ---- Key / hybrid errors (v1.6.0) ----
+  String get errBadKeyFile => lang == AppLanguage.english
+      ? 'Not a valid VCTCrypt key file.'
+      : '不是有效的 VCTCrypt 密钥文件。';
+  String get errWrongKeyPassword => lang == AppLanguage.english
+      ? 'Wrong private-key password.'
+      : '私钥保护密码错误。';
+  String get errUnsupportedKeyParams => lang == AppLanguage.english
+      ? 'Unsupported key parameters.'
+      : '不支持的密钥参数。';
+  String get errKeyRequired => lang == AppLanguage.english
+      ? 'This file needs the recipient private key (.vctkey) - it has no password channel.'
+      : '此文件需要收件人私钥（.vctkey）才能解开——它没有密码通道。';
+  String get errWrongKey => lang == AppLanguage.english
+      ? 'This private key does not match the file.'
+      : '此私钥与文件不匹配。';
+  String get errKeyNotApplicable => lang == AppLanguage.english
+      ? 'A private key cannot open this file - use the password instead.'
+      : '私钥无法解开此文件，请使用密码。';
+  String get errNoChannel => lang == AppLanguage.english
+      ? 'Nothing can open this file: no password and no recipient key.'
+      : '此文件无法解开：既没有密码也没有收件人密钥。';
+
   // ---- Settings ----
   String get settingsTitle => lang == AppLanguage.english
       ? 'Settings'
@@ -327,11 +474,11 @@ class AppStrings {
       ? 'Algorithm'
       : '算法';
   String get aboutAlgoValue => lang == AppLanguage.english
-      ? 'VCT-Crypt v1.1\nTriple AES-256-GCM + PBKDF2\n600,000 iterations\n+ Decoy / Duress partitions'
-      : 'VCT-Crypt v1.1\n三层 AES-256-GCM + PBKDF2\n60万次迭代\n+ 伪装分区 / 胁迫销毁';
+      ? 'VCT-Crypt v1.2\nTriple AES-256-GCM + PBKDF2\n600,000 iterations\n+ Decoy / Duress partitions\n+ ML-KEM-768 hybrid (FIPS 203)'
+      : 'VCT-Crypt v1.2\n三层 AES-256-GCM + PBKDF2\n60万次迭代\n+ 伪装分区 / 胁迫销毁\n+ ML-KEM-768 混合加密（FIPS 203）';
   String get aboutFormatValue => lang == AppLanguage.english
-      ? 'VCT format v1 & v2\nv2: deniable partitions'
-      : 'VCT 格式 v1 与 v2\nv2：可否认分区';
+      ? 'VCT format v1 / v2 / v3\nv2: deniable partitions\nv3: ML-KEM hybrid envelope'
+      : 'VCT 格式 v1 / v2 / v3\nv2：可否认分区\nv3：ML-KEM 混合信封';
 
   // ---- Misc ----
   String get passwordStrengthWeak => lang == AppLanguage.english
@@ -402,6 +549,17 @@ class AppStrings {
   String get infoFormatV2 => lang == AppLanguage.english
       ? 'V2 (advanced slots)'
       : 'V2（支持高级分区）';
+  String get infoFormatV3 => lang == AppLanguage.english
+      ? 'V3 (ML-KEM hybrid)'
+      : 'V3（ML-KEM 混合格式）';
+  String get infoChannelPassword => lang == AppLanguage.english
+      ? 'Password channel'
+      : '密码通道';
+  String get infoChannelKem => lang == AppLanguage.english
+      ? 'ML-KEM recipient channel'
+      : 'ML-KEM 收件人通道';
+  String get infoYes => lang == AppLanguage.english ? 'yes' : '有';
+  String get infoNo => lang == AppLanguage.english ? 'no' : '无';
   String get infoFormatInvalid => lang == AppLanguage.english
       ? 'Not a VCT file'
       : '不是 VCT 文件';
@@ -560,6 +718,13 @@ class AppStrings {
       case 'DECOY_PW_REQUIRED': return errDecoyPwRequired;
       case 'DECOY_FILE_EMPTY': return errDecoyFileEmpty;
       case 'SHRED_VERIFY_FAILED': return errShredVerify;
+      case 'BAD_KEY_FILE': return errBadKeyFile;
+      case 'WRONG_KEY_PASSWORD': return errWrongKeyPassword;
+      case 'UNSUPPORTED_KEY_PARAMS': return errUnsupportedKeyParams;
+      case 'KEY_REQUIRED': return errKeyRequired;
+      case 'WRONG_KEY': return errWrongKey;
+      case 'KEY_NOT_APPLICABLE': return errKeyNotApplicable;
+      case 'NO_UNLOCK_CHANNEL': return errNoChannel;
       default: return code;
     }
   }

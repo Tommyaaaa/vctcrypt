@@ -2,9 +2,11 @@
 /// File selection + password + triple AES-256-GCM encryption
 /// v1.1.0: advanced security options (decoy partition, duress password,
 /// secure shred of the original file).
+/// v1.6.0: optional ML-KEM-768 recipient - hybrid V3 encryption where
+/// the password becomes optional (dual-channel or key-only files).
 
 import 'dart:async' show unawaited;
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +15,7 @@ import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
 import '../crypto/vct_crypto.dart' as crypto;
+import '../crypto/vct_keys.dart' as keys;
 import '../i18n/strings.dart';
 import '../main.dart';
 import '../utils/password_generator.dart';
@@ -49,6 +52,12 @@ class _EncryptScreenState extends State<EncryptScreen> {
   bool _resultDecoy = false;
   bool _resultDuress = false;
   bool _resultShredded = false;
+  bool _resultKem = false;
+
+  // ---- Recipient public key state (v1.6.0) ----
+  bool _recipientOn = false;
+  String? _recipientPath;
+  keys.VctPublicKey? _recipientPub;
 
   // ---- Advanced options state ----
   final _decoyPwController = TextEditingController();
@@ -183,6 +192,43 @@ class _EncryptScreenState extends State<EncryptScreen> {
     }
   }
 
+  /// v1.6.0: pick the recipient's .vctpub public key. Mobile pickers
+  /// cannot filter by unknown extensions (.vctpub has no UTI), so any
+  /// file is allowed there and validated against the container magic.
+  Future<void> _pickRecipient() async {
+    final strings = _strings;
+    final isMobile = Platform.isIOS || Platform.isAndroid;
+    final result = await FilePicker.platform.pickFiles(
+      type: isMobile ? FileType.any : FileType.custom,
+      allowedExtensions: isMobile ? null : ['vctpub', 'VCTPUB'],
+    );
+    if (result == null || result.files.isEmpty) return;
+    final path = result.files.first.path;
+    if (path == null) return;
+    try {
+      final bytes = File(path).readAsBytesSync();
+      final pub = keys.VctPublicKey.parse(bytes);
+      setState(() {
+        _recipientPath = path;
+        _recipientPub = pub;
+        // Picking a key implies turning the recipient channel on.
+        _recipientOn = true;
+        _resultText = null;
+      });
+    } catch (_) {
+      _showSnackBar(strings.errBadKeyFile, isError: true);
+    }
+  }
+
+  void _clearRecipient() {
+    setState(() {
+      _recipientOn = false;
+      _recipientPath = null;
+      _recipientPub = null;
+      _resultText = null;
+    });
+  }
+
   String _passwordStrength(String pw) {
     if (pw.isEmpty) return '';
     int score = 0;
@@ -209,60 +255,92 @@ class _EncryptScreenState extends State<EncryptScreen> {
     final mainPw = _pwController.text;
     final decoyPw = _decoyPwController.text;
     final duressPw = _duressPwController.text;
+    // v1.6.0: hybrid ML-KEM branch (password optional).
+    final useKem = _recipientOn;
 
     if (_files.isEmpty) {
       _showSnackBar(strings.errNotFound, isError: true);
       return;
     }
-    if (mainPw.length < 4) {
-      _showSnackBar(strings.errPwShort, isError: true);
-      return;
-    }
-    if (mainPw != _pw2Controller.text) {
-      _showSnackBar(strings.errPwMismatch, isError: true);
-      return;
-    }
 
-    // ---- Advanced option validation ----
-    if (decoyPw.isNotEmpty) {
-      // v1.3.0: the decoy partition is single-file only.
-      if (_files.length > 1) {
-        _showSnackBar(strings.errDecoyBatch, isError: true);
+    if (useKem) {
+      if (_recipientPub == null) {
+        _showSnackBar(strings.errRecipientRequired, isError: true);
         return;
       }
-      if (decoyPw.length < 4) {
+      // With a recipient the password is OPTIONAL: empty = key-only
+      // file, non-empty = dual-channel (password OR key).
+      if (mainPw.isNotEmpty) {
+        if (mainPw.length < 4) {
+          _showSnackBar(strings.errPwShort, isError: true);
+          return;
+        }
+        if (mainPw != _pw2Controller.text) {
+          _showSnackBar(strings.errPwMismatch, isError: true);
+          return;
+        }
+      }
+      // V3 has no decoy/duress slots - guard even though the UI hides
+      // them while a recipient is selected.
+      if (decoyPw.isNotEmpty ||
+          duressPw.isNotEmpty ||
+          _decoyFilePath != null) {
+        _showSnackBar(strings.errHybridAdvanced, isError: true);
+        return;
+      }
+    } else {
+      if (mainPw.length < 4) {
         _showSnackBar(strings.errPwShort, isError: true);
         return;
       }
-      if (decoyPw != _decoyPw2Controller.text) {
+      if (mainPw != _pw2Controller.text) {
         _showSnackBar(strings.errPwMismatch, isError: true);
         return;
       }
-      if (decoyPw == mainPw) {
-        _showSnackBar(strings.errDecoyPwIdentical, isError: true);
-        return;
-      }
-      if (_decoyFilePath == null) {
-        _showSnackBar(strings.errDecoyFileMissing, isError: true);
-        return;
-      }
-    } else if (_decoyFilePath != null) {
-      _showSnackBar(strings.errDecoyPwRequired, isError: true);
-      return;
     }
 
-    if (duressPw.isNotEmpty) {
-      if (duressPw.length < 4) {
-        _showSnackBar(strings.errPwShort, isError: true);
+    // ---- Advanced option validation (V2 path only) ----
+    if (!useKem) {
+      if (decoyPw.isNotEmpty) {
+        // v1.3.0: the decoy partition is single-file only.
+        if (_files.length > 1) {
+          _showSnackBar(strings.errDecoyBatch, isError: true);
+          return;
+        }
+        if (decoyPw.length < 4) {
+          _showSnackBar(strings.errPwShort, isError: true);
+          return;
+        }
+        if (decoyPw != _decoyPw2Controller.text) {
+          _showSnackBar(strings.errPwMismatch, isError: true);
+          return;
+        }
+        if (decoyPw == mainPw) {
+          _showSnackBar(strings.errDecoyPwIdentical, isError: true);
+          return;
+        }
+        if (_decoyFilePath == null) {
+          _showSnackBar(strings.errDecoyFileMissing, isError: true);
+          return;
+        }
+      } else if (_decoyFilePath != null) {
+        _showSnackBar(strings.errDecoyPwRequired, isError: true);
         return;
       }
-      if (duressPw != _duressPw2Controller.text) {
-        _showSnackBar(strings.errPwMismatch, isError: true);
-        return;
-      }
-      if (duressPw == mainPw || duressPw == decoyPw) {
-        _showSnackBar(strings.errDuressPwIdentical, isError: true);
-        return;
+
+      if (duressPw.isNotEmpty) {
+        if (duressPw.length < 4) {
+          _showSnackBar(strings.errPwShort, isError: true);
+          return;
+        }
+        if (duressPw != _duressPw2Controller.text) {
+          _showSnackBar(strings.errPwMismatch, isError: true);
+          return;
+        }
+        if (duressPw == mainPw || duressPw == decoyPw) {
+          _showSnackBar(strings.errDuressPwIdentical, isError: true);
+          return;
+        }
       }
     }
 
@@ -279,6 +357,11 @@ class _EncryptScreenState extends State<EncryptScreen> {
       duressPassword: duressPw.isNotEmpty ? duressPw : null,
       shredOriginal: _shredOriginal,
     );
+    final hybridOptions = crypto.HybridEncryptOptions(
+      password: mainPw.isNotEmpty ? mainPw : null,
+      recipient: _recipientPub,
+      shredOriginal: _shredOriginal,
+    );
 
     // v1.3.0: batch loop - encrypt every selected file in sequence.
     var okCount = 0, failCount = 0, totalBytes = 0;
@@ -287,23 +370,34 @@ class _EncryptScreenState extends State<EncryptScreen> {
     String? firstError;
     String? singleOutputPath;
     int? singleOutputSize;
-    var anyDecoy = false, anyDuress = false, anyShredded = false;
+    var anyDecoy = false, anyDuress = false, anyShredded = false,
+        anyKem = false;
 
     for (var i = 0; i < _files.length; i++) {
       if (mounted) {
         setState(() =>
             _statusText = strings.batchEncrypting(i + 1, _files.length));
       }
-      final result = await crypto.encryptFile(
-        _files[i],
-        mainPw,
-        (msg) {
-          if (mounted) {
-            setState(() => _statusText = _strings.progressMessage(msg));
-          }
-        },
-        options: options,
-      );
+      final result = useKem
+          ? await crypto.encryptFileHybrid(
+              _files[i],
+              hybridOptions,
+              (msg) {
+                if (mounted) {
+                  setState(() => _statusText = _strings.progressMessage(msg));
+                }
+              },
+            )
+          : await crypto.encryptFile(
+              _files[i],
+              mainPw,
+              (msg) {
+                if (mounted) {
+                  setState(() => _statusText = _strings.progressMessage(msg));
+                }
+              },
+              options: options,
+            );
       if (result.success) {
         okCount++;
         totalBytes += result.outputSize ?? 0;
@@ -313,6 +407,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
         anyDecoy = anyDecoy || result.usedDecoy;
         anyDuress = anyDuress || result.usedDuress;
         anyShredded = anyShredded || result.shreddedOriginal;
+        anyKem = anyKem || result.usedKem;
         // v1.2.0: local usage statistics (no names/paths recorded).
         unawaited(UsageStats.recordEncrypt(
           bytes: result.outputSize ?? 0,
@@ -340,6 +435,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
       _resultDecoy = anyDecoy;
       _resultDuress = anyDuress;
       _resultShredded = anyShredded;
+      _resultKem = anyKem;
       _isError = okCount == 0;
 
       if (okCount == 0) {
@@ -491,6 +587,86 @@ class _EncryptScreenState extends State<EncryptScreen> {
                 ],
                 const SizedBox(height: 24),
 
+                // ---- Recipient public key (v1.6.0, optional) ----
+                Card(
+                  margin: EdgeInsets.zero,
+                  clipBehavior: Clip.antiAlias,
+                  child: Theme(
+                    data: theme.copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      initiallyExpanded: false,
+                      leading: Icon(
+                        _recipientOn ? Icons.key : Icons.vpn_key_outlined,
+                        color: _recipientOn
+                            ? theme.colorScheme.tertiary
+                            : theme.colorScheme.primary,
+                      ),
+                      title: Text(
+                        strings.recipientSection,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      subtitle: Text(
+                        _recipientPub != null
+                            ? '${_recipientPub!.name} · ${_recipientPub!.fingerprint} · ${strings.mlkemLabel}'
+                            : strings.recipientNone,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: _recipientPub != null
+                              ? theme.colorScheme.tertiary
+                              : theme.colorScheme.onSurfaceVariant,
+                          fontWeight: _recipientPub != null
+                              ? FontWeight.w600
+                              : null,
+                        ),
+                      ),
+                      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      children: [
+                        Text(
+                          strings.recipientHint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _pickRecipient,
+                                icon: const Icon(Icons.file_upload_outlined,
+                                    size: 18),
+                                label: Text(strings.recipientPickBtn),
+                              ),
+                            ),
+                            if (_recipientPub != null) ...[
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: _clearRecipient,
+                                child: Text(strings.recipientClear),
+                              ),
+                            ],
+                          ],
+                        ),
+                        if (_recipientPub != null) ...[
+                          const SizedBox(height: 8),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              strings.recipientUseKey,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            value: _recipientOn,
+                            onChanged: (v) =>
+                                setState(() => _recipientOn = v),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
                 // Password field
                 TextField(
                   controller: _pwController,
@@ -579,6 +755,15 @@ class _EncryptScreenState extends State<EncryptScreen> {
                     LengthLimitingTextInputFormatter(256),
                   ],
                 ),
+                if (_recipientOn) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    strings.hybridPwOptional,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // ---- Advanced security options (v1.1.0) ----
@@ -608,7 +793,33 @@ class _EncryptScreenState extends State<EncryptScreen> {
                       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       children: [
                         // ---- Decoy partition (single-file mode only) ----
-                        if (_files.length > 1)
+                        // v1.6.0: V3 hybrid files have no decoy/duress
+                        // slots - show why instead of the sections.
+                        if (_recipientOn)
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 18,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    strings.hybridAdvancedDisabled,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (_files.length > 1)
                           Padding(
                             padding: const EdgeInsets.all(12),
                             child: Row(
@@ -648,22 +859,23 @@ class _EncryptScreenState extends State<EncryptScreen> {
                             onGenerate: _openGeneratorForDecoy,
                             onChanged: () => setState(() {}),
                           ),
-                        const SizedBox(height: 16),
-
-                        // ---- Duress password ----
-                        _DuressSection(
-                          strings: strings,
-                          duressPwController: _duressPwController,
-                          duressPw2Controller: _duressPw2Controller,
-                          obscureDuressPw: _obscureDuressPw,
-                          obscureDuressPw2: _obscureDuressPw2,
-                          onToggleDuressPw: () => setState(
-                              () => _obscureDuressPw = !_obscureDuressPw),
-                          onToggleDuressPw2: () => setState(
-                              () => _obscureDuressPw2 = !_obscureDuressPw2),
-                          onGenerate: _openGeneratorForDuress,
-                          onChanged: () => setState(() {}),
-                        ),
+                        // ---- Duress password (not available in V3) ----
+                        if (!_recipientOn) ...[
+                          const SizedBox(height: 16),
+                          _DuressSection(
+                            strings: strings,
+                            duressPwController: _duressPwController,
+                            duressPw2Controller: _duressPw2Controller,
+                            obscureDuressPw: _obscureDuressPw,
+                            obscureDuressPw2: _obscureDuressPw2,
+                            onToggleDuressPw: () => setState(
+                                () => _obscureDuressPw = !_obscureDuressPw),
+                            onToggleDuressPw2: () => setState(
+                                () => _obscureDuressPw2 = !_obscureDuressPw2),
+                            onGenerate: _openGeneratorForDuress,
+                            onChanged: () => setState(() {}),
+                          ),
+                        ],
                         const SizedBox(height: 16),
 
                         // ---- Secure shred ----
@@ -843,13 +1055,26 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                 ),
                               ),
                             ],
-                            if (_resultDecoy || _resultDuress || _resultShredded)
+                            if (_resultDecoy ||
+                                _resultDuress ||
+                                _resultShredded ||
+                                _resultKem)
                               const SizedBox(height: 8),
-                            if (_resultDecoy || _resultDuress || _resultShredded)
+                            if (_resultDecoy ||
+                                _resultDuress ||
+                                _resultShredded ||
+                                _resultKem)
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 4,
                                 children: [
+                                  if (_resultKem)
+                                    _ResultChip(
+                                      icon: Icons.vpn_key,
+                                      label: strings.resultKemUsed,
+                                      color:
+                                          theme.colorScheme.onPrimaryContainer,
+                                    ),
                                   if (_resultDecoy)
                                     _ResultChip(
                                       icon: Icons.theater_comedy,

@@ -30,6 +30,14 @@ void main() async {
     await prefs.setInt('startTab', 3);
   }
   await prefs.setBool('startTab.v15', true);
+  // v1.6.0 migration: the Keys tab was inserted at index 2 - Notes
+  // moved to 3 and Settings to 4. Remap the stored v1.5 values.
+  if (!prefs.containsKey('startTab.v16')) {
+    if (startTab == 2) startTab = 3; // was Notes
+    if (startTab == 3) startTab = 4; // was Settings
+    await prefs.setInt('startTab', startTab);
+    await prefs.setBool('startTab.v16', true);
+  }
   final clipboardClearSeconds = prefs.getInt('clipClear') ?? 30;
   final onboarded = prefs.getBool('onboarded') ?? false;
 

@@ -38,6 +38,30 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
   # ============================================================
+  # Tests: ML-KEM-768 KAT (Go cross-validated vectors) + key
+  # containers + V1/V3 roundtrips. Runs on every push/PR.
+  # ============================================================
+  test:
+    name: Tests
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        # Password-channel cases burn 600K-iteration PBKDF2 by design,
+        # so this takes a few minutes.
+        run: flutter test --reporter expanded
+
+  # ============================================================
   # Heavy 5-platform builds: ONLY on version tags (v*) or manual
   # dispatch. Plain main pushes stop at the analyze gate above -
   # one 2-minute ubuntu job instead of a 5-platform burst that
@@ -493,17 +517,17 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
-            ### What's New in v1.5.0
-            - 📝 **Secure Notes**: encrypt text directly into a .VCT file; decrypted notes stay in memory only (nothing touches disk)
-            - 📊 **Password strength meter**: live entropy estimate under every password field
-            - ⌨️ **Desktop shortcuts**: Ctrl+1..4 switch tabs, Ctrl+L panic lock (Cmd on macOS)
-            - 📤 **Full-width Share button** on every result card - the reliable way to export on iOS/Android
-            - 🎭 Decoy partition, duress password, secure shred, auto-lock, batch encryption and the file inspector from earlier releases all included
+            ### What's New in v1.6.0
+            - 🔐 **Recipient keys (ML-KEM-768)**: optional post-quantum encryption per NIST FIPS 203. New Keys tab to generate / import / share / delete `.vctpub` (public) and `.vctkey` (private) key files
+            - 📨 **Encrypt to a public key**: on the Encrypt tab, choose a recipient's `.vctpub` and the password becomes optional - dual-channel files (password OR private key) or key-only files
+            - 🔓 **Unlock with your private key**: the Decrypt tab can open recipient-encrypted files with your `.vctkey` + its protection password
+            - 🧪 **Cross-validated crypto**: the ML-KEM-768 implementation is verified against Go's standard library with checked-in KAT vectors; `flutter test` runs in CI
+            - All previous features (Secure Notes, decoy/duress, batch, shred, auto-lock, password generator) included
 
             100% offline. No analytics, no ads, no network code - keys never leave your device.
 
             ### Algorithm
-            VCT-Crypt v1.1: Triple AES-256-GCM + PBKDF2 (600K iterations)
+            VCT-Crypt v1.1: Triple AES-256-GCM + PBKDF2 (600K iterations), optional ML-KEM-768 (FIPS 203) hybrid envelope
 
             Author: Tommy
           files: |
