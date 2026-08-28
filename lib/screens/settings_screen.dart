@@ -1,5 +1,9 @@
 /// VCTCrypt - Settings Screen
-/// Language, Theme, Security, Usage Statistics, About
+/// Language, Theme, Security, Usage Statistics, Other
+///
+/// v2.0.0: the old inline "About" card was replaced by the "Other"
+/// section - About / Donate / Policies & Terms / Changelog each open
+/// a dedicated screen.
 
 import 'package:flutter/material.dart';
 
@@ -7,7 +11,11 @@ import '../i18n/strings.dart';
 import '../main.dart';
 import '../utils/usage_stats.dart';
 import '../widgets/onboarding.dart';
+import 'about_screen.dart';
+import 'changelog_screen.dart';
+import 'donate_screen.dart';
 import 'help_screen.dart';
+import 'policy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   final AppStrings strings;
@@ -347,112 +355,75 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
 
-                // ---- About ----
+                // ---- Other (v2.0.0: About / Donate / Policies / Changelog) ----
                 _SectionHeader(
-                  icon: Icons.info_outline,
-                  title: strings.aboutSection,
+                  icon: Icons.more_horiz,
+                  title: strings.otherSection,
                 ),
                 const SizedBox(height: 12),
                 Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        // App icon
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(
-                            Icons.shield,
-                            size: 40,
-                            color: theme.colorScheme.onPrimaryContainer,
-                          ),
+                  margin: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      // 1. About
+                      ListTile(
+                        leading: Icon(
+                          Icons.info_outline,
+                          color: theme.colorScheme.primary,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          strings.appName,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        title: Text(strings.aboutEntry),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const AboutScreen()),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          strings.appVersion,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                      ),
+                      const Divider(height: 1),
+                      // 2. Donate
+                      ListTile(
+                        leading: Icon(
+                          Icons.favorite_outline,
+                          color: theme.colorScheme.primary,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          strings.guiVersion,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                        title: Text(strings.donateEntry),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const DonateScreen()),
                         ),
-                        const SizedBox(height: 12),
-                        // What's new in this version
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.secondaryContainer,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            strings.whatsNew,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSecondaryContainer,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
+                      ),
+                      const Divider(height: 1),
+                      // 3. Policies & terms
+                      ListTile(
+                        leading: Icon(
+                          Icons.policy_outlined,
+                          color: theme.colorScheme.primary,
                         ),
-                        const Divider(height: 32),
-                        _InfoRow(
-                          label: strings.aboutAuthor,
-                          value: strings.author,
+                        title: Text(strings.policyEntry),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const PolicyScreen()),
                         ),
-                        const SizedBox(height: 8),
-                        _InfoRow(
-                          label: strings.aboutAlgo,
-                          value: strings.aboutAlgoValue,
+                      ),
+                      const Divider(height: 1),
+                      // 4. Changelog
+                      ListTile(
+                        leading: Icon(
+                          Icons.history,
+                          color: theme.colorScheme.primary,
                         ),
-                      ],
-                    ),
+                        title: Text(strings.changelogEntry),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const ChangelogScreen()),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Security note
-                Card(
-                  color: theme.colorScheme.tertiaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.security,
-                          color: theme.colorScheme.onTertiaryContainer,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            strings.lang == AppLanguage.english
-                                ? 'All encryption runs locally. No data is transmitted.'
-                                : '所有加密均在本地执行，不传输任何数据。',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onTertiaryContainer,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -479,38 +450,6 @@ class _SectionHeader extends StatelessWidget {
           title,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InfoRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: theme.textTheme.bodyMedium,
           ),
         ),
       ],

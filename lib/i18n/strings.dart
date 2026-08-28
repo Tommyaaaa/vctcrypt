@@ -18,7 +18,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v1.6.0';
+  String get appVersion => 'v2.0.0';
   String get guiVersion => lang == AppLanguage.english
       ? '[GUI Version]'
       : '[图形界面版]';
@@ -27,8 +27,8 @@ class AppStrings {
       ? 'Algorithm: VCT-Crypt (AES-256 x3 + ML-KEM-768)'
       : '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)';
   String get whatsNew => lang == AppLanguage.english
-      ? 'New in v1.6.0: ML-KEM-768 recipient keys - encrypt to a public key, decrypt with your private key (post-quantum, optional alongside passwords)'
-      : 'v1.6.0 新特性：ML-KEM-768 收件人公钥加密——可用公钥加密、私钥解密（后量子安全，可与密码并用）';
+      ? 'New in v2.0.0: a major milestone - the new "Other" section (About / Donate / Policies & Terms / Changelog), the MIT license, and the Alipay donation QR code'
+      : 'v2.0.0 大版本更新：全新「其它」板块（关于 / 捐赠 / 政策与条款 / 更新日志）、MIT 开源协议、支付宝捐赠收款码';
 
   /// v1.4.0: share / save button label (mobile result cards).
   String get shareBtn => lang == AppLanguage.english
@@ -467,18 +467,90 @@ class AppStrings {
   String autoLockMinutes(int n) => lang == AppLanguage.english
       ? '$n min'
       : '$n 分钟';
-  String get aboutSection => lang == AppLanguage.english ? 'About' : '关于';
+  // ---- Other section entries (v2.0.0) ----
+  String get otherSection => lang == AppLanguage.english
+      ? 'Other'
+      : '其它';
+  String get aboutEntry => lang == AppLanguage.english
+      ? 'About'
+      : '关于';
+  String get donateEntry => lang == AppLanguage.english
+      ? 'Donate'
+      : '捐赠';
+  String get policyEntry => lang == AppLanguage.english
+      ? 'Policies & Terms'
+      : '政策与条款';
+  String get changelogEntry => lang == AppLanguage.english
+      ? 'Changelog'
+      : '更新日志';
+
+  // ---- About screen (v2.0.0) ----
+  String get aboutTitle => lang == AppLanguage.english
+      ? 'About'
+      : '关于';
+  String get aboutWebsite => lang == AppLanguage.english
+      ? 'Website'
+      : '官网';
+  String get aboutLicense => lang == AppLanguage.english
+      ? 'License'
+      : '协议';
+  String get aboutLicenseValue => lang == AppLanguage.english
+      ? 'MIT License - free, open source, no ads'
+      : 'MIT 开源协议——免费、开源、无广告';
+  String get aboutLocalNote => lang == AppLanguage.english
+      ? 'VCTCrypt runs fully offline: no telemetry, no analytics, no ads. All encryption and decryption happens 100% on your device.'
+      : 'VCTCrypt 完全离线运行：无遥测、无分析、无广告。所有加解密运算 100% 在你的设备上完成。';
+  String get copyBtn => lang == AppLanguage.english
+      ? 'Copy'
+      : '复制';
+  String get websiteCopied => lang == AppLanguage.english
+      ? 'Website address copied'
+      : '官网地址已复制';
+
+  // ---- Donate screen (v2.0.0) ----
+  String get donateTitle => lang == AppLanguage.english
+      ? 'Donate'
+      : '捐赠';
+  String get donateIntro => lang == AppLanguage.english
+      ? 'VCTCrypt is free, open-source and ad-free. Donate to support development.'
+      : 'VCTCrypt 免费开源无广告，捐赠以支持开发。';
+  String get donateQrLabel => lang == AppLanguage.english
+      ? 'Alipay donation QR code'
+      : '支付宝捐赠收款码';
+  String get donateScanHint => lang == AppLanguage.english
+      ? 'Scan with Alipay'
+      : '使用支付宝扫码';
+  String get donateThanks => lang == AppLanguage.english
+      ? 'Every donation keeps the project going - thank you!'
+      : '每一份捐赠都是持续开发的动力——谢谢你！';
+  String get donateShareQr => lang == AppLanguage.english
+      ? 'Share / Save QR'
+      : '分享 / 存储收款码';
+
+  // ---- Policies & Terms screen (v2.0.0) ----
+  String get policyTitle => lang == AppLanguage.english
+      ? 'Policies & Terms'
+      : '政策与条款';
+  String get policyPrivacyTab => lang == AppLanguage.english
+      ? 'Privacy Policy'
+      : '隐私政策';
+  String get policyTermsTab => lang == AppLanguage.english
+      ? 'Terms of Use'
+      : '使用条款';
+
+  // ---- Changelog screen (v2.0.0) ----
+  String get changelogTitle => lang == AppLanguage.english
+      ? 'Changelog'
+      : '更新日志';
+
+  // ---- About facts (shared by the About card & screen) ----
   String get aboutAuthor => lang == AppLanguage.english ? 'Author' : '作者';
-  String get aboutVersion => lang == AppLanguage.english ? 'Version' : '版本';
   String get aboutAlgo => lang == AppLanguage.english
       ? 'Algorithm'
       : '算法';
   String get aboutAlgoValue => lang == AppLanguage.english
       ? 'VCT-Crypt v1.2\nTriple AES-256-GCM + PBKDF2\n600,000 iterations\n+ Decoy / Duress partitions\n+ ML-KEM-768 hybrid (FIPS 203)'
       : 'VCT-Crypt v1.2\n三层 AES-256-GCM + PBKDF2\n60万次迭代\n+ 伪装分区 / 胁迫销毁\n+ ML-KEM-768 混合加密（FIPS 203）';
-  String get aboutFormatValue => lang == AppLanguage.english
-      ? 'VCT format v1 / v2 / v3\nv2: deniable partitions\nv3: ML-KEM hybrid envelope'
-      : 'VCT 格式 v1 / v2 / v3\nv2：可否认分区\nv3：ML-KEM 混合信封';
 
   // ---- Misc ----
   String get passwordStrengthWeak => lang == AppLanguage.english
