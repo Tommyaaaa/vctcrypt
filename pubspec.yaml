@@ -39,3 +39,12 @@ flutter:
   # Bundled, never fetched from the network.
   assets:
     - assets/donate_alipay.png
+
+  # v2.0.0 (rebuild): Noto Sans SC (variable weight, Google Fonts /
+  # OFL). Bundling a CJK font fixes inconsistent Chinese glyph
+  # rendering on Windows, where Flutter would otherwise fall back to
+  # whatever fonts the OS happens to have (YaHei / SimSun / ...).
+  fonts:
+    - family: Noto Sans SC
+      fonts:
+        - asset: assets/fonts/NotoSansSC.ttf

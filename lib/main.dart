@@ -247,6 +247,9 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: lightScheme,
+        // v2.0.0: bundle Noto Sans SC so Chinese renders consistently
+        // on every Windows install (no OS font fallback mismatch).
+        fontFamily: 'Noto Sans SC',
         appBarTheme: AppBarTheme(
           centerTitle: false,
           backgroundColor: lightScheme.surface,
@@ -272,6 +275,9 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: darkScheme,
+        // v2.0.0: bundle Noto Sans SC so Chinese renders consistently
+        // on every Windows install (no OS font fallback mismatch).
+        fontFamily: 'Noto Sans SC',
         appBarTheme: AppBarTheme(
           centerTitle: false,
           backgroundColor: darkScheme.surface,
