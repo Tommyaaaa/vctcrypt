@@ -517,12 +517,14 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
-            ### What's New in v1.6.0
-            - 🔐 **Recipient keys (ML-KEM-768)**: optional post-quantum encryption per NIST FIPS 203. New Keys tab to generate / import / share / delete `.vctpub` (public) and `.vctkey` (private) key files
-            - 📨 **Encrypt to a public key**: on the Encrypt tab, choose a recipient's `.vctpub` and the password becomes optional - dual-channel files (password OR private key) or key-only files
-            - 🔓 **Unlock with your private key**: the Decrypt tab can open recipient-encrypted files with your `.vctkey` + its protection password
-            - 🧪 **Cross-validated crypto**: the ML-KEM-768 implementation is verified against Go's standard library with checked-in KAT vectors; `flutter test` runs in CI
-            - All previous features (Secure Notes, decoy/duress, batch, shred, auto-lock, password generator) included
+            ### What's New in v2.0.0
+            - 🧭 **New "Other" section** in Settings: About / Donate / Policies & Terms / Changelog now open dedicated screens
+            - ℹ️ **About screen**: app icon, name, version, website (vctcrypt.pages.dev), author, MIT license
+            - 💚 **Donate screen**: bundled Alipay QR code - "VCTCrypt 免费开源无广告，捐赠以支持开发"
+            - 📜 **Policies & Terms**: privacy policy + terms of use (tabbed)
+            - 📝 **Changelog screen**: full version history
+            - 🔤 **Bundled Noto Sans SC font**: fixes inconsistent Chinese glyph sizes on Windows (no more OS font fallback mismatch); consistent rendering on every platform
+            - All previous features (ML-KEM-768 recipient keys, Secure Notes, decoy/duress, batch, shred, auto-lock, password generator) included
 
             100% offline. No analytics, no ads, no network code - keys never leave your device.
 
