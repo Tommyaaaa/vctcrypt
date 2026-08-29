@@ -1003,7 +1003,8 @@ Future<EncryptResult> encryptFile(
 }
 
 /// Cheap sanity check of a freshly written V2 file (magic + real HMAC,
-/// ~10K PBKDF2 iterations) before we allow shredding the original.
+/// full-strength 600K PBKDF2 iterations, v2.1.0) before we allow
+/// shredding the original.
 Future<bool> _verifyWrittenV2(String outPath, String password) async {
   try {
     final data = _readFile(outPath);
