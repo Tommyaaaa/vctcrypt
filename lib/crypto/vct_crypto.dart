@@ -52,7 +52,13 @@ const _nonceSize = 12;
 const _tagSize = 16;
 const _hmacSize = 32;
 const _pbkdf2Iters = 600000;
-const _pbkdf2VIters = 10000;
+// v2.1.0 (P0 fix): the verification key now uses the SAME full iteration
+// count as the encryption keys. Before, it used 10k, letting an offline
+// attacker test a candidate password 60x cheaper by only checking the
+// header HMAC. Files written before 2.1.0 used a 10k verification key,
+// so every verify/decrypt path falls back to the legacy count below.
+const _pbkdf2VIters = 600000;
+const _pbkdf2VItersLegacy = 10000;
 const _maxFname = 512;
 
 // ---- V2 layout offsets ----
@@ -163,6 +169,20 @@ Future<_Keys> _deriveKeys(
   final k2 = await _pbkdf2('$password::2', salt, _pbkdf2Iters, 32);
   final k3 = await _pbkdf2('$password::3', salt, _pbkdf2Iters, 32);
   return _Keys(k1, k2, k3, vk);
+}
+
+/// Derive only the three body keys (no verification key). Used by the
+/// V1/V2 decrypt path: the password was already verified by
+/// _verifyPartitionHmac, so re-deriving the vk would be wasted work.
+/// (v2.1.0 - keeps decrypt cost at 3x full-strength iterations.)
+Future<_Keys> _deriveBodyKeys(
+  String password,
+  List<int> salt,
+) async {
+  final k1 = await _pbkdf2('$password::1', salt, _pbkdf2Iters, 32);
+  final k2 = await _pbkdf2('$password::2', salt, _pbkdf2Iters, 32);
+  final k3 = await _pbkdf2('$password::3', salt, _pbkdf2Iters, 32);
+  return _Keys(k1, k2, k3, const []);
 }
 
 // ---- AES-GCM wrappers ----
@@ -686,6 +706,9 @@ bool _constantTimeEq(List<int> a, List<int> b) {
 }
 
 /// Verify a partition HMAC: HMAC(PBKDF2(password::V, salt), data)
+/// v2.1.0: verifies with the full iteration count first (closes the cheap
+/// 10k offline-brute-force shortcut), then falls back to the legacy 10k
+/// count so files written before 2.1.0 still open.
 Future<bool> _verifyPartitionHmac(
   String password,
   List<int> salt,
@@ -694,17 +717,25 @@ Future<bool> _verifyPartitionHmac(
   List<int> n3,
   List<int> storedHmac,
 ) async {
-  final vk = await _pbkdf2('$password::V', salt, _pbkdf2VIters, 32);
   final hData = BytesBuilder()
     ..add(salt)
     ..add(n1)
     ..add(n2)
     ..add(n3);
-  final computed = await _hmacSha256(vk, hData.toBytes());
-  return _constantTimeEq(computed, storedHmac);
+  final hb = hData.toBytes();
+
+  final vk = await _pbkdf2('$password::V', salt, _pbkdf2VIters, 32);
+  final computed = await _hmacSha256(vk, hb);
+  if (_constantTimeEq(computed, storedHmac)) return true;
+
+  final legacyVk =
+      await _pbkdf2('$password::V', salt, _pbkdf2VItersLegacy, 32);
+  final legacyComputed = await _hmacSha256(legacyVk, hb);
+  return _constantTimeEq(legacyComputed, storedHmac);
 }
 
 /// Verify the duress HMAC: HMAC(PBKDF2(duressPassword::V, xsalt), xsalt)
+/// v2.1.0: full iteration count first, legacy 10k fallback for old files.
 Future<bool> _verifyDuressHmac(
   String password,
   List<int> xsalt,
@@ -712,7 +743,12 @@ Future<bool> _verifyDuressHmac(
 ) async {
   final vk = await _pbkdf2('$password::V', xsalt, _pbkdf2VIters, 32);
   final computed = await _hmacSha256(vk, xsalt);
-  return _constantTimeEq(computed, storedHmac);
+  if (_constantTimeEq(computed, storedHmac)) return true;
+
+  final legacyVk =
+      await _pbkdf2('$password::V', xsalt, _pbkdf2VItersLegacy, 32);
+  final legacyComputed = await _hmacSha256(legacyVk, xsalt);
+  return _constantTimeEq(legacyComputed, storedHmac);
 }
 
 /// Write decrypted bytes to a user-visible location.
@@ -1464,7 +1500,7 @@ Future<DecryptResult> _decryptV2(
   if (realOk) {
     onProgress?.call('VERIFIED');
     onProgress?.call('DECRYPTING');
-    final keys = await _deriveKeys(password, realSalt);
+    final keys = await _deriveBodyKeys(password, realSalt);
     final internal = await _decryptBody(keys, realN1, realN2, realN3, realCt, realTag);
     if (!internal.success) {
       return DecryptResult(success: false, error: internal.error);
@@ -1476,7 +1512,7 @@ Future<DecryptResult> _decryptV2(
   if (decoyOk) {
     onProgress?.call('VERIFIED');
     onProgress?.call('DECRYPTING');
-    final keys = await _deriveKeys(password, decoySalt);
+    final keys = await _deriveBodyKeys(password, decoySalt);
     final internal =
         await _decryptBody(keys, decoyN1, decoyN2, decoyN3, decoyCt, decoyTag);
     if (!internal.success) {
@@ -1542,21 +1578,32 @@ Future<DecryptResult> _decryptV1(
 
   onProgress?.call('VERIFYING');
 
+  // v2.1.0 (P0 fix): verify at full iteration count, then fall back to
+  // the legacy 10k count so files written before 2.1.0 still open.
   final vk = await _pbkdf2('$password::V', salt, _pbkdf2VIters, 32);
   final hData = BytesBuilder()
     ..add(salt)
     ..add(n1)
     ..add(n2)
     ..add(n3);
-  final computedHmac = await _hmacSha256(vk, hData.toBytes());
-  if (!_constantTimeEq(computedHmac, storedHmac)) {
+  final hb = hData.toBytes();
+  var vkOk = _constantTimeEq(
+    await _hmacSha256(vk, hb),
+    storedHmac,
+  );
+  if (!vkOk) {
+    final legacyVk =
+        await _pbkdf2('$password::V', salt, _pbkdf2VItersLegacy, 32);
+    vkOk = _constantTimeEq(await _hmacSha256(legacyVk, hb), storedHmac);
+  }
+  if (!vkOk) {
     return DecryptResult(success: false, error: 'WRONG_PASSWORD');
   }
 
   onProgress?.call('VERIFIED');
   onProgress?.call('DECRYPTING');
 
-  final keys = await _deriveKeys(password, salt);
+  final keys = await _deriveBodyKeys(password, salt);
   final internal = await _decryptBody(keys, n1, n2, n3, l3Ct, t3);
   if (!internal.success) {
     return DecryptResult(success: false, error: internal.error);

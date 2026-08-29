@@ -6,6 +6,7 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 
 ## Features
 
+- **Verification-key hardening** (v2.1.0): the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, closing a 60x cheaper offline brute-force shortcut; files written by older versions remain fully compatible via automatic legacy fallback
 - **Triple AES-256-GCM** (`VCT-Crypt`): three independent key layers, PBKDF2-SHA256 with 600,000 iterations
 - **Recipient keys / ML-KEM-768** (v1.6.0): optional post-quantum encryption (NIST FIPS 203). Generate a key pair on the Keys tab, encrypt to someone's `.vctpub` public key, open files with your `.vctkey` private key. The password becomes optional - dual-channel or key-only files
 - **Decoy partition** (v1.1.0): a second password reveals an innocent decoy file instead of the real one

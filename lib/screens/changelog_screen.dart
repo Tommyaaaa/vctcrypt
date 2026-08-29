@@ -107,6 +107,11 @@ List<_Entry> _entries(AppStrings s) {
   final en = s.lang == AppLanguage.english;
   if (!en) {
     return [
+      const _Entry('2.1.0 Beta', [
+        '安全加固（P0）：口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，封堵离线爆破「便宜 60 倍」的捷径',
+        '旧版本文件（1.x / 2.0.0）完整兼容，自动回退到旧校验方式',
+        '解密流程不再重复派生校验密钥，速度损失降到最低',
+      ]),
       const _Entry('2.0.0', [
         '全新「其它」板块：关于（图标、官网、作者、协议）、捐赠（支付宝收款码）、政策与条款（隐私政策与使用条款）、更新日志',
         '仓库新增 MIT 开源协议（LICENSE）',
@@ -156,6 +161,11 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry('2.1.0 Beta', [
+      'Security hardening (P0): the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, closing the 60x cheaper offline brute-force shortcut',
+      'Files created by older versions (1.x / 2.0.0) remain fully compatible via automatic legacy fallback',
+      'Decryption no longer re-derives the verification key, keeping the speed cost minimal',
+    ]),
     const _Entry('2.0.0', [
       'New "Other" section: About (icon, website, author, license), Donate (Alipay QR), Policies & Terms (privacy policy and terms of use), Changelog',
       'MIT license (LICENSE) added to the repository',

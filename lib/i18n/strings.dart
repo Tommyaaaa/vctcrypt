@@ -18,7 +18,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v2.0.0';
+  String get appVersion => 'v2.1.0 Beta';
   String get guiVersion => lang == AppLanguage.english
       ? '[GUI Version]'
       : '[图形界面版]';
@@ -27,8 +27,8 @@ class AppStrings {
       ? 'Algorithm: VCT-Crypt (AES-256 x3 + ML-KEM-768)'
       : '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)';
   String get whatsNew => lang == AppLanguage.english
-      ? 'New in v2.0.0: a major milestone - the new "Other" section (About / Donate / Policies & Terms / Changelog), the MIT license, and the Alipay donation QR code'
-      : 'v2.0.0 大版本更新：全新「其它」板块（关于 / 捐赠 / 政策与条款 / 更新日志）、MIT 开源协议、支付宝捐赠收款码';
+      ? 'New in v2.1.0 (security hardening): the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, closing a 60x cheaper offline brute-force shortcut; older files remain fully supported'
+      : 'v2.1.0 安全加固：口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，封堵离线爆破被砍 60 倍的捷径；旧版本文件完整兼容';
 
   /// v1.4.0: share / save button label (mobile result cards).
   String get shareBtn => lang == AppLanguage.english
