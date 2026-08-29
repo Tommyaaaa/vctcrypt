@@ -505,6 +505,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: VCTCrypt ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
           body: |
             ## VCTCrypt ${{ github.ref_name }}
 
@@ -517,13 +518,10 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
-            ### What's New in v2.0.0
-            - 🧭 **New "Other" section** in Settings: About / Donate / Policies & Terms / Changelog now open dedicated screens
-            - ℹ️ **About screen**: app icon, name, version, website (vctcrypt.pages.dev), author, MIT license
-            - 💚 **Donate screen**: bundled Alipay QR code - "VCTCrypt 免费开源无广告，捐赠以支持开发"
-            - 📜 **Policies & Terms**: privacy policy + terms of use (tabbed)
-            - 📝 **Changelog screen**: full version history
-            - 🔤 **Bundled Noto Sans SC font**: fixes inconsistent Chinese glyph sizes on Windows (no more OS font fallback mismatch); consistent rendering on every platform
+            ### What's New in v2.1.0 Beta
+            - 🔒 **Security hardening (P0)**: the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, closing the 60x cheaper offline brute-force shortcut
+            - ♻️ **Backward compatible**: files created by older versions (1.x / 2.0.0) open unchanged via automatic legacy fallback
+            - ⚡ **Faster decrypt**: no longer re-derives the verification key, keeping the speed cost minimal
             - All previous features (ML-KEM-768 recipient keys, Secure Notes, decoy/duress, batch, shred, auto-lock, password generator) included
 
             100% offline. No analytics, no ads, no network code - keys never leave your device.
