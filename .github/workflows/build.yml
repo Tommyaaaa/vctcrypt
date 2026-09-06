@@ -120,6 +120,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Patch cryptography_flutter for AGP 8 (namespace + SDK 35)
+        run: python3 scripts/patch_crypto_plugin.py
+
       - name: Generate app icon (shield on white)
         run: dart run flutter_launcher_icons -f icon_android.yaml
 
