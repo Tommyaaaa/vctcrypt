@@ -149,13 +149,13 @@ class _OnboardingDialogState extends State<_OnboardingDialog> {
         title: en ? 'Everyday tools' : '日常工具',
         bullets: en
             ? [
-                'Password generator with live entropy estimation.',
+                'Password generator with live strength estimation.',
                 'Batch-encrypt many files in one run.',
                 'Inspect .VCT metadata without any password.',
                 'Local usage statistics - numbers only, never names.',
               ]
             : [
-                '密码生成器，实时估算熵值。',
+                '密码生成器，实时估算密码强度。',
                 '批量加密：一次处理多个文件。',
                 '无需密码即可查看 .VCT 文件元数据。',
                 '本地使用统计，只记数字，不记文件名。',

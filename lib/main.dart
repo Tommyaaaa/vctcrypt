@@ -4,6 +4,8 @@
 
 import 'dart:async';
 
+import 'package:cryptography/cryptography.dart';
+import 'package:cryptography_flutter/cryptography_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +15,14 @@ import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // v2.1.0: platform crypto acceleration - native PBKDF2 + AES-GCM on
+  // Android, native AES-GCM on iOS/macOS, background isolates on
+  // desktop. Same algorithms, same outputs (the test suite proves it),
+  // but key derivation and bulk encryption no longer run on the UI
+  // thread.
+  Cryptography.instance = FlutterCryptography.defaultInstance;
+
   final prefs = await SharedPreferences.getInstance();
 
   final langCode = prefs.getString('lang') ?? 'en';
@@ -241,65 +251,71 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
       brightness: Brightness.dark,
     );
 
+    // v2.1.0 typography: Inter (open alternative to Google Sans) for
+    // Latin + Noto Sans SC fallback for Chinese, with one-step-bolder
+    // defaults so UI text reads solid rather than thin. The base themes
+    // are resolved first so the platform text styles are correct, then
+    // the weights are bumped in a copy.
+    final lightTheme = ThemeData(
+      useMaterial3: true,
+      colorScheme: lightScheme,
+      fontFamily: 'Inter',
+      fontFamilyFallback: const ['Noto Sans SC'],
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        backgroundColor: lightScheme.surface,
+        foregroundColor: lightScheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 2,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+      ),
+    );
+    final darkTheme = ThemeData(
+      useMaterial3: true,
+      colorScheme: darkScheme,
+      fontFamily: 'Inter',
+      fontFamilyFallback: const ['Noto Sans SC'],
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        backgroundColor: darkScheme.surface,
+        foregroundColor: darkScheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 2,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+      ),
+    );
+
     return MaterialApp(
       title: strings.appName,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: lightScheme,
-        // v2.0.0: bundle Noto Sans SC so Chinese renders consistently
-        // on every Windows install (no OS font fallback mismatch).
-        fontFamily: 'Noto Sans SC',
-        appBarTheme: AppBarTheme(
-          centerTitle: false,
-          backgroundColor: lightScheme.surface,
-          foregroundColor: lightScheme.onSurface,
-          elevation: 0,
-          scrolledUnderElevation: 2,
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          filled: true,
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: darkScheme,
-        // v2.0.0: bundle Noto Sans SC so Chinese renders consistently
-        // on every Windows install (no OS font fallback mismatch).
-        fontFamily: 'Noto Sans SC',
-        appBarTheme: AppBarTheme(
-          centerTitle: false,
-          backgroundColor: darkScheme.surface,
-          foregroundColor: darkScheme.onSurface,
-          elevation: 0,
-          scrolledUnderElevation: 2,
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          filled: true,
-        ),
-      ),
+      theme: lightTheme.copyWith(textTheme: _bolderText(lightTheme.textTheme)),
+      darkTheme: darkTheme.copyWith(textTheme: _bolderText(darkTheme.textTheme)),
       themeMode: themeMode,
       // Pointer activity anywhere in the app postpones the auto-lock.
       home: Listener(
@@ -309,6 +325,38 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
         // propagate down to the screens immediately.
         child: HomeScreen(),
       ),
+    );
+  }
+
+  /// v2.1.0 typography: bump every Material text role one weight step
+  /// (400→500, 500→600, 600→700) so the UI reads solid rather than thin
+  /// with Inter, while the M3 hierarchy (headline vs body vs label)
+  /// stays intact. Already-bold styles (700+) are left alone.
+  TextTheme _bolderText(TextTheme base) {
+    TextStyle? bump(TextStyle? style) {
+      if (style == null) return null;
+      const maxIndex = 6; // FontWeight.w700
+      final current = style.fontWeight?.index ?? FontWeight.w400.index;
+      final next = current >= maxIndex ? current : current + 1;
+      return style.copyWith(fontWeight: FontWeight.values[next]);
+    }
+
+    return base.copyWith(
+      displayLarge: bump(base.displayLarge),
+      displayMedium: bump(base.displayMedium),
+      displaySmall: bump(base.displaySmall),
+      headlineLarge: bump(base.headlineLarge),
+      headlineMedium: bump(base.headlineMedium),
+      headlineSmall: bump(base.headlineSmall),
+      titleLarge: bump(base.titleLarge),
+      titleMedium: bump(base.titleMedium),
+      titleSmall: bump(base.titleSmall),
+      bodyLarge: bump(base.bodyLarge),
+      bodyMedium: bump(base.bodyMedium),
+      bodySmall: bump(base.bodySmall),
+      labelLarge: bump(base.labelLarge),
+      labelMedium: bump(base.labelMedium),
+      labelSmall: bump(base.labelSmall),
     );
   }
 }

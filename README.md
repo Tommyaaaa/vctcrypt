@@ -6,7 +6,9 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 
 ## Features
 
-- **Verification-key hardening** (v2.1.0): the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, closing a 60x cheaper offline brute-force shortcut; files written by older versions remain fully compatible via automatic legacy fallback
+- **Verification-key hardening** (v2.1.0): the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves; files written by older versions remain fully compatible via automatic legacy fallback
+- **Faster crypto on mobile** (v2.1.0): platform-native acceleration — Android gets native PBKDF2 and AES-GCM, iOS/macOS get native AES-GCM, desktop moves crypto off the UI thread. Same algorithms, same output
+- **Bolder typography** (v2.1.0): Inter for Latin + Noto Sans SC for Chinese, one weight step bolder across the UI
 - **Triple AES-256-GCM** (`VCT-Crypt`): three independent key layers, PBKDF2-SHA256 with 600,000 iterations
 - **Recipient keys / ML-KEM-768** (v1.6.0): optional post-quantum encryption (NIST FIPS 203). Generate a key pair on the Keys tab, encrypt to someone's `.vctpub` public key, open files with your `.vctkey` private key. The password becomes optional - dual-channel or key-only files
 - **Decoy partition** (v1.1.0): a second password reveals an innocent decoy file instead of the real one
@@ -14,7 +16,7 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 - **Deniable by design**: every V2 file always contains all three slots — nobody can prove a decoy or duress password exists
 - **Secure shred** (v1.1.0): overwrite the original with random data after verified encryption
 - **Auto-lock** (v1.1.0): clear entered passwords after inactivity (1/5/10/30 min)
-- **Password generator** (v1.2.0): CSPRNG-based, per-class guarantees, live entropy estimation
+- **Password generator** (v1.2.0): CSPRNG-based, per-class guarantees, live strength estimation
 - **File inspector** (v1.2.0): read .VCT header metadata without any password (format, sizes, algorithm) — never leaks slot usage
 - **Usage statistics** (v1.2.0): local-only counters (files, bytes, decoys, duress triggers); no names, no paths, no telemetry
 - **Panic lock** (v1.2.0): one tap wipes every password field in the app
@@ -24,7 +26,7 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 - **Personalization** (v1.3.0): 8 accent colors, choice of start page, bilingual UI
 - **iOS Files app fix + share sheet** (v1.4.0): outputs now use atomic writes (temp file + rename) so iOS's Files app reliably shows them in *On My iPhone → VCTCrypt*; a share/save button on the result cards stores files anywhere via the system sheet
 - **App icon & name** (v1.4.0): Material Design shield, black on white; display name unified to VCTCrypt on all platforms
-- **Other section** (v2.0.0): About (icon, name, website, author, MIT license), Donate (bundled Alipay QR — "free, open-source, ad-free; donate to support development"), Policies & Terms (offline privacy policy and terms of use), and a full Changelog — all bundled, zero network
+- **Other section** (v2.0.0): About (icon, name, website, author, AGPL-3.0 license), Donate (bundled Alipay QR — "free, open-source, ad-free; donate to support development"), Policies & Terms (offline privacy policy and terms of use), and a full Changelog — all bundled, zero network
 - **Bilingual UI**: English / 简体中文, light / dark / system themes
 - **Desktop & mobile layouts**: NavigationRail on wide screens, NavigationBar on phones; drag-and-drop on desktop
 
@@ -59,13 +61,19 @@ flutter run          # or: flutter run -d windows / macos / linux / chrome
 
 ## Version history
 
+- **2.1.0** — Verification-key hardening (600K PBKDF2, legacy files auto-supported) · platform-native crypto acceleration on mobile · bolder Inter + Noto Sans SC typography · license corrected to AGPL-3.0
+- **2.0.0** — New "Other" section (About / Donate / Policies & Terms / Changelog) · LICENSE file added · feature-set milestone
 - **1.6.0** — Optional post-quantum encryption: ML-KEM-768 (FIPS 203) recipient keys. New Keys tab (generate/import/share/delete `.vctpub` / `.vctkey`), encrypt to a public key with optional password (dual-channel or key-only V3 files), decrypt with your private key. Cross-validated against Go's `crypto/mlkem` with checked-in KAT vectors
 - **1.5.0** — Secure Notes · password strength meter · desktop shortcuts · full-width share button
 - **1.4.0** — iOS Files app visibility fix (atomic writes) · share/save sheet on mobile · new app icon (black shield on white) · display name VCTCrypt
 - **1.3.0** — Onboarding guide & help center · batch encryption · clipboard auto-clear · accent colors · start page preference
-- **1.2.0** — Password generator with entropy meter · passwordless .VCT file inspector · local usage statistics · panic lock
+- **1.2.0** — Password generator with strength meter · passwordless .VCT file inspector · local usage statistics · panic lock
 - **1.1.0** — Decoy partition · duress password · secure shred · auto-lock · V2 file format
 - **1.0.x** — Flutter rewrite (Win32 GUI → Material 3), five-platform CI, V1/CLI format compatibility
+
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see [LICENSE](LICENSE). You are free to use, study, modify and redistribute it; modified versions must be released under the same license, and if you offer it as a network service you must make the source code available to those users.
 
 ## Author
 

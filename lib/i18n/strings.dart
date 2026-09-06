@@ -18,7 +18,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v2.1.0 Beta';
+  String get appVersion => 'v2.1.0';
   String get guiVersion => lang == AppLanguage.english
       ? '[GUI Version]'
       : '[图形界面版]';
@@ -27,8 +27,8 @@ class AppStrings {
       ? 'Algorithm: VCT-Crypt (AES-256 x3 + ML-KEM-768)'
       : '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)';
   String get whatsNew => lang == AppLanguage.english
-      ? 'New in v2.1.0 (security hardening): the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, closing a 60x cheaper offline brute-force shortcut; older files remain fully supported'
-      : 'v2.1.0 安全加固：口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，封堵离线爆破被砍 60 倍的捷径；旧版本文件完整兼容';
+      ? 'New in v2.1.0: faster encryption with platform-native crypto on mobile; the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves; bolder, clearer typography; license changed to AGPL-3.0. Older files remain fully supported'
+      : 'v2.1.0 正式版新特性：移动端启用平台原生加密，速度更快；口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，离线猜测密码不再有捷径；界面字体更粗、更易读；开源协议改为 AGPL-3.0。旧版本文件完整兼容';
 
   /// v1.4.0: share / save button label (mobile result cards).
   String get shareBtn => lang == AppLanguage.english
@@ -495,8 +495,8 @@ class AppStrings {
       ? 'License'
       : '协议';
   String get aboutLicenseValue => lang == AppLanguage.english
-      ? 'MIT License - free, open source, no ads'
-      : 'MIT 开源协议——免费、开源、无广告';
+      ? 'AGPL-3.0 License - free, open source, no ads'
+      : 'AGPL-3.0 开源协议——免费、开源、无广告';
   String get aboutLocalNote => lang == AppLanguage.english
       ? 'VCTCrypt runs fully offline: no telemetry, no analytics, no ads. All encryption and decryption happens 100% on your device.'
       : 'VCTCrypt 完全离线运行：无遥测、无分析、无广告。所有加解密运算 100% 在你的设备上完成。';
@@ -590,8 +590,8 @@ class AppStrings {
       ? 'Regenerate'
       : '重新生成';
   String genEntropy(int bits) => lang == AppLanguage.english
-      ? '~$bits bits'
-      : '约 $bits 位熵';
+      ? '~$bits bits of strength'
+      : '密码强度约 $bits 位';
   String get genQualityExcellent => lang == AppLanguage.english
       ? 'Excellent'
       : '极强';

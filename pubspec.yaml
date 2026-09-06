@@ -1,7 +1,7 @@
 name: vctcrypt
 description: VCTCrypt - VCT File Encryption Tool with triple AES-256-GCM encryption.
 publish_to: "none"
-version: 2.1.0+9
+version: 2.1.0+10
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -11,6 +11,14 @@ dependencies:
   flutter:
     sdk: flutter
   cryptography: ^2.7.0
+  # v2.1.0: platform crypto acceleration. Android gets native PBKDF2
+  # (javax.crypto) and AES-GCM; iOS/macOS get native AES-GCM; every other
+  # platform moves crypto off the UI thread. Same algorithms, same
+  # output - verified by the same test suite.
+  # Pinned to 2.3.2 exactly: 2.3.3+ depends on @internal being re-exported
+  # by package:flutter/foundation.dart, which only Flutter 3.27+ does;
+  # CI and local builds use Flutter 3.24.
+  cryptography_flutter: 2.3.2
   file_picker: ^8.0.0
   shared_preferences: ^2.3.0
   desktop_drop: ^0.4.4
@@ -44,7 +52,21 @@ flutter:
   # OFL). Bundling a CJK font fixes inconsistent Chinese glyph
   # rendering on Windows, where Flutter would otherwise fall back to
   # whatever fonts the OS happens to have (YaHei / SimSun / ...).
+  # v2.1.0: Inter (Google Fonts / OFL, static instances at opsz 14) is
+  # the primary Latin typeface - an open alternative to Google Sans -
+  # with a solid, bold-friendly look; Noto Sans SC remains the CJK
+  # fallback. Bolder UI weights come from the theme.
   fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-400.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-500.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-600.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-700.ttf
+          weight: 700
     - family: Noto Sans SC
       fonts:
         - asset: assets/fonts/NotoSansSC.ttf

@@ -107,14 +107,16 @@ List<_Entry> _entries(AppStrings s) {
   final en = s.lang == AppLanguage.english;
   if (!en) {
     return [
-      const _Entry('2.1.0 Beta', [
-        '安全加固（P0）：口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，封堵离线爆破「便宜 60 倍」的捷径',
+      const _Entry('2.1.0', [
+        '安全加固：口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，离线猜测密码不再有捷径',
+        '加密提速：移动端启用平台原生加密，密钥派生与加解密不再占用界面线程',
+        '界面字体更粗、更易读（Inter + 思源黑体中英文混排）',
+        '开源协议由 MIT 更正为 AGPL-3.0',
         '旧版本文件（1.x / 2.0.0）完整兼容，自动回退到旧校验方式',
-        '解密流程不再重复派生校验密钥，速度损失降到最低',
-      ]),
+      ], major: true),
       const _Entry('2.0.0', [
         '全新「其它」板块：关于（图标、官网、作者、协议）、捐赠（支付宝收款码）、政策与条款（隐私政策与使用条款）、更新日志',
-        '仓库新增 MIT 开源协议（LICENSE）',
+        '仓库新增开源协议（LICENSE）',
         '大版本里程碑：功能体系趋于完整，主版本号升至 2.0',
       ], major: true),
       const _Entry('1.6.0', [
@@ -126,7 +128,7 @@ List<_Entry> _entries(AppStrings s) {
       ]),
       const _Entry('1.5.0', [
         '安全笔记：加密文本生成标准 .VCT 文件，明文不落盘',
-        '密码强度指示器（熵估算）',
+        '密码强度指示器',
         '桌面快捷键 Ctrl+1..5 切换页面、Ctrl+L 紧急锁定',
         '移动端结果卡片全宽分享按钮',
       ]),
@@ -142,7 +144,7 @@ List<_Entry> _entries(AppStrings s) {
         '个性化：8 种强调色、起始页偏好',
       ]),
       const _Entry('1.2.0', [
-        '密码生成器（CSPRNG + 熵估算）',
+        '密码生成器（CSPRNG + 密码强度估算）',
         '.VCT 文件检查器：无需密码查看头信息',
         '本地使用统计（仅计数，无文件名 / 路径）',
         '紧急锁定：一键清空所有密码输入框',
@@ -161,14 +163,16 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
-    const _Entry('2.1.0 Beta', [
-      'Security hardening (P0): the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, closing the 60x cheaper offline brute-force shortcut',
+    const _Entry('2.1.0', [
+      'Security hardening: the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves',
+      'Faster encryption: platform-native crypto on mobile moves key derivation and bulk encryption off the UI thread',
+      'Bolder, clearer typography (Inter + Noto Sans SC mixed Latin/CJK text)',
+      'License corrected from MIT to AGPL-3.0',
       'Files created by older versions (1.x / 2.0.0) remain fully compatible via automatic legacy fallback',
-      'Decryption no longer re-derives the verification key, keeping the speed cost minimal',
-    ]),
+    ], major: true),
     const _Entry('2.0.0', [
       'New "Other" section: About (icon, website, author, license), Donate (Alipay QR), Policies & Terms (privacy policy and terms of use), Changelog',
-      'MIT license (LICENSE) added to the repository',
+      'License (LICENSE) added to the repository',
       'Major milestone: the feature set is complete; version bumped to 2.0',
     ], major: true),
     const _Entry('1.6.0', [
@@ -180,7 +184,7 @@ List<_Entry> _entries(AppStrings s) {
     ]),
     const _Entry('1.5.0', [
       'Secure Notes: text encrypted into a standard .VCT file, plaintext never touches disk',
-      'Password strength meter with entropy estimation',
+      'Password strength meter',
       'Desktop shortcuts Ctrl+1..5 (tabs) and Ctrl+L (panic lock)',
       'Full-width share button on mobile result cards',
     ]),
@@ -196,7 +200,7 @@ List<_Entry> _entries(AppStrings s) {
       'Personalization: 8 accent colors, start page preference',
     ]),
     const _Entry('1.2.0', [
-      'Password generator (CSPRNG + entropy estimation)',
+      'Password generator (CSPRNG + strength estimation)',
       'Passwordless .VCT file inspector',
       'Local usage statistics (counts only, no names / paths)',
       'Panic lock: wipe every password field at once',

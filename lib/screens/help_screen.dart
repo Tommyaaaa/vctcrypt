@@ -109,9 +109,9 @@ class HelpScreen extends StatelessWidget {
         Icons.speed,
         en ? 'Password strength meter' : '密码强度指示条',
         en
-            ? 'Every password field now shows a live strength meter based on entropy (character pool × length), not just length.\n\n'
+            ? 'Every password field now shows a live strength meter that combines the character pool and the length, not just the length.\n\n'
                 'Rough guide: Weak < 40 bits, Fair < 60, Good < 80, Strong 80+. For files that matter, aim for Good or better - or just use the generator.'
-            : '所有密码框下方现在都有实时强度指示条，基于熵值（字符池 × 长度）评估，而不只是看长度。\n\n'
+            : '所有密码框下方现在都有实时强度指示条，综合字符池大小与长度评估，而不只看长度。\n\n'
                 '大致标准：弱 < 40 位，一般 < 60 位，良好 < 80 位，强 80 位以上。重要文件建议达到“良好”以上，或直接使用密码生成器。',
       ),
       _HelpEntry(
@@ -172,12 +172,12 @@ class HelpScreen extends StatelessWidget {
         en ? 'Password generator' : '密码生成器',
         en
             ? 'The dice button next to each password field opens the generator: 8-64 characters, four character classes, optional exclusion of look-alike characters (0O1lI).\n\n'
-                'The entropy meter estimates strength - aim for "Strong" (90+ bits) for anything important.\n\n'
+                'The strength meter estimates how hard the password is to guess - aim for "Strong" (90+ bits) for anything important.\n\n'
                 'Copied passwords can be wiped from the clipboard automatically (Settings → Personalization → Clipboard auto-clear).\n\n'
                 'How the wipe works: the countdown timer runs inside the VCTCrypt process. It is honest engineering, so know its limits - if you force-quit the app or the system kills it before the timer fires, the wipe never happens and the clipboard keeps the password until something else overwrites it.\n\n'
                 'Exposure reality check: on Android 10+ apps cannot read the clipboard while in the background, so only apps you deliberately open could see it; on iOS any app you open can read it, but iOS 14+ shows a banner whenever an app reads the pasteboard. Safest habit: paste right away, then open VCTCrypt and copy any single character (or use panic lock) to overwrite it.'
             : '密码框旁的骰子按钮打开生成器：8-64 位长度、四类字符、可选排除易混淆字符（0O1lI）。\n\n'
-                '熵值估算条会显示强度——重要文件建议达到“强”（90 位以上）。\n\n'
+                '强度估算条会显示密码被猜中的难度——重要文件建议达到“强”（90 位以上）。\n\n'
                 '复制的密码可自动从剪贴板清除（设置 → 个性化 → 剪贴板自动清除）。\n\n'
                 '清除的原理：倒计时定时器运行在 VCTCrypt 进程内。这是诚实的工程实现，所以要知道它的边界——如果你在定时器触发前强杀应用或系统回收了进程，清除不会发生，剪贴板会一直保留密码，直到被其他内容覆盖。\n\n'
                 '实际风险评估：Android 10+ 上应用在后台无法读取剪贴板，只有你主动打开的 App 才可能看到；iOS 上任何打开的 App 都能读，但 iOS 14+ 会在 App 读取剪贴板时弹横幅提示。最安全的习惯：复制后立即粘贴使用，然后回到 VCTCrypt 随便复制一个字符（或用紧急锁定）把它覆盖掉。',

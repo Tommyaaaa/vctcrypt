@@ -518,16 +518,18 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
-            ### What's New in v2.1.0 Beta
-            - 🔒 **Security hardening (P0)**: the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, closing the 60x cheaper offline brute-force shortcut
+            ### What's New in v2.1.0
+            - 🔒 **Security hardening**: the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves
+            - ⚡ **Faster encryption**: platform-native crypto acceleration — Android gets native PBKDF2 + AES-GCM, iOS/macOS get native AES-GCM, desktop moves crypto off the UI thread. Same algorithms, same output
+            - 🔤 **Bolder typography**: Inter for Latin + Noto Sans SC for Chinese, one weight step bolder across the UI
+            - 📄 **License**: corrected from MIT to AGPL-3.0
             - ♻️ **Backward compatible**: files created by older versions (1.x / 2.0.0) open unchanged via automatic legacy fallback
-            - ⚡ **Faster decrypt**: no longer re-derives the verification key, keeping the speed cost minimal
             - All previous features (ML-KEM-768 recipient keys, Secure Notes, decoy/duress, batch, shred, auto-lock, password generator) included
 
             100% offline. No analytics, no ads, no network code - keys never leave your device.
 
             ### Algorithm
-            VCT-Crypt v1.1: Triple AES-256-GCM + PBKDF2 (600K iterations), optional ML-KEM-768 (FIPS 203) hybrid envelope
+            VCT-Crypt v1.2: Triple AES-256-GCM + PBKDF2 (600K iterations), optional ML-KEM-768 (FIPS 203) hybrid envelope
 
             Author: Tommy
           files: |

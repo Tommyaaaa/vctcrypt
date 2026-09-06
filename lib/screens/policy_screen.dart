@@ -144,7 +144,7 @@ List<_Section> _termsSections(AppStrings s) {
         '使用 VCTCrypt 即表示你同意本条款。若不同意，请停止使用并删除本应用。',
       ]),
       _Section('免费开源', [
-        'VCTCrypt 以 MIT 开源协议发布，免费、无广告。你可以自由使用、修改和分发，但需保留版权与许可声明。详见仓库根目录的 LICENSE 文件。',
+        'VCTCrypt 以 AGPL-3.0 开源协议发布，免费、无广告。你可以自由使用、研究、修改和分发，但衍生作品须以相同协议开源；若将其作为网络服务提供，也须向使用者提供源代码。详见仓库根目录的 LICENSE 文件。',
       ]),
       _Section('无担保与免责', [
         '本软件按“现状”提供，不提供任何明示或默示的担保，包括对适商性、特定用途适用性和非侵权的担保。',
@@ -164,7 +164,7 @@ List<_Section> _termsSections(AppStrings s) {
       'By using VCTCrypt you agree to these terms. If you do not agree, stop using and delete the app.',
     ]),
     _Section('Free and open source', [
-      'VCTCrypt is released under the MIT license - free and ad-free. You may use, modify and redistribute it, provided the copyright and license notice are retained. See the LICENSE file in the repository root.',
+      'VCTCrypt is released under the AGPL-3.0 license - free and ad-free. You are free to use, study, modify and redistribute it; modified versions must be released under the same license, and if you offer it as a network service you must make the source code available to those users. See the LICENSE file in the repository root.',
     ]),
     _Section('No warranty; disclaimers', [
       'The software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement.',
