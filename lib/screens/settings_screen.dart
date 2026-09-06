@@ -43,39 +43,32 @@ class SettingsScreen extends StatelessWidget {
                   title: strings.languageSection,
                 ),
                 const SizedBox(height: 12),
-                SegmentedButton<AppLanguage>(
-                  segments: [
-                    ButtonSegment(
-                      value: AppLanguage.english,
-                      icon: const Text('EN'),
-                      label: Text('English'),
-                    ),
-                    ButtonSegment(
-                      value: AppLanguage.chinese,
-                      icon: const Text('中'),
-                      label: Text('中文'),
-                    ),
-                    // v2.2.1: French, German and Han-Nom (Chữ Nôm)
-                    ButtonSegment(
-                      value: AppLanguage.french,
-                      icon: const Text('FR'),
-                      label: Text('Français'),
-                    ),
-                    ButtonSegment(
-                      value: AppLanguage.german,
-                      icon: const Text('DE'),
-                      label: Text('Deutsch'),
-                    ),
-                    ButtonSegment(
-                      value: AppLanguage.hannom,
-                      icon: const Text('喃'),
-                      label: Text('漢喃文'),
-                    ),
-                  ],
-                  selected: {appState.lang},
-                  onSelectionChanged: (selected) {
-                    appState.changeLanguage(selected.first);
-                  },
+                // v2.2.5: vertical list - every language name reads in
+                // full horizontally (𡨸喃 included), no cramped pill row.
+                Card(
+                  margin: EdgeInsets.zero,
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      for (final lang in AppLanguage.values) ...[
+                        if (lang != AppLanguage.values.first)
+                          const Divider(height: 1, indent: 56),
+                        RadioListTile<AppLanguage>(
+                          value: lang,
+                          groupValue: appState.lang,
+                          onChanged: (value) =>
+                              appState.changeLanguage(value!),
+                          secondary: Text(
+                            lang.code.toUpperCase(),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          title: Text(lang.displayName),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 32),
 

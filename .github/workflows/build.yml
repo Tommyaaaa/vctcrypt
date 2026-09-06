@@ -521,6 +521,11 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
+            ### What's New in v2.2.5
+            - 🀄 **Genuine 𡸨喃 (Chữ Nôm)**: the Han-Nom UI was rewritten with Vietnamese grammar and word order (đã / không / của …), not Traditional Chinese
+            - 📋 **Vertical language picker**: the Settings language selector is now a vertical list, so every language name — 𡸨喃 included — reads in full horizontally
+            - ♻️ **Backward compatible**: files created by all older versions (1.x / 2.0.x / 2.1.0 / 2.2.1) open unchanged
+
             ### What's New in v2.2.1
             - 🌍 **Five UI languages**: English, 简体中文, Français, Deutsch and 漢喃文 (Han-Nom / Chữ Nôm), switchable in Settings
             - 🔤 **Tianheng font bundled**: TH-Feon (天珩全字庫) ships inside the app and renders Han-Nom and extended CJK glyphs (Unicode Ext B–F) that regular fonts lack

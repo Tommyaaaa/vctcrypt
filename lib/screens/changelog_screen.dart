@@ -107,6 +107,11 @@ List<_Entry> _entries(AppStrings s) {
   final en = s.lang == AppLanguage.english;
   if (!en) {
     return [
+      const _Entry('2.2.5', [
+        '汉喃文界面重写为真正的 𡨸喃（Chữ Nôm）：遵循越南语语法与词序（đã / không / của …），不再是繁体中文',
+        '语言选择改为纵向列表，语言名称（𡨸喃等）完整横排显示，不再挤在一排',
+        '旧版本文件（1.x / 2.0.x / 2.1.0 / 2.2.1）完整兼容',
+      ], major: true),
       const _Entry('2.2.1', [
         '新增法语、德语、汉喃文（Chữ Nôm）三语界面，共五种界面语言',
         '内置天珩全字库（TH-Feon），完整显示汉喃字与扩展 CJK 汉字（Ext B-F）',
@@ -169,6 +174,11 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry('2.2.5', [
+      'Han-Nom UI rewritten as genuine 𡨸喃 (Chữ Nôm): Vietnamese grammar and word order (đã / không / của …), not Traditional Chinese',
+      'Language picker is now a vertical list - every language name, 𡨸喃 included, reads in full horizontally',
+      'Files from all older versions (1.x / 2.0.x / 2.1.0 / 2.2.1) remain fully supported',
+    ], major: true),
     const _Entry('2.2.1', [
       'New UI languages: Français, Deutsch and Han-Nom (Chữ Nôm) - five UI languages in total',
       'Bundled Tianheng font (TH-Feon) renders Han-Nom and extended CJK glyphs (Ext B-F) completely',
