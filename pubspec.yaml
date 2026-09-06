@@ -1,7 +1,7 @@
 name: vctcrypt
 description: VCTCrypt - VCT File Encryption Tool with triple AES-256-GCM encryption.
 publish_to: "none"
-version: 2.1.0+10
+version: 2.2.1+11
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -52,21 +52,18 @@ flutter:
   # OFL). Bundling a CJK font fixes inconsistent Chinese glyph
   # rendering on Windows, where Flutter would otherwise fall back to
   # whatever fonts the OS happens to have (YaHei / SimSun / ...).
-  # v2.1.0: Inter (Google Fonts / OFL, static instances at opsz 14) is
-  # the primary Latin typeface - an open alternative to Google Sans -
-  # with a solid, bold-friendly look; Noto Sans SC remains the CJK
-  # fallback. Bolder UI weights come from the theme.
+  # v2.2.1: TH-Feon (天珩全字庫, ©沈天珩, freeware, cheonhyeong.com)
+  # is bundled as the supplementary CJK font: it covers Han-Nom
+  # (Chữ Nôm) and the extended Unicode CJK blocks (Ext B-F) that
+  # Noto Sans SC lacks, and it renders them in a solid, heavy style.
+  # TH-Feon intentionally contains no basic Latin or common Hanzi
+  # (it is a supplementary font by design), so Noto Sans SC remains
+  # the base font for English / 中文 / Français / Deutsch text; the
+  # theme bumps weights two steps so Chinese reads bolder.
   fonts:
-    - family: Inter
-      fonts:
-        - asset: assets/fonts/Inter-400.ttf
-          weight: 400
-        - asset: assets/fonts/Inter-500.ttf
-          weight: 500
-        - asset: assets/fonts/Inter-600.ttf
-          weight: 600
-        - asset: assets/fonts/Inter-700.ttf
-          weight: 700
     - family: Noto Sans SC
       fonts:
         - asset: assets/fonts/NotoSansSC.ttf
+    - family: TH-Feon
+      fonts:
+        - asset: assets/fonts/TH-Feon.ttf

@@ -6,9 +6,10 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 
 ## Features
 
+- **Five UI languages** (v2.2.1): English, 简体中文, Français, Deutsch and 漢喃文 (Han-Nom / Chữ Nôm) — switchable in Settings
+- **Tianheng font bundled** (v2.2.1): TH-Feon (天珩全字庫, freeware) ships inside the app and renders Han-Nom and extended CJK glyphs (Unicode Ext B–F) that regular fonts lack; Chinese text is bumped two weight steps bolder for a clearer display
 - **Verification-key hardening** (v2.1.0): the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves; files written by older versions remain fully compatible via automatic legacy fallback
 - **Faster crypto on mobile** (v2.1.0): platform-native acceleration — Android gets native PBKDF2 and AES-GCM, iOS/macOS get native AES-GCM, desktop moves crypto off the UI thread. Same algorithms, same output
-- **Bolder typography** (v2.1.0): Inter for Latin + Noto Sans SC for Chinese, one weight step bolder across the UI
 - **Triple AES-256-GCM** (`VCT-Crypt`): three independent key layers, PBKDF2-SHA256 with 600,000 iterations
 - **Recipient keys / ML-KEM-768** (v1.6.0): optional post-quantum encryption (NIST FIPS 203). Generate a key pair on the Keys tab, encrypt to someone's `.vctpub` public key, open files with your `.vctkey` private key. The password becomes optional - dual-channel or key-only files
 - **Decoy partition** (v1.1.0): a second password reveals an innocent decoy file instead of the real one
@@ -27,7 +28,7 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 - **iOS Files app fix + share sheet** (v1.4.0): outputs now use atomic writes (temp file + rename) so iOS's Files app reliably shows them in *On My iPhone → VCTCrypt*; a share/save button on the result cards stores files anywhere via the system sheet
 - **App icon & name** (v1.4.0): Material Design shield, black on white; display name unified to VCTCrypt on all platforms
 - **Other section** (v2.0.0): About (icon, name, website, author, AGPL-3.0 license), Donate (bundled Alipay QR — "free, open-source, ad-free; donate to support development"), Policies & Terms (offline privacy policy and terms of use), and a full Changelog — all bundled, zero network
-- **Bilingual UI**: English / 简体中文, light / dark / system themes
+- **Multilingual UI** (v2.2.1): English · 简体中文 · Français · Deutsch · 漢喃文, light / dark / system themes
 - **Desktop & mobile layouts**: NavigationRail on wide screens, NavigationBar on phones; drag-and-drop on desktop
 
 ## File format
@@ -61,7 +62,8 @@ flutter run          # or: flutter run -d windows / macos / linux / chrome
 
 ## Version history
 
-- **2.1.0** — Verification-key hardening (600K PBKDF2, legacy files auto-supported) · platform-native crypto acceleration on mobile · bolder Inter + Noto Sans SC typography · license corrected to AGPL-3.0
+- **2.2.1** — Five UI languages (English / 简体中文 / Français / Deutsch / 漢喃文) · bundled Tianheng font TH-Feon renders Han-Nom and extended CJK glyphs (Ext B–F) · Chinese text two weight steps bolder · fully backward compatible
+- **2.1.0** — Verification-key hardening (600K PBKDF2, legacy files auto-supported) · platform-native crypto acceleration on mobile · bolder typography · license corrected to AGPL-3.0
 - **2.0.0** — New "Other" section (About / Donate / Policies & Terms / Changelog) · LICENSE file added · feature-set milestone
 - **1.6.0** — Optional post-quantum encryption: ML-KEM-768 (FIPS 203) recipient keys. New Keys tab (generate/import/share/delete `.vctpub` / `.vctkey`), encrypt to a public key with optional password (dual-channel or key-only V3 files), decrypt with your private key. Cross-validated against Go's `crypto/mlkem` with checked-in KAT vectors
 - **1.5.0** — Secure Notes · password strength meter · desktop shortcuts · full-width share button

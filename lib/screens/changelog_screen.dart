@@ -107,6 +107,12 @@ List<_Entry> _entries(AppStrings s) {
   final en = s.lang == AppLanguage.english;
   if (!en) {
     return [
+      const _Entry('2.2.1', [
+        '新增法语、德语、汉喃文（Chữ Nôm）三语界面，共五种界面语言',
+        '内置天珩全字库（TH-Feon），完整显示汉喃字与扩展 CJK 汉字（Ext B-F）',
+        '中文界面字重加粗两级，显示更粗更清晰',
+        '旧版本文件（1.x / 2.0.x / 2.1.0）完整兼容',
+      ], major: true),
       const _Entry('2.1.0', [
         '安全加固：口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，离线猜测密码不再有捷径',
         '加密提速：移动端启用平台原生加密，密钥派生与加解密不再占用界面线程',
@@ -163,6 +169,12 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry('2.2.1', [
+      'New UI languages: Français, Deutsch and Han-Nom (Chữ Nôm) - five UI languages in total',
+      'Bundled Tianheng font (TH-Feon) renders Han-Nom and extended CJK glyphs (Ext B-F) completely',
+      'Chinese UI text is now two weight steps bolder for a clearer display',
+      'Files from all older versions (1.x / 2.0.x / 2.1.0) remain fully supported',
+    ], major: true),
     const _Entry('2.1.0', [
       'Security hardening: the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves',
       'Faster encryption: platform-native crypto on mobile moves key derivation and bulk encryption off the UI thread',

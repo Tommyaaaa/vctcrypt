@@ -1,12 +1,40 @@
 /// VCTCrypt - Internationalization
-/// Supports English and Chinese (Simplified)
+/// Supports English, Chinese (Simplified), Français, Deutsch and
+/// 漢喃文 (Han-Nom / Chữ Nôm). The Han-Nom strings are written in
+/// Sino-Vietnamese Nôm characters rendered by the bundled TH-Feon font.
 
-enum AppLanguage { english, chinese }
+enum AppLanguage { english, chinese, french, german, hannom }
 
 extension AppLanguageX on AppLanguage {
-  String get code => this == AppLanguage.english ? 'en' : 'zh';
-  String get displayName =>
-      this == AppLanguage.english ? 'English' : '中文';
+  String get code {
+    switch (this) {
+      case AppLanguage.chinese:
+        return 'zh';
+      case AppLanguage.french:
+        return 'fr';
+      case AppLanguage.german:
+        return 'de';
+      case AppLanguage.hannom:
+        return 'vi-Hani';
+      case AppLanguage.english:
+        return 'en';
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case AppLanguage.chinese:
+        return '中文';
+      case AppLanguage.french:
+        return 'Français';
+      case AppLanguage.german:
+        return 'Deutsch';
+      case AppLanguage.hannom:
+        return '漢喃文';
+      case AppLanguage.english:
+        return 'English';
+    }
+  }
 }
 
 class AppStrings {
@@ -16,762 +44,831 @@ class AppStrings {
 
   static AppStrings of(AppLanguage lang) => AppStrings(lang);
 
+  /// v2.2.1: 5-way localized string helper
+  /// [en] English, [zh] 中文, [fr] Français, [de] Deutsch,
+  /// [hn] 漢喃文 (Han-Nom / Chữ Nôm).
+  String tr(String en, String zh, String fr, String de, String hn) {
+    switch (lang) {
+      case AppLanguage.chinese:
+        return zh;
+      case AppLanguage.french:
+        return fr;
+      case AppLanguage.german:
+        return de;
+      case AppLanguage.hannom:
+        return hn;
+      case AppLanguage.english:
+        return en;
+    }
+  }
+
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v2.1.0';
-  String get guiVersion => lang == AppLanguage.english
-      ? '[GUI Version]'
-      : '[图形界面版]';
+  String get appVersion => 'v2.2.1';
+  String get guiVersion => tr(
+      '[GUI Version]', '[图形界面版]', '[Version GUI]', '[GUI-Version]',
+      '[圖形界面版]');
   String get author => 'Tommy';
-  String get algorithm => lang == AppLanguage.english
-      ? 'Algorithm: VCT-Crypt (AES-256 x3 + ML-KEM-768)'
-      : '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)';
-  String get whatsNew => lang == AppLanguage.english
-      ? 'New in v2.1.0: faster encryption with platform-native crypto on mobile; the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves; bolder, clearer typography; license changed to AGPL-3.0. Older files remain fully supported'
-      : 'v2.1.0 正式版新特性：移动端启用平台原生加密，速度更快；口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，离线猜测密码不再有捷径；界面字体更粗、更易读；开源协议改为 AGPL-3.0。旧版本文件完整兼容';
+  String get algorithm => tr(
+      'Algorithm: VCT-Crypt (AES-256 x3 + ML-KEM-768)',
+      '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)',
+      'Algorithme : VCT-Crypt (AES-256 x3 + ML-KEM-768)',
+      'Algorithmus: VCT-Crypt (AES-256 x3 + ML-KEM-768)',
+      '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)');
+  String get whatsNew => tr(
+      'New in v2.2.1: French, German and Han-Nom (Chữ Nôm) UI languages; the Tianheng font (TH-Feon) is now bundled for full Han-Nom and extended-CJK rendering; Chinese text renders bolder. Files from all older versions remain fully supported',
+      'v2.2.1 正式版新特性：新增法语、德语、汉喃文三语界面；内置天珩全字库（TH-Feon），完整显示汉喃字与扩展汉字；中文显示更粗更清晰。旧版本文件完整兼容',
+      'Nouveautés de la v2.2.1 : interface en français, allemand et hán nôm (Chữ Nôm) ; la police Tianheng (TH-Feon) est intégrée pour un affichage complet du hán nôm et des sinogrammes étendus ; le chinois s\'affiche plus gras. Les fichiers des anciennes versions restent pris en charge.',
+      'Neues in v2.2.1: Benutzeroberfläche auf Französisch, Deutsch und Hán-Nôm (Chữ Nôm); die Tianheng-Schrift (TH-Feon) ist für die vollständige Darstellung von Hán-Nôm und erweiterten CJK-Zeichen integriert; chinesischer Text erscheint fetter. Dateien aller älteren Versionen bleiben voll unterstützt.',
+      'v2.2.1 新版：新增法語、德語、漢喃文三語界面；內置天珩全字庫（TH-Feon），完整顯示漢喃字與擴展漢字；中文更粗更清。舊版檔案完整兼容');
 
   /// v1.4.0: share / save button label (mobile result cards).
-  String get shareBtn => lang == AppLanguage.english
-      ? 'Share / Save'
-      : '分享 / 存储';
+  String get shareBtn => tr(
+      'Share / Save', '分享 / 存储', 'Partager / Enregistrer',
+      'Teilen / Speichern', '分享 / 存');
 
   // ---- Secure Notes (v1.5.0) ----
-  String get notesTitle => lang == AppLanguage.english
-      ? 'Secure Notes'
-      : '安全笔记';
-  String get noteEncrypt => lang == AppLanguage.english
-      ? 'Encrypt Note'
-      : '加密笔记';
-  String get noteDecrypt => lang == AppLanguage.english
-      ? 'Decrypt Note'
-      : '解密笔记';
-  String get noteHint => lang == AppLanguage.english
-      ? 'The text becomes a normal .VCT file. Decrypted text stays in memory only - it is never written to disk.'
-      : '文本将加密为标准 .VCT 文件。解密后的文本只保留在内存中，绝不写入磁盘。';
-  String get noteContentLabel => lang == AppLanguage.english
-      ? 'Note content'
-      : '笔记内容';
-  String get noteEmpty => lang == AppLanguage.english
-      ? 'The note is empty'
-      : '笔记内容为空';
-  String get noteEncrypted => lang == AppLanguage.english
-      ? 'Note encrypted'
-      : '笔记已加密';
-  String get noteEncryptedMobile => lang == AppLanguage.english
-      ? 'Saved to the app Documents folder. Use Share / Save below to store it anywhere (iCloud Drive included).'
-      : '已保存到应用文稿目录。用下方“分享 / 存储”可存到任意位置（含 iCloud 云盘）。';
-  String get noteDecrypted => lang == AppLanguage.english
-      ? 'Note decrypted'
-      : '笔记已解密';
-  String get noteSavedAs => lang == AppLanguage.english
-      ? 'Saved'
-      : '已保存';
-  String get noteSaveAsFile => lang == AppLanguage.english
-      ? 'Save as file'
-      : '另存为文件';
-  String get noteNotText => lang == AppLanguage.english
-      ? 'This file does not contain readable text. If it was encrypted on the Encrypt tab, decrypt it there instead.'
-      : '该文件不含可读文本。如果它是在“加密”页加密的普通文件，请回到“解密”页进行解密。';
-  String get strengthLabel => lang == AppLanguage.english
-      ? 'Strength'
-      : '强度';
-  String get strengthGood => lang == AppLanguage.english
-      ? 'Good'
-      : '良好';
-  String get strengthBits => lang == AppLanguage.english ? ' bits' : ' 位';
+  String get notesTitle =>
+      tr('Secure Notes', '安全笔记', 'Notes sécurisées', 'Sichere Notizen',
+          '記註');
+  String get noteEncrypt => tr('Encrypt Note', '加密笔记', 'Chiffrer une note',
+      'Notiz verschlüsseln', '碼化記註');
+  String get noteDecrypt => tr('Decrypt Note', '解密笔记',
+      'Déchiffrer une note', 'Notiz entschlüsseln', '解碼記註');
+  String get noteHint => tr(
+      'The text becomes a normal .VCT file. Decrypted text stays in memory only - it is never written to disk.',
+      '文本将加密为标准 .VCT 文件。解密后的文本只保留在内存中，绝不写入磁盘。',
+      'Le texte devient un fichier .VCT normal. Le texte déchiffré reste en mémoire uniquement — il n\'est jamais écrit sur le disque.',
+      'Der Text wird zu einer normalen .VCT-Datei. Entschlüsselter Text bleibt nur im Speicher – er wird nie auf die Festplatte geschrieben.',
+      '文本將碼化為標準 .VCT 檔案。解碼後文本只留於記憶體，絕不寫入磁碟。');
+  String get noteContentLabel => tr('Note content', '笔记内容',
+      'Contenu de la note', 'Notizinhalt', '記註內容');
+  String get noteEmpty => tr('The note is empty', '笔记内容为空',
+      'La note est vide', 'Die Notiz ist leer', '記註空');
+  String get noteEncrypted => tr('Note encrypted', '笔记已加密',
+      'Note chiffrée', 'Notiz verschlüsselt', '記註已碼化');
+  String get noteEncryptedMobile => tr(
+      'Saved to the app Documents folder. Use Share / Save below to store it anywhere (iCloud Drive included).',
+      '已保存到应用文稿目录。用下方“分享 / 存储”可存到任意位置（含 iCloud 云盘）。',
+      'Enregistré dans le dossier Documents de l\'application. Utilisez « Partager / Enregistrer » ci-dessous pour le stocker où vous voulez (iCloud Drive inclus).',
+      'Im Dokumente-Ordner der App gespeichert. Verwenden Sie unten „Teilen / Speichern", um sie überall zu speichern (inkl. iCloud Drive).',
+      '已存於應用文稿目錄。用下方「分享 / 存」可存到任意處（含 iCloud 雲盤）。');
+  String get noteDecrypted => tr('Note decrypted', '笔记已解密',
+      'Note déchiffrée', 'Notiz entschlüsselt', '記註已解碼');
+  String get noteSavedAs =>
+      tr('Saved', '已保存', 'Enregistré', 'Gespeichert', '已存');
+  String get noteSaveAsFile => tr('Save as file', '另存为文件',
+      'Enregistrer en tant que fichier', 'Als Datei speichern', '存為檔案');
+  String get noteNotText => tr(
+      'This file does not contain readable text. If it was encrypted on the Encrypt tab, decrypt it there instead.',
+      '该文件不含可读文本。如果它是在“加密”页加密的普通文件，请回到“解密”页进行解密。',
+      'Ce fichier ne contient pas de texte lisible. S\'il a été chiffré dans l\'onglet Chiffrer, déchiffrez-le plutôt là-bas.',
+      'Diese Datei enthält keinen lesbaren Text. Wenn sie auf der Registerkarte „Verschlüsseln" verschlüsselt wurde, entschlüsseln Sie sie stattdessen dort.',
+      '該檔案不含可讀文本。若它在「碼化」頁被碼化，請回「解碼」頁解碼。');
+  String get strengthLabel => tr('Strength', '强度', 'Robustesse', 'Stärke',
+      '強度');
+  String get strengthGood =>
+      tr('Good', '良好', 'Bon', 'Gut', '良');
+  String get strengthBits =>
+      tr(' bits', ' 位', ' bits', ' Bit', ' 位');
 
   // ---- Navigation ----
-  String get navEncrypt => lang == AppLanguage.english ? 'Encrypt' : '加密';
-  String get navDecrypt => lang == AppLanguage.english ? 'Decrypt' : '解密';
-  String get navSettings => lang == AppLanguage.english ? 'Settings' : '设置';
-  String get navNotes => lang == AppLanguage.english ? 'Notes' : '笔记';
-  String get navKeys => lang == AppLanguage.english ? 'Keys' : '密钥';
+  String get navEncrypt => tr('Encrypt', '加密', 'Chiffrer', 'Verschlüsseln',
+      '碼化');
+  String get navDecrypt => tr('Decrypt', '解密', 'Déchiffrer', 'Entschlüsseln',
+      '解碼');
+  String get navSettings => tr('Settings', '设置', 'Réglages', 'Einstellungen',
+      '設置');
+  String get navNotes =>
+      tr('Notes', '笔记', 'Notes', 'Notizen', '記註');
+  String get navKeys =>
+      tr('Keys', '密钥', 'Clés', 'Schlüssel', '密鑰');
 
   // ---- Keys screen (v1.6.0, ML-KEM-768) ----
-  String get keysTitle => lang == AppLanguage.english
-      ? 'Recipient Keys (ML-KEM-768)'
-      : '收件人密钥（ML-KEM-768）';
-  String get keysSubtitle => lang == AppLanguage.english
-      ? 'Generate, import and share post-quantum key pairs'
-      : '生成、导入并分享后量子密钥对';
-  String get keysIntro => lang == AppLanguage.english
-      ? 'A .vctpub PUBLIC key is what others use to encrypt files TO you - share it freely. A .vctkey PRIVATE key unlocks those files - keep it secret; it is stored password-protected.'
-      : '.vctpub 公钥供他人向你加密文件时使用，可放心分享；.vctkey 私钥用于解开这些文件，务必保密，它以密码保护形式存储。';
-  String get genKeyBtn => lang == AppLanguage.english
-      ? 'Generate Key Pair'
-      : '生成密钥对';
-  String get importKeyBtn => lang == AppLanguage.english
-      ? 'Import Key File'
-      : '导入密钥文件';
-  String get keyNameLabel => lang == AppLanguage.english
-      ? 'Key name'
-      : '密钥名称';
-  String get keyNameHint => lang == AppLanguage.english
-      ? 'e.g. "Laptop" or "Tommy" (shown to senders)'
-      : '例如“笔记本电脑”或“Tommy”（发送方会看到）';
-  String get keyPwLabel => lang == AppLanguage.english
-      ? 'Private-key password'
-      : '私钥保护密码';
-  String get keyPwHint => lang == AppLanguage.english
-      ? 'Protects the .vctkey file only. Losing it loses every file encrypted to this key.'
-      : '仅用于保护 .vctkey 文件本身。忘记它将无法解开用此密钥加密的所有文件。';
-  String get keyGenOk => lang == AppLanguage.english
-      ? 'Key pair generated'
-      : '密钥对已生成';
-  String keyGenOkBody(String dir) => lang == AppLanguage.english
-      ? 'Saved to $dir. Share the .vctpub file with anyone who should encrypt files to you.'
-      : '已保存到 $dir。把 .vctpub 文件发给需要向你加密文件的人。';
-  String get keyFingerprint => lang == AppLanguage.english
-      ? 'Fingerprint'
-      : '指纹';
-  String get keyTypePublicLabel => lang == AppLanguage.english
-      ? 'Public key (.vctpub) - share freely'
-      : '公钥（.vctpub）——可自由分享';
-  String get keyTypePrivateLabel => lang == AppLanguage.english
-      ? 'Private key (.vctkey) - keep secret'
-      : '私钥（.vctkey）——务必保密';
-  String get keyInvalidFile => lang == AppLanguage.english
-      ? 'Not a valid VCTCrypt key file'
-      : '不是有效的 VCTCrypt 密钥文件';
-  String get noKeysYet => lang == AppLanguage.english
-      ? 'No key files yet. Generate a pair or import existing .vctpub / .vctkey files.'
-      : '还没有密钥文件。可生成一对，或导入已有的 .vctpub / .vctkey 文件。';
-  String get deleteKeyBtn => lang == AppLanguage.english
-      ? 'Delete' : '删除';
-  String get deleteKeyConfirmTitle => lang == AppLanguage.english
-      ? 'Delete key file?'
-      : '删除密钥文件？';
-  String deleteKeyConfirmBody(String name) => lang == AppLanguage.english
-      ? '"$name" will be deleted from this device. Files already encrypted with it are NOT affected, but a deleted private key can never decrypt them again. This cannot be undone.'
-      : '“$name”将从本设备删除。已用它加密的文件不受影响，但私钥一旦删除，那些文件将永远无法解开。此操作不可撤销。';
-  String get keyImported => lang == AppLanguage.english
-      ? 'Key imported'
-      : '密钥已导入';
-  String get keyDeleted => lang == AppLanguage.english
-      ? 'Key deleted'
-      : '密钥已删除';
+  String get keysTitle => tr('Recipient Keys (ML-KEM-768)',
+      '收件人密钥（ML-KEM-768）', 'Clés du destinataire (ML-KEM-768)',
+      'Empfängerschlüssel (ML-KEM-768)', '收件人密鑰（ML-KEM-768）');
+  String get keysSubtitle => tr(
+      'Generate, import and share post-quantum key pairs',
+      '生成、导入并分享后量子密钥对',
+      'Générer, importer et partager des paires de clés post-quantiques',
+      'Post-Quanten-Schlüsselpaare erzeugen, importieren und teilen',
+      '生成、導入並分享後量子密鑰對');
+  String get keysIntro => tr(
+      'A .vctpub PUBLIC key is what others use to encrypt files TO you - share it freely. A .vctkey PRIVATE key unlocks those files - keep it secret; it is stored password-protected.',
+      '.vctpub 公钥供他人向你加密文件时使用，可放心分享；.vctkey 私钥用于解开这些文件，务必保密，它以密码保护形式存储。',
+      'Une clé PUBLIQUE .vctpub sert aux autres à chiffrer des fichiers POUR vous — partagez-la librement. Une clé PRIVÉE .vctkey déverrouille ces fichiers — gardez-la secrète ; elle est stockée protégée par mot de passe.',
+      'Ein .vctpub-ÖFFENTLICHER Schlüssel wird von anderen verwendet, um Dateien AN SIE zu verschlüsseln – teilen Sie ihn frei. Ein .vctkey-PRIVATER Schlüssel entsperrt diese Dateien – halten Sie ihn geheim; er wird passwortgeschützt gespeichert.',
+      '.vctpub 公鑰供他人向你碼化檔案時用，可放心分享；.vctkey 私鑰用於解開此等檔案，務必保密，它以密碼保護存儲。');
+  String get genKeyBtn => tr('Generate Key Pair', '生成密钥对',
+      'Générer une paire de clés', 'Schlüsselpaar erzeugen', '生成密鑰對');
+  String get importKeyBtn => tr('Import Key File', '导入密钥文件',
+      'Importer un fichier de clé', 'Schlüsseldatei importieren', '導入密鑰檔案');
+  String get keyNameLabel => tr('Key name', '密钥名称', 'Nom de la clé',
+      'Schlüsselname', '密鑰名');
+  String get keyNameHint => tr(
+      'e.g. "Laptop" or "Tommy" (shown to senders)',
+      '例如“笔记本电脑”或“Tommy”（发送方会看到）',
+      'ex. « Portable » ou « Tommy » (visible par les expéditeurs)',
+      'z. B. „Laptop" oder „Tommy" (für Absender sichtbar)',
+      '例如「電腦」或「Tommy」（發送方會看到）');
+  String get keyPwLabel => tr('Private-key password', '私钥保护密码',
+      'Mot de passe de la clé privée', 'Passwort des privaten Schlüssels',
+      '私鑰護密碼');
+  String get keyPwHint => tr(
+      'Protects the .vctkey file only. Losing it loses every file encrypted to this key.',
+      '仅用于保护 .vctkey 文件本身。忘记它将无法解开用此密钥加密的所有文件。',
+      'Protège uniquement le fichier .vctkey. Le perdre, c\'est perdre tous les fichiers chiffrés avec cette clé.',
+      'Schützt nur die .vctkey-Datei. Wer es verliert, verliert alle mit diesem Schlüssel verschlüsselten Dateien.',
+      '僅護 .vctkey 檔案本身。忘掉它將無法解開用此密鑰碼化之所有檔案。');
+  String get keyGenOk => tr('Key pair generated', '密钥对已生成',
+      'Paire de clés générée', 'Schlüsselpaar erzeugt', '密鑰對已生成');
+  String keyGenOkBody(String dir) => tr(
+      'Saved to $dir. Share the .vctpub file with anyone who should encrypt files to you.',
+      '已保存到 $dir。把 .vctpub 文件发给需要向你加密文件的人。',
+      'Enregistrée dans $dir. Partagez le fichier .vctpub avec quiconque doit vous chiffrer des fichiers.',
+      'Gespeichert unter $dir. Teilen Sie die .vctpub-Datei mit allen, die Ihnen Dateien verschlüsseln sollen.',
+      '已存到 $dir。把 .vctpub 檔案發給需向你碼化檔案之人。');
+  String get keyFingerprint => tr('Fingerprint', '指纹', 'Empreinte',
+      'Fingerabdruck', '指紋');
+  String get keyTypePublicLabel => tr('Public key (.vctpub) - share freely',
+      '公钥（.vctpub）——可自由分享',
+      'Clé publique (.vctpub) — partagez librement',
+      'Öffentlicher Schlüssel (.vctpub) – frei teilen',
+      '公鑰（.vctpub）——可自由分享');
+  String get keyTypePrivateLabel => tr('Private key (.vctkey) - keep secret',
+      '私钥（.vctkey）——务必保密',
+      'Clé privée (.vctkey) — gardez secrète',
+      'Privater Schlüssel (.vctkey) – geheim halten',
+      '私鑰（.vctkey）——務必保密');
+  String get keyInvalidFile => tr('Not a valid VCTCrypt key file',
+      '不是有效的 VCTCrypt 密钥文件', 'Fichier de clé VCTCrypt non valide',
+      'Keine gültige VCTCrypt-Schlüsseldatei', '非效 VCTCrypt 密鑰檔案');
+  String get noKeysYet => tr(
+      'No key files yet. Generate a pair or import existing .vctpub / .vctkey files.',
+      '还没有密钥文件。可生成一对，或导入已有的 .vctpub / .vctkey 文件。',
+      'Aucun fichier de clé pour l\'instant. Générez une paire ou importez des fichiers .vctpub / .vctkey existants.',
+      'Noch keine Schlüsseldateien. Erzeugen Sie ein Paar oder importieren Sie vorhandene .vctpub-/ .vctkey-Dateien.',
+      '未有密鑰檔案。可生成一對，或導入已有 .vctpub / .vctkey 檔案。');
+  String get deleteKeyBtn => tr('Delete', '删除', 'Supprimer', 'Löschen',
+      '刪除');
+  String get deleteKeyConfirmTitle => tr('Delete key file?', '删除密钥文件？',
+      'Supprimer le fichier de clé ?', 'Schlüsseldatei löschen?', '刪除密鑰檔案？');
+  String deleteKeyConfirmBody(String name) => tr(
+      '"$name" will be deleted from this device. Files already encrypted with it are NOT affected, but a deleted private key can never decrypt them again. This cannot be undone.',
+      '“$name”将从本设备删除。已用它加密的文件不受影响，但私钥一旦删除，那些文件将永远无法解开。此操作不可撤销。',
+      '« $name » sera supprimé de cet appareil. Les fichiers déjà chiffrés avec cette clé ne sont PAS affectés, mais une clé privée supprimée ne pourra plus jamais les déchiffrer. Cette action est irréversible.',
+      '„$name" wird von diesem Gerät gelöscht. Bereits damit verschlüsselte Dateien sind NICHT betroffen, aber ein gelöschter privater Schlüssel kann sie nie wieder entschlüsseln. Dies kann nicht rückgängig gemacht werden.',
+      '「$name」將自本機刪除。已用它碼化之檔案不受影響，但私鑰一旦刪除，此等檔案將永遠無法解開。不可撤銷。');
+  String get keyImported => tr('Key imported', '密钥已导入', 'Clé importée',
+      'Schlüssel importiert', '密鑰已導入');
+  String get keyDeleted => tr('Key deleted', '密钥已删除', 'Clé supprimée',
+      'Schlüssel gelöscht', '密鑰已刪');
   String get mlkemLabel => 'ML-KEM-768';
 
-
   // ---- Encrypt screen ----
-  String get encryptTitle => lang == AppLanguage.english
-      ? 'Encrypt File'
-      : '加密文件';
-  String get encryptSubtitle => lang == AppLanguage.english
-      ? 'Secure any file with triple AES-256-GCM'
-      : '使用三层 AES-256-GCM 加密任意文件';
-  String get selectFile => lang == AppLanguage.english
-      ? 'Tap to select a file'
-      : '点击选择文件';
-  String get selectFileHint => lang == AppLanguage.english
-      ? 'Or drag and drop a file here (desktop)'
-      : '或将文件拖放到此处（桌面端）';
-  String get passwordLabel => lang == AppLanguage.english
-      ? 'Password'
-      : '密码';
-  String get confirmPasswordLabel => lang == AppLanguage.english
-      ? 'Confirm Password'
-      : '确认密码';
-  String get passwordHint => lang == AppLanguage.english
-      ? 'Enter password (min 4 chars)'
-      : '输入密码（至少4个字符）';
-  String get browse => lang == AppLanguage.english ? 'Browse' : '浏览';
-  String get encryptBtn => lang == AppLanguage.english
-      ? 'Encrypt'
-      : '加密';
-  String get cancel => lang == AppLanguage.english ? 'Cancel' : '取消';
+  String get encryptTitle => tr('Encrypt File', '加密文件',
+      'Chiffrer un fichier', 'Datei verschlüsseln', '碼化檔案');
+  String get encryptSubtitle => tr(
+      'Secure any file with triple AES-256-GCM',
+      '使用三层 AES-256-GCM 加密任意文件',
+      'Sécurisez n\'importe quel fichier avec le triple AES-256-GCM',
+      'Sichern Sie jede Datei mit dreifachem AES-256-GCM',
+      '用三層 AES-256-GCM 碼化任意檔案');
+  String get selectFile => tr('Tap to select a file', '点击选择文件',
+      'Touchez pour sélectionner un fichier',
+      'Zum Auswählen einer Datei tippen', '按以選檔案');
+  String get selectFileHint => tr('Or drag and drop a file here (desktop)',
+      '或将文件拖放到此处（桌面端）',
+      'Ou glissez-déposez un fichier ici (bureau)',
+      'Oder Datei hierher ziehen und ablegen (Desktop)',
+      '或拖放檔案於此（桌面端）');
+  String get passwordLabel => tr('Password', '密码', 'Mot de passe', 'Passwort',
+      '密碼');
+  String get confirmPasswordLabel => tr('Confirm Password', '确认密码',
+      'Confirmer le mot de passe', 'Passwort bestätigen', '確認密碼');
+  String get passwordHint => tr('Enter password (min 4 chars)',
+      '输入密码（至少4个字符）',
+      'Saisissez le mot de passe (4 caractères min.)',
+      'Passwort eingeben (mind. 4 Zeichen)', '入密碼（至少4字符）');
+  String get browse => tr('Browse', '浏览', 'Parcourir', 'Durchsuchen', '瀏覽');
+  String get encryptBtn => tr('Encrypt', '加密', 'Chiffrer', 'Verschlüsseln',
+      '碼化');
+  String get cancel => tr('Cancel', '取消', 'Annuler', 'Abbrechen', '取消');
 
   // ---- Advanced security options (v1.1.0) ----
-  String get advancedOptions => lang == AppLanguage.english
-      ? 'Advanced Security Options'
-      : '高级安全选项';
-  String get advancedOptionsHint => lang == AppLanguage.english
-      ? 'Optional. Decoy partition and duress wipe.'
-      : '可选。伪装分区与胁迫销毁。';
+  String get advancedOptions => tr('Advanced Security Options', '高级安全选项',
+      'Options de sécurité avancées', 'Erweiterte Sicherheitsoptionen',
+      '高級安選項');
+  String get advancedOptionsHint => tr(
+      'Optional. Decoy partition and duress wipe.',
+      '可选。伪装分区与胁迫销毁。',
+      'Optionnel. Partition leurre et destruction sous contrainte.',
+      'Optional. Täuschungspartition und Zwangs-Löschung.',
+      '可選。偽分區與脅毀。');
 
-  String get decoySection => lang == AppLanguage.english
-      ? 'Decoy Partition'
-      : '伪装分区';
-  String get decoyPwLabel => lang == AppLanguage.english
-      ? 'Decoy Password'
-      : '伪装密码';
-  String get decoyPwHint => lang == AppLanguage.english
-      ? 'Entering this password during decryption reveals the decoy file instead of the real one.'
-      : '解密时输入此密码将解出伪装文件，而非真实文件。';
-  String get decoyFileLabel => lang == AppLanguage.english
-      ? 'Decoy File'
-      : '伪装文件';
-  String get decoyFileHint => lang == AppLanguage.english
-      ? 'Pick a plausible file to show (e.g. an innocent document)'
-      : '选择一个无所谓的文件作为伪装内容（例如普通文档）';
+  String get decoySection => tr('Decoy Partition', '伪装分区',
+      'Partition leurre', 'Täuschungspartition', '偽分區');
+  String get decoyPwLabel => tr('Decoy Password', '伪装密码',
+      'Mot de passe leurre', 'Täuschungspasswort', '偽密碼');
+  String get decoyPwHint => tr(
+      'Entering this password during decryption reveals the decoy file instead of the real one.',
+      '解密时输入此密码将解出伪装文件，而非真实文件。',
+      'Saisir ce mot de passe lors du déchiffrement révèle le fichier leurre au lieu du vrai.',
+      'Die Eingabe dieses Passworts beim Entschlüsseln zeigt die Täuschungsdatei statt der echten Datei.',
+      '解碼時入此密碼將解出偽檔案，而非真檔案。');
+  String get decoyFileLabel => tr('Decoy File', '伪装文件', 'Fichier leurre',
+      'Täuschungsdatei', '偽檔案');
+  String get decoyFileHint => tr(
+      'Pick a plausible file to show (e.g. an innocent document)',
+      '选择一个无所谓的文件作为伪装内容（例如普通文档）',
+      'Choisissez un fichier plausible à afficher (ex. un document anodin)',
+      'Wählen Sie eine plausible Datei zum Anzeigen (z. B. ein harmloses Dokument)',
+      '選一無所謂之檔案為偽內容（例如普通文檔）');
 
-  String get duressSection => lang == AppLanguage.english
-      ? 'Duress Password'
-      : '胁迫密码';
-  String get duressPwHint => lang == AppLanguage.english
-      ? 'WARNING: entering this password during decryption PERMANENTLY DESTROYS the encrypted file. Irreversible!'
-      : '警告：解密时输入此密码将永久销毁整个加密文件，不可恢复！';
+  String get duressSection => tr('Duress Password', '胁迫密码',
+      'Mot de passe de contrainte', 'Zwangs-Passwort', '脅密碼');
+  String get duressPwHint => tr(
+      'WARNING: entering this password during decryption PERMANENTLY DESTROYS the encrypted file. Irreversible!',
+      '警告：解密时输入此密码将永久销毁整个加密文件，不可恢复！',
+      'ATTENTION : saisir ce mot de passe lors du déchiffrement DÉTRUIT DÉFINITIVEMENT le fichier chiffré. Irréversible !',
+      'WARNUNG: Die Eingabe dieses Passworts beim Entschlüsseln ZERSTÖRT die verschlüsselte Datei DAUERHAFT. Unumkehrbar!',
+      '警告：解碼時入此密碼將永久毀整個碼化檔案，不可復！');
 
-  String get shredSection => lang == AppLanguage.english
-      ? 'Secure Shred'
-      : '安全擦除';
-  String get shredOption => lang == AppLanguage.english
-      ? 'Shred original after encryption'
-      : '加密后安全擦除原文件';
-  String get shredHint => lang == AppLanguage.english
-      ? 'Overwrite the original with random data before deleting. Only runs after the output is verified.'
-      : '用随机数据覆写原文件后再删除。仅在加密产物校验通过后执行。';
+  String get shredSection => tr('Secure Shred', '安全擦除',
+      'Effacement sécurisé', 'Sicheres Löschen', '安全擦');
+  String get shredOption => tr('Shred original after encryption',
+      '加密后安全擦除原文件', 'Effacer l\'original après chiffrement',
+      'Original nach dem Verschlüsseln sicher löschen',
+      '碼化後安全擦原檔案');
+  String get shredHint => tr(
+      'Overwrite the original with random data before deleting. Only runs after the output is verified.',
+      '用随机数据覆写原文件后再删除。仅在加密产物校验通过后执行。',
+      'Écrase l\'original avec des données aléatoires avant suppression. Ne s\'exécute qu\'après vérification de la sortie.',
+      'Überschreibt das Original mit Zufallsdaten, bevor es gelöscht wird. Läuft nur, nachdem die Ausgabe verifiziert wurde.',
+      '用隨機數據覆寫原檔案後再刪。僅於碼化產物驗證通後執行。');
 
-  String get optionalHint => lang == AppLanguage.english
-      ? 'Leave empty to disable'
-      : '留空则不启用';
+  String get optionalHint => tr('Leave empty to disable', '留空则不启用',
+      'Laisser vide pour désactiver', 'Leer lassen zum Deaktivieren', '留空則不啟');
 
   // ---- Recipient public key / hybrid mode (v1.6.0) ----
-  String get recipientSection => lang == AppLanguage.english
-      ? 'Encrypt to a Public Key (ML-KEM-768)'
-      : '使用公钥加密（ML-KEM-768）';
-  String get recipientHint => lang == AppLanguage.english
-      ? 'Post-quantum recipient encryption. With a recipient key the password becomes optional - leave it empty for key-only files.'
-      : '后量子收件人加密。选择公钥后密码变为可选——留空即生成仅限私钥解开的文件。';
-  String get recipientPickBtn => lang == AppLanguage.english
-      ? 'Choose .vctpub'
-      : '选择 .vctpub';
-  String get recipientNone => lang == AppLanguage.english
-      ? 'No recipient selected'
-      : '未选择收件人';
-  String get recipientClear => lang == AppLanguage.english
-      ? 'Clear' : '清除';
-  String get recipientUseKey => lang == AppLanguage.english
-      ? 'Encrypt to this public key (password becomes optional)'
-      : '用此公钥加密（密码变为可选）';
-  String get hybridPwOptional => lang == AppLanguage.english
-      ? 'Password is optional now: with a password the file opens with EITHER the password or the private key; without it, ONLY the private key works.'
-      : '密码现在是可选的：填写密码时，密码或私钥都能解开文件；留空则只有私钥能解开。';
-  String get hybridAdvancedDisabled => lang == AppLanguage.english
-      ? 'The decoy partition and duress password are unavailable when encrypting to a public key.'
-      : '使用公钥加密时，伪装分区与胁迫密码不可用。';
-  String get errHybridAdvanced => lang == AppLanguage.english
-      ? 'Decoy / duress options cannot be combined with a recipient key. Clear them or remove the recipient.'
-      : '伪装/胁迫选项不能与收件人公钥同时使用，请清除其一。';
-  String get errRecipientRequired => lang == AppLanguage.english
-      ? 'Select a valid .vctpub recipient key or turn the option off.'
-      : '请选择有效的 .vctpub 公钥，或关闭该选项。';
-  String get resultKemUsed => lang == AppLanguage.english
-      ? 'ML-KEM recipient'
-      : 'ML-KEM 收件人';
+  String get recipientSection => tr('Encrypt to a Public Key (ML-KEM-768)',
+      '使用公钥加密（ML-KEM-768）',
+      'Chiffrer vers une clé publique (ML-KEM-768)',
+      'Mit öffentlichem Schlüssel verschlüsseln (ML-KEM-768)',
+      '用公鑰碼化（ML-KEM-768）');
+  String get recipientHint => tr(
+      'Post-quantum recipient encryption. With a recipient key the password becomes optional - leave it empty for key-only files.',
+      '后量子收件人加密。选择公钥后密码变为可选——留空即生成仅限私钥解开的文件。',
+      'Chiffrement post-quantique du destinataire. Avec une clé de destinataire, le mot de passe devient optionnel — laissez vide pour des fichiers à clé seule.',
+      'Post-Quanten-Empfängerverschlüsselung. Mit einem Empfängerschlüssel wird das Passwort optional – leer lassen für Nur-Schlüssel-Dateien.',
+      '後量子收件人碼化。選公鑰後密碼變為可選——留空即生成僅限私鑰解開之檔案。');
+  String get recipientPickBtn => tr('Choose .vctpub', '选择 .vctpub',
+      'Choisir .vctpub', '.vctpub wählen', '選 .vctpub');
+  String get recipientNone => tr('No recipient selected', '未选择收件人',
+      'Aucun destinataire sélectionné', 'Kein Empfänger ausgewählt', '未選收件人');
+  String get recipientClear => tr('Clear', '清除', 'Effacer', 'Leeren', '清除');
+  String get recipientUseKey => tr(
+      'Encrypt to this public key (password becomes optional)',
+      '用此公钥加密（密码变为可选）',
+      'Chiffrer avec cette clé publique (mot de passe optionnel)',
+      'Mit diesem öffentlichen Schlüssel verschlüsseln (Passwort optional)',
+      '用此公鑰碼化（密碼變為可選）');
+  String get hybridPwOptional => tr(
+      'Password is optional now: with a password the file opens with EITHER the password or the private key; without it, ONLY the private key works.',
+      '密码现在是可选的：填写密码时，密码或私钥都能解开文件；留空则只有私钥能解开。',
+      'Le mot de passe est désormais optionnel : avec un mot de passe, le fichier s\'ouvre AVEC le mot de passe OU la clé privée ; sans lui, seule la clé privée fonctionne.',
+      'Das Passwort ist jetzt optional: mit Passwort öffnet die Datei mit EITHER Passwort ODER privatem Schlüssel; ohne Passwort funktioniert NUR der private Schlüssel.',
+      '密碼現為可選：填密碼時，密碼或私鑰皆能解開檔案；留空則只有私鑰能解開。');
+  String get hybridAdvancedDisabled => tr(
+      'The decoy partition and duress password are unavailable when encrypting to a public key.',
+      '使用公钥加密时，伪装分区与胁迫密码不可用。',
+      'La partition leurre et le mot de passe de contrainte ne sont pas disponibles lors du chiffrement vers une clé publique.',
+      'Täuschungspartition und Zwangs-Passwort sind beim Verschlüsseln mit einem öffentlichen Schlüssel nicht verfügbar.',
+      '用公鑰碼化時，偽分區與脅密碼不可用。');
+  String get errHybridAdvanced => tr(
+      'Decoy / duress options cannot be combined with a recipient key. Clear them or remove the recipient.',
+      '伪装/胁迫选项不能与收件人公钥同时使用，请清除其一。',
+      'Les options leurre / contrainte ne peuvent pas être combinées avec une clé de destinataire. Effacez-les ou retirez le destinataire.',
+      'Täuschungs-/Zwangsoptionen können nicht mit einem Empfängerschlüssel kombiniert werden. Leeren Sie sie oder entfernen Sie den Empfänger.',
+      '偽/脅選項不能與收件人公鑰並用，請清除其一。');
+  String get errRecipientRequired => tr(
+      'Select a valid .vctpub recipient key or turn the option off.',
+      '请选择有效的 .vctpub 公钥，或关闭该选项。',
+      'Sélectionnez une clé .vctpub valide ou désactivez cette option.',
+      'Wählen Sie einen gültigen .vctpub-Empfängerschlüssel oder deaktivieren Sie die Option.',
+      '請選有效 .vctpub 公鑰，或關該選項。');
+  String get resultKemUsed => tr('ML-KEM recipient', 'ML-KEM 收件人',
+      'Destinataire ML-KEM', 'ML-KEM-Empfänger', 'ML-KEM 收件人');
 
   // ---- Decrypt with private key (v1.6.0) ----
-  String get keyUnlockSection => lang == AppLanguage.english
-      ? 'Unlock with Private Key'
-      : '使用私钥解锁';
-  String get keyFileLabel => lang == AppLanguage.english
-      ? 'Private key file (.vctkey)'
-      : '私钥文件（.vctkey）';
-  String get keyFilePickHint => lang == AppLanguage.english
-      ? 'Pick the .vctkey file and enter its password'
-      : '选择 .vctkey 文件并输入其保护密码';
-  String get keyUnlockBtn => lang == AppLanguage.english
-      ? 'Decrypt with Key'
-      : '用私钥解密';
-  String keyReady(String name) => lang == AppLanguage.english
-      ? 'Private key loaded: $name'
-      : '私钥已加载：$name';
-  String get v3KeyChannelHint => lang == AppLanguage.english
-      ? 'This file carries an ML-KEM recipient channel - it can be opened with the recipient private key.'
-      : '此文件包含 ML-KEM 收件人通道，可用收件人私钥解开。';
-  String get v3PasswordOnlyHint => lang == AppLanguage.english
-      ? 'This file has no password channel - only the recipient private key can open it.'
-      : '此文件没有密码通道，只能用收件人私钥解开。';
+  String get keyUnlockSection => tr('Unlock with Private Key', '使用私钥解锁',
+      'Déverrouiller avec la clé privée', 'Mit privatem Schlüssel entsperren',
+      '用私鑰解鎖');
+  String get keyFileLabel => tr('Private key file (.vctkey)', '私钥文件（.vctkey）',
+      'Fichier de clé privée (.vctkey)', 'Datei des privaten Schlüssels (.vctkey)',
+      '私鑰檔案（.vctkey）');
+  String get keyFilePickHint => tr('Pick the .vctkey file and enter its password',
+      '选择 .vctkey 文件并输入其保护密码',
+      'Choisissez le fichier .vctkey et saisissez son mot de passe',
+      'Wählen Sie die .vctkey-Datei und geben Sie ihr Passwort ein',
+      '選 .vctkey 檔案並入其護密碼');
+  String get keyUnlockBtn => tr('Decrypt with Key', '用私钥解密',
+      'Déchiffrer avec la clé', 'Mit Schlüssel entschlüsseln', '用私鑰解碼');
+  String keyReady(String name) => tr('Private key loaded: $name', '私钥已加载：$name',
+      'Clé privée chargée : $name', 'Privater Schlüssel geladen: $name',
+      '私鑰已載：$name');
+  String get v3KeyChannelHint => tr(
+      'This file carries an ML-KEM recipient channel - it can be opened with the recipient private key.',
+      '此文件包含 ML-KEM 收件人通道，可用收件人私钥解开。',
+      'Ce fichier comporte un canal destinataire ML-KEM — il peut être ouvert avec la clé privée du destinataire.',
+      'Diese Datei hat einen ML-KEM-Empfängerkanal – sie kann mit dem privaten Empfängerschlüssel geöffnet werden.',
+      '此檔案含 ML-KEM 收件人通道，可用收件人私鑰解開。');
+  String get v3PasswordOnlyHint => tr(
+      'This file has no password channel - only the recipient private key can open it.',
+      '此文件没有密码通道，只能用收件人私钥解开。',
+      'Ce fichier n\'a pas de canal mot de passe — seule la clé privée du destinataire peut l\'ouvrir.',
+      'Diese Datei hat keinen Passwortkanal – nur der private Empfängerschlüssel kann sie öffnen.',
+      '此檔案無密碼通道，只能用收件人私鑰解開。');
 
   // ---- Decrypt screen ----
-  String get decryptTitle => lang == AppLanguage.english
-      ? 'Decrypt .VCT File'
-      : '解密 .VCT 文件';
-  String get decryptSubtitle => lang == AppLanguage.english
-      ? 'Restore your encrypted files'
-      : '恢复已加密的文件';
-  String get selectVctFile => lang == AppLanguage.english
-      ? 'Tap to select a .VCT file'
-      : '点击选择 .VCT 文件';
+  String get decryptTitle => tr('Decrypt .VCT File', '解密 .VCT 文件',
+      'Déchiffrer un fichier .VCT', '.VCT-Datei entschlüsseln',
+      '解碼 .VCT 檔案');
+  String get decryptSubtitle => tr('Restore your encrypted files',
+      '恢复已加密的文件', 'Restaurez vos fichiers chiffrés',
+      'Stellen Sie Ihre verschlüsselten Dateien wieder her', '復原已碼化之檔案');
+  String get selectVctFile => tr('Tap to select a .VCT file', '点击选择 .VCT 文件',
+      'Touchez pour sélectionner un fichier .VCT',
+      'Zum Auswählen einer .VCT-Datei tippen', '按以選 .VCT 檔案');
 
   // ---- Progress messages ----
-  String get statusDeriving => lang == AppLanguage.english
-      ? 'Deriving keys (PBKDF2, 600K iterations)...'
-      : '派生密钥 (PBKDF2, 60万次迭代)...';
-  String get statusEncrypting => lang == AppLanguage.english
-      ? 'Encrypting (3-layer AES-256-GCM)...'
-      : '加密中 (三层 AES-256-GCM)...';
-  String get statusEncryptingDecoy => lang == AppLanguage.english
-      ? 'Encrypting decoy partition...'
-      : '正在加密伪装分区...';
-  String get statusShredding => lang == AppLanguage.english
-      ? 'Securely shredding original file...'
-      : '正在安全擦除原文件...';
-  String get statusVerifying => lang == AppLanguage.english
-      ? 'Verifying password...'
-      : '验证密码...';
-  String get statusVerified => lang == AppLanguage.english
-      ? 'Password verified.'
-      : '密码验证通过。';
-  String get statusDecrypting => lang == AppLanguage.english
-      ? 'Decrypting (3-layer AES-256-GCM)...'
-      : '解密中 (三层 AES-256-GCM)...';
-  String get statusProcessing => lang == AppLanguage.english
-      ? 'Processing... Please wait.'
-      : '处理中... 请稍候。';
-  String get statusReady => lang == AppLanguage.english ? 'Ready.' : '就绪。';
+  String get statusDeriving => tr(
+      'Deriving keys (PBKDF2, 600K iterations)...',
+      '派生密钥 (PBKDF2, 60万次迭代)...',
+      'Dérivation des clés (PBKDF2, 600 000 itérations)...',
+      'Schlüssel werden abgeleitet (PBKDF2, 600.000 Iterationen)...',
+      '派生密鑰 (PBKDF2, 60萬次迭代)...');
+  String get statusEncrypting => tr(
+      'Encrypting (3-layer AES-256-GCM)...',
+      '加密中 (三层 AES-256-GCM)...',
+      'Chiffrement (AES-256-GCM à 3 couches)...',
+      'Verschlüsseln (3-Schicht-AES-256-GCM)...',
+      '碼化中 (三層 AES-256-GCM)...');
+  String get statusEncryptingDecoy => tr('Encrypting decoy partition...',
+      '正在加密伪装分区...', 'Chiffrement de la partition leurre...',
+      'Täuschungspartition wird verschlüsselt...', '正在碼化偽分區...');
+  String get statusShredding => tr('Securely shredding original file...',
+      '正在安全擦除原文件...', 'Effacement sécurisé du fichier original...',
+      'Originaldatei wird sicher gelöscht...', '正在安擦原檔案...');
+  String get statusVerifying => tr('Verifying password...', '验证密码...',
+      'Vérification du mot de passe...', 'Passwort wird verifiziert...',
+      '驗證密碼...');
+  String get statusVerified => tr('Password verified.', '密码验证通过。',
+      'Mot de passe vérifié.', 'Passwort verifiziert.', '密碼驗證通。');
+  String get statusDecrypting => tr(
+      'Decrypting (3-layer AES-256-GCM)...',
+      '解密中 (三层 AES-256-GCM)...',
+      'Déchiffrement (AES-256-GCM à 3 couches)...',
+      'Entschlüsseln (3-Schicht-AES-256-GCM)...',
+      '解碼中 (三層 AES-256-GCM)...');
+  String get statusProcessing => tr('Processing... Please wait.', '处理中... 请稍候。',
+      'Traitement... Veuillez patienter.', 'Verarbeitung... Bitte warten.',
+      '處理中... 請稍候。');
+  String get statusReady => tr('Ready.', '就绪。', 'Prêt.', 'Bereit.', '就緒。');
 
   // ---- Success ----
-  String get encSuccess => lang == AppLanguage.english
-      ? 'Encryption complete!'
-      : '加密完成！';
-  String get decSuccess => lang == AppLanguage.english
-      ? 'Decryption complete!'
-      : '解密完成！';
-  String get outputFile => lang == AppLanguage.english ? 'Output' : '输出';
-  String get originalFile => lang == AppLanguage.english
-      ? 'Original file'
-      : '原始文件';
-  String get mobileOutputHint => lang == AppLanguage.english
-      ? 'Saved to the VCTCrypt folder - open the Files app to find it.'
-      : '已保存到 VCTCrypt 文件夹，请打开系统“文件”App 查看。';
-  String get mobileEncHint => lang == AppLanguage.english
-      ? 'The .VCT file is saved to the VCTCrypt folder - open the Files app to find it.'
-      : '加密产物已保存到 VCTCrypt 文件夹，请打开系统“文件”App 查看。';
-  String get fileSize => lang == AppLanguage.english ? 'Size' : '大小';
-  String get bytes => lang == AppLanguage.english ? 'bytes' : '字节';
-  String get resultDecoyUsed => lang == AppLanguage.english
-      ? 'Decoy partition enabled'
-      : '已启用伪装分区';
-  String get resultDuressUsed => lang == AppLanguage.english
-      ? 'Duress wipe enabled'
-      : '已启用胁迫销毁';
-  String get resultShredded => lang == AppLanguage.english
-      ? 'Original file securely shredded.'
-      : '原文件已安全擦除。';
+  String get encSuccess => tr('Encryption complete!', '加密完成！',
+      'Chiffrement terminé !', 'Verschlüsselung abgeschlossen!', '碼化完！');
+  String get decSuccess => tr('Decryption complete!', '解密完成！',
+      'Déchiffrement terminé !', 'Entschlüsselung abgeschlossen!', '解碼完！');
+  String get outputFile => tr('Output', '输出', 'Sortie', 'Ausgabe', '輸出');
+  String get originalFile => tr('Original file', '原始文件', 'Fichier original',
+      'Originaldatei', '原檔案');
+  String get mobileOutputHint => tr(
+      'Saved to the VCTCrypt folder - open the Files app to find it.',
+      '已保存到 VCTCrypt 文件夹，请打开系统“文件”App 查看。',
+      'Enregistré dans le dossier VCTCrypt — ouvrez l\'app Fichiers pour le trouver.',
+      'Im VCTCrypt-Ordner gespeichert – öffnen Sie die Dateien-App, um sie zu finden.',
+      '已存於 VCTCrypt 文件夾，請開系統「檔案」App 查看。');
+  String get mobileEncHint => tr(
+      'The .VCT file is saved to the VCTCrypt folder - open the Files app to find it.',
+      '加密产物已保存到 VCTCrypt 文件夹，请打开系统“文件”App 查看。',
+      'Le fichier .VCT est enregistré dans le dossier VCTCrypt — ouvrez l\'app Fichiers pour le trouver.',
+      'Die .VCT-Datei ist im VCTCrypt-Ordner gespeichert – öffnen Sie die Dateien-App, um sie zu finden.',
+      '碼化產物已存於 VCTCrypt 文件夾，請開系統「檔案」App 查看。');
+  String get fileSize => tr('Size', '大小', 'Taille', 'Größe', '大小');
+  String get bytes => tr('bytes', '字节', 'octets', 'Bytes', '字節');
+  String get resultDecoyUsed => tr('Decoy partition enabled', '已启用伪装分区',
+      'Partition leurre activée', 'Täuschungspartition aktiviert', '已啟偽分區');
+  String get resultDuressUsed => tr('Duress wipe enabled', '已启用胁迫销毁',
+      'Destruction sous contrainte activée', 'Zwangs-Löschung aktiviert',
+      '已啟脅毀');
+  String get resultShredded => tr('Original file securely shredded.',
+      '原文件已安全擦除。', 'Fichier original effacé de façon sécurisée.',
+      'Originaldatei sicher gelöscht.', '原檔案已安擦。');
 
   // ---- Errors ----
-  String get errRead => lang == AppLanguage.english
-      ? 'Cannot read file.'
-      : '无法读取文件。';
-  String get errEmpty => lang == AppLanguage.english
-      ? 'File is empty.'
-      : '文件为空。';
-  String get errKeyFail => lang == AppLanguage.english
-      ? 'Key derivation failed.'
-      : '密钥派生失败。';
-  String get errL1 => lang == AppLanguage.english
-      ? 'Layer 1 encryption failed.'
-      : '第1层加密失败。';
-  String get errL2 => lang == AppLanguage.english
-      ? 'Layer 2 encryption failed.'
-      : '第2层加密失败。';
-  String get errL3 => lang == AppLanguage.english
-      ? 'Layer 3 encryption failed.'
-      : '第3层加密失败。';
-  String get errNotVct => lang == AppLanguage.english
-      ? 'Not a valid VCT file.'
-      : '不是有效的 VCT 文件。';
-  String get errSmall => lang == AppLanguage.english
-      ? 'File too small or corrupted.'
-      : '文件过小或已损坏。';
-  String get errCorrupt => lang == AppLanguage.english
-      ? 'Data corrupted.'
-      : '数据损坏。';
-  String get errPayload => lang == AppLanguage.english
-      ? 'Corrupted payload data.'
-      : '负载数据损坏。';
-  String get errWrite => lang == AppLanguage.english
-      ? 'Cannot write output file.'
-      : '无法写入输出文件。';
-  String get errNotFound => lang == AppLanguage.english
-      ? 'File not found.'
-      : '文件未找到。';
-  String get errDir => lang == AppLanguage.english
-      ? 'Directories are not supported.'
-      : '不支持目录。';
-  String get errPwShort => lang == AppLanguage.english
-      ? 'Password too short (min 4 characters).'
-      : '密码太短（至少4个字符）。';
-  String get errPwMismatch => lang == AppLanguage.english
-      ? 'Passwords do not match.'
-      : '两次密码不一致。';
-  String get errWrongPw => lang == AppLanguage.english
-      ? 'Wrong password or file corrupted.'
-      : '密码错误或文件已损坏。';
-  String get errDecoyPwIdentical => lang == AppLanguage.english
-      ? 'Decoy password must differ from the main password.'
-      : '伪装密码不能与主密码相同。';
-  String get errDuressPwIdentical => lang == AppLanguage.english
-      ? 'Duress password must differ from the main and decoy passwords.'
-      : '胁迫密码不能与主密码或伪装密码相同。';
-  String get errDecoyFileMissing => lang == AppLanguage.english
-      ? 'Please select a decoy file.'
-      : '请选择伪装文件。';
-  String get errDecoyPwRequired => lang == AppLanguage.english
-      ? 'A decoy file was selected - set a decoy password too.'
-      : '已选择伪装文件，请同时设置伪装密码。';
-  String get errDecoyFileEmpty => lang == AppLanguage.english
-      ? 'Decoy file is empty.'
-      : '伪装文件为空。';
-  String get errShredVerify => lang == AppLanguage.english
-      ? 'Output verification failed - original file was NOT shredded.'
-      : '加密产物校验失败，原文件未被擦除。';
+  String get errRead => tr('Cannot read file.', '无法读取文件。',
+      'Impossible de lire le fichier.', 'Datei kann nicht gelesen werden.',
+      '不能讀檔案。');
+  String get errEmpty => tr('File is empty.', '文件为空。', 'Le fichier est vide.',
+      'Die Datei ist leer.', '檔案空。');
+  String get errKeyFail => tr('Key derivation failed.', '密钥派生失败。',
+      'Échec de la dérivation de clé.', 'Schlüsselableitung fehlgeschlagen.',
+      '派生密鑰失。');
+  String get errL1 => tr('Layer 1 encryption failed.', '第1层加密失败。',
+      'Échec du chiffrement de la couche 1.',
+      'Schicht-1-Verschlüsselung fehlgeschlagen.', '第一層碼化失。');
+  String get errL2 => tr('Layer 2 encryption failed.', '第2层加密失败。',
+      'Échec du chiffrement de la couche 2.',
+      'Schicht-2-Verschlüsselung fehlgeschlagen.', '第二層碼化失。');
+  String get errL3 => tr('Layer 3 encryption failed.', '第3层加密失败。',
+      'Échec du chiffrement de la couche 3.',
+      'Schicht-3-Verschlüsselung fehlgeschlagen.', '第三層碼化失。');
+  String get errNotVct => tr('Not a valid VCT file.', '不是有效的 VCT 文件。',
+      'Fichier VCT non valide.', 'Keine gültige VCT-Datei.', '非效 VCT 檔案。');
+  String get errSmall => tr('File too small or corrupted.', '文件过小或已损坏。',
+      'Fichier trop petit ou corrompu.', 'Datei zu klein oder beschädigt.',
+      '檔案過小或已損。');
+  String get errCorrupt => tr('Data corrupted.', '数据损坏。', 'Données corrompues.',
+      'Daten beschädigt.', '數據損。');
+  String get errPayload => tr('Corrupted payload data.', '负载数据损坏。',
+      'Données utiles corrompues.', 'Nutzlastdaten beschädigt.', '載數據損。');
+  String get errWrite => tr('Cannot write output file.', '无法写入输出文件。',
+      'Impossible d\'écrire le fichier de sortie.',
+      'Ausgabedatei kann nicht geschrieben werden.', '不能寫出檔案。');
+  String get errNotFound => tr('File not found.', '文件未找到。',
+      'Fichier introuvable.', 'Datei nicht gefunden.', '無檔案。');
+  String get errDir => tr('Directories are not supported.', '不支持目录。',
+      'Les dossiers ne sont pas pris en charge.',
+      'Verzeichnisse werden nicht unterstützt.', '不支持目錄。');
+  String get errPwShort => tr('Password too short (min 4 characters).',
+      '密码太短（至少4个字符）。',
+      'Mot de passe trop court (4 caractères min.).',
+      'Passwort zu kurz (mind. 4 Zeichen).', '密碼過短（至少4字符）。');
+  String get errPwMismatch => tr('Passwords do not match.', '两次密码不一致。',
+      'Les mots de passe ne correspondent pas.',
+      'Die Passwörter stimmen nicht überein.', '兩次密碼不一致。');
+  String get errWrongPw => tr('Wrong password or file corrupted.',
+      '密码错误或文件已损坏。', 'Mot de passe incorrect ou fichier corrompu.',
+      'Falsches Passwort oder Datei beschädigt.', '密碼錯或檔案已損。');
+  String get errDecoyPwIdentical => tr(
+      'Decoy password must differ from the main password.',
+      '伪装密码不能与主密码相同。',
+      'Le mot de passe leurre doit différer du mot de passe principal.',
+      'Das Täuschungspasswort muss sich vom Hauptpasswort unterscheiden.',
+      '偽密碼不能與主密碼同。');
+  String get errDuressPwIdentical => tr(
+      'Duress password must differ from the main and decoy passwords.',
+      '胁迫密码不能与主密码或伪装密码相同。',
+      'Le mot de passe de contrainte doit différer des mots de passe principal et leurre.',
+      'Das Zwangs-Passwort muss sich vom Haupt- und Täuschungspasswort unterscheiden.',
+      '脅密碼不能與主密碼或偽密碼同。');
+  String get errDecoyFileMissing => tr('Please select a decoy file.',
+      '请选择伪装文件。', 'Veuillez sélectionner un fichier leurre.',
+      'Bitte wählen Sie eine Täuschungsdatei.', '請選偽檔案。');
+  String get errDecoyPwRequired => tr(
+      'A decoy file was selected - set a decoy password too.',
+      '已选择伪装文件，请同时设置伪装密码。',
+      'Un fichier leurre a été sélectionné — définissez aussi un mot de passe leurre.',
+      'Eine Täuschungsdatei wurde gewählt – legen Sie auch ein Täuschungspasswort fest.',
+      '已選偽檔案，請並設偽密碼。');
+  String get errDecoyFileEmpty => tr('Decoy file is empty.', '伪装文件为空。',
+      'Le fichier leurre est vide.', 'Die Täuschungsdatei ist leer.', '偽檔案空。');
+  String get errShredVerify => tr(
+      'Output verification failed - original file was NOT shredded.',
+      '加密产物校验失败，原文件未被擦除。',
+      'Échec de la vérification de la sortie — le fichier original n\'a PAS été effacé.',
+      'Ausgabeprüfung fehlgeschlagen – die Originaldatei wurde NICHT gelöscht.',
+      '碼化產物驗證失，原檔案未被擦。');
 
   // ---- Key / hybrid errors (v1.6.0) ----
-  String get errBadKeyFile => lang == AppLanguage.english
-      ? 'Not a valid VCTCrypt key file.'
-      : '不是有效的 VCTCrypt 密钥文件。';
-  String get errWrongKeyPassword => lang == AppLanguage.english
-      ? 'Wrong private-key password.'
-      : '私钥保护密码错误。';
-  String get errUnsupportedKeyParams => lang == AppLanguage.english
-      ? 'Unsupported key parameters.'
-      : '不支持的密钥参数。';
-  String get errKeyRequired => lang == AppLanguage.english
-      ? 'This file needs the recipient private key (.vctkey) - it has no password channel.'
-      : '此文件需要收件人私钥（.vctkey）才能解开——它没有密码通道。';
-  String get errWrongKey => lang == AppLanguage.english
-      ? 'This private key does not match the file.'
-      : '此私钥与文件不匹配。';
-  String get errKeyNotApplicable => lang == AppLanguage.english
-      ? 'A private key cannot open this file - use the password instead.'
-      : '私钥无法解开此文件，请使用密码。';
-  String get errNoChannel => lang == AppLanguage.english
-      ? 'Nothing can open this file: no password and no recipient key.'
-      : '此文件无法解开：既没有密码也没有收件人密钥。';
+  String get errBadKeyFile => tr('Not a valid VCTCrypt key file.',
+      '不是有效的 VCTCrypt 密钥文件。', 'Fichier de clé VCTCrypt non valide.',
+      'Keine gültige VCTCrypt-Schlüsseldatei.', '非效 VCTCrypt 密鑰檔案。');
+  String get errWrongKeyPassword => tr('Wrong private-key password.',
+      '私钥保护密码错误。', 'Mot de passe de clé privée incorrect.',
+      'Falsches Passwort des privaten Schlüssels.', '私鑰護密碼錯。');
+  String get errUnsupportedKeyParams => tr('Unsupported key parameters.',
+      '不支持的密钥参数。', 'Paramètres de clé non pris en charge.',
+      'Nicht unterstützte Schlüsselparameter.', '不支持的密鑰參數。');
+  String get errKeyRequired => tr(
+      'This file needs the recipient private key (.vctkey) - it has no password channel.',
+      '此文件需要收件人私钥（.vctkey）才能解开——它没有密码通道。',
+      'Ce fichier nécessite la clé privée du destinataire (.vctkey) — il n\'a pas de canal mot de passe.',
+      'Diese Datei benötigt den privaten Empfängerschlüssel (.vctkey) – sie hat keinen Passwortkanal.',
+      '此檔案需收件人私鑰（.vctkey）才能解開——它無密碼通道。');
+  String get errWrongKey => tr('This private key does not match the file.',
+      '此私钥与文件不匹配。', 'Cette clé privée ne correspond pas au fichier.',
+      'Dieser private Schlüssel passt nicht zur Datei.', '此私鑰與檔案不匹配。');
+  String get errKeyNotApplicable => tr(
+      'A private key cannot open this file - use the password instead.',
+      '私钥无法解开此文件，请使用密码。',
+      'Une clé privée ne peut pas ouvrir ce fichier — utilisez le mot de passe.',
+      'Ein privater Schlüssel kann diese Datei nicht öffnen – verwenden Sie das Passwort.',
+      '私鑰不能解開此檔案，請用密碼。');
+  String get errNoChannel => tr(
+      'Nothing can open this file: no password and no recipient key.',
+      '此文件无法解开：既没有密码也没有收件人密钥。',
+      'Rien ne peut ouvrir ce fichier : ni mot de passe ni clé de destinataire.',
+      'Nichts kann diese Datei öffnen: weder Passwort noch Empfängerschlüssel.',
+      '此檔案不能解開：既無密碼也無收件人密鑰。');
 
   // ---- Settings ----
-  String get settingsTitle => lang == AppLanguage.english
-      ? 'Settings'
-      : '设置';
-  String get languageSection => lang == AppLanguage.english
-      ? 'Language'
-      : '语言';
-  String get themeSection => lang == AppLanguage.english
-      ? 'Theme'
-      : '主题';
-  String get themeLight => lang == AppLanguage.english ? 'Light' : '浅色';
-  String get themeDark => lang == AppLanguage.english ? 'Dark' : '深色';
-  String get themeSystem => lang == AppLanguage.english ? 'System' : '跟随系统';
-  String get securitySection => lang == AppLanguage.english
-      ? 'Security'
-      : '安全';
-  String get autoLockLabel => lang == AppLanguage.english
-      ? 'Auto-lock'
-      : '自动锁定';
-  String get autoLockHint => lang == AppLanguage.english
-      ? 'Clears entered passwords after a period of inactivity.'
-      : '空闲一段时间后自动清空已输入的密码。';
-  String get autoLockOff => lang == AppLanguage.english ? 'Off' : '关闭';
-  String autoLockMinutes(int n) => lang == AppLanguage.english
-      ? '$n min'
-      : '$n 分钟';
+  String get settingsTitle => tr('Settings', '设置', 'Réglages', 'Einstellungen',
+      '設置');
+  String get languageSection => tr('Language', '语言', 'Langue', 'Sprache',
+      '言語');
+  String get themeSection => tr('Theme', '主题', 'Thème', 'Design', '主題');
+  String get themeLight => tr('Light', '浅色', 'Clair', 'Hell', '明');
+  String get themeDark => tr('Dark', '深色', 'Sombre', 'Dunkel', '暗');
+  String get themeSystem => tr('System', '跟随系统', 'Système', 'System',
+      '隨系統');
+  String get securitySection => tr('Security', '安全', 'Sécurité', 'Sicherheit',
+      '安');
+  String get autoLockLabel => tr('Auto-lock', '自动锁定', 'Verrouillage automatique',
+      'Automatische Sperre', '自鎖');
+  String get autoLockHint => tr(
+      'Clears entered passwords after a period of inactivity.',
+      '空闲一段时间后自动清空已输入的密码。',
+      'Efface les mots de passe saisis après une période d\'inactivité.',
+      'Leert eingegebene Passwörter nach einer Zeit der Inaktivität.',
+      '空閒一段時間後自動清空已入之密碼。');
+  String get autoLockOff => tr('Off', '关闭', 'Désactivé', 'Aus', '關');
+  String autoLockMinutes(int n) => tr('$n min', '$n 分钟', '$n min', '$n Min.',
+      '$n 分');
   // ---- Other section entries (v2.0.0) ----
-  String get otherSection => lang == AppLanguage.english
-      ? 'Other'
-      : '其它';
-  String get aboutEntry => lang == AppLanguage.english
-      ? 'About'
-      : '关于';
-  String get donateEntry => lang == AppLanguage.english
-      ? 'Donate'
-      : '捐赠';
-  String get policyEntry => lang == AppLanguage.english
-      ? 'Policies & Terms'
-      : '政策与条款';
-  String get changelogEntry => lang == AppLanguage.english
-      ? 'Changelog'
-      : '更新日志';
+  String get otherSection => tr('Other', '其它', 'Autres', 'Sonstiges', '其它');
+  String get aboutEntry => tr('About', '关于', 'À propos', 'Über', '關於');
+  String get donateEntry => tr('Donate', '捐赠', 'Faire un don', 'Spenden',
+      '捐贈');
+  String get policyEntry => tr('Policies & Terms', '政策与条款',
+      'Politique & Conditions', 'Richtlinien & Bedingungen', '政策與條款');
+  String get changelogEntry => tr('Changelog', '更新日志', 'Journal des versions',
+      'Änderungsprotokoll', '更新誌');
 
   // ---- About screen (v2.0.0) ----
-  String get aboutTitle => lang == AppLanguage.english
-      ? 'About'
-      : '关于';
-  String get aboutWebsite => lang == AppLanguage.english
-      ? 'Website'
-      : '官网';
-  String get aboutLicense => lang == AppLanguage.english
-      ? 'License'
-      : '协议';
-  String get aboutLicenseValue => lang == AppLanguage.english
-      ? 'AGPL-3.0 License - free, open source, no ads'
-      : 'AGPL-3.0 开源协议——免费、开源、无广告';
-  String get aboutLocalNote => lang == AppLanguage.english
-      ? 'VCTCrypt runs fully offline: no telemetry, no analytics, no ads. All encryption and decryption happens 100% on your device.'
-      : 'VCTCrypt 完全离线运行：无遥测、无分析、无广告。所有加解密运算 100% 在你的设备上完成。';
-  String get copyBtn => lang == AppLanguage.english
-      ? 'Copy'
-      : '复制';
-  String get websiteCopied => lang == AppLanguage.english
-      ? 'Website address copied'
-      : '官网地址已复制';
+  String get aboutTitle => tr('About', '关于', 'À propos', 'Über', '關於');
+  String get aboutWebsite => tr('Website', '官网', 'Site web', 'Website',
+      '網站');
+  String get aboutLicense => tr('License', '协议', 'Licence', 'Lizenz', '協議');
+  String get aboutLicenseValue => tr(
+      'AGPL-3.0 License - free, open source, no ads',
+      'AGPL-3.0 开源协议——免费、开源、无广告',
+      'Licence AGPL-3.0 — gratuit, open source, sans publicité',
+      'AGPL-3.0-Lizenz – kostenlos, Open Source, werbefrei',
+      'AGPL-3.0 開源協議——免費、開源、無廣告');
+  String get aboutLocalNote => tr(
+      'VCTCrypt runs fully offline: no telemetry, no analytics, no ads. All encryption and decryption happens 100% on your device.',
+      'VCTCrypt 完全离线运行：无遥测、无分析、无广告。所有加解密运算 100% 在你的设备上完成。',
+      'VCTCrypt fonctionne entièrement hors ligne : aucune télémétrie, aucune analyse, aucune publicité. Tout le chiffrement et le déchiffrement se fait à 100 % sur votre appareil.',
+      'VCTCrypt läuft vollständig offline: keine Telemetrie, keine Analyse, keine Werbung. Die gesamte Ver- und Entschlüsselung erfolgt zu 100 % auf Ihrem Gerät.',
+      'VCTCrypt 完全離線運行：無遙測、無分析、無廣告。所有加解密 100% 於本機完成。');
+  String get copyBtn => tr('Copy', '复制', 'Copier', 'Kopieren', '複製');
+  String get websiteCopied => tr('Website address copied', '官网地址已复制',
+      'Adresse du site copiée', 'Website-Adresse kopiert', '網站址已複製');
 
   // ---- Donate screen (v2.0.0) ----
-  String get donateTitle => lang == AppLanguage.english
-      ? 'Donate'
-      : '捐赠';
-  String get donateIntro => lang == AppLanguage.english
-      ? 'VCTCrypt is free, open-source and ad-free. Donate to support development.'
-      : 'VCTCrypt 免费开源无广告，捐赠以支持开发。';
-  String get donateQrLabel => lang == AppLanguage.english
-      ? 'Alipay donation QR code'
-      : '支付宝捐赠收款码';
-  String get donateScanHint => lang == AppLanguage.english
-      ? 'Scan with Alipay'
-      : '使用支付宝扫码';
-  String get donateThanks => lang == AppLanguage.english
-      ? 'Every donation keeps the project going - thank you!'
-      : '每一份捐赠都是持续开发的动力——谢谢你！';
-  String get donateShareQr => lang == AppLanguage.english
-      ? 'Share / Save QR'
-      : '分享 / 存储收款码';
+  String get donateTitle => tr('Donate', '捐赠', 'Faire un don', 'Spenden',
+      '捐贈');
+  String get donateIntro => tr(
+      'VCTCrypt is free, open-source and ad-free. Donate to support development.',
+      'VCTCrypt 免费开源无广告，捐赠以支持开发。',
+      'VCTCrypt est gratuit, open source et sans publicité. Faites un don pour soutenir le développement.',
+      'VCTCrypt ist kostenlos, Open Source und werbefrei. Spenden Sie, um die Entwicklung zu unterstützen.',
+      'VCTCrypt 免費開源無廣告，捐贈以支持開發。');
+  String get donateQrLabel => tr('Alipay donation QR code', '支付宝捐赠收款码',
+      'QR code de don Alipay', 'Alipay-Spenden-QR-Code', '支付寶捐贈收款碼');
+  String get donateScanHint => tr('Scan with Alipay', '使用支付宝扫码',
+      'Scannez avec Alipay', 'Mit Alipay scannen', '用支付寶掃碼');
+  String get donateThanks => tr(
+      'Every donation keeps the project going - thank you!',
+      '每一份捐赠都是持续开发的动力——谢谢你！',
+      'Chaque don fait avancer le projet — merci !',
+      'Jede Spende hält das Projekt am Laufen – danke!',
+      '每份捐贈都是持續開發之動力——多謝你！');
+  String get donateShareQr => tr('Share / Save QR', '分享 / 存储收款码',
+      'Partager / Enregistrer le QR', 'QR teilen / speichern',
+      '分享 / 存收款碼');
 
   // ---- Policies & Terms screen (v2.0.0) ----
-  String get policyTitle => lang == AppLanguage.english
-      ? 'Policies & Terms'
-      : '政策与条款';
-  String get policyPrivacyTab => lang == AppLanguage.english
-      ? 'Privacy Policy'
-      : '隐私政策';
-  String get policyTermsTab => lang == AppLanguage.english
-      ? 'Terms of Use'
-      : '使用条款';
+  String get policyTitle => tr('Policies & Terms', '政策与条款',
+      'Politique & Conditions', 'Richtlinien & Bedingungen', '政策與條款');
+  String get policyPrivacyTab => tr('Privacy Policy', '隐私政策',
+      'Politique de confidentialité', 'Datenschutzrichtlinie', '隱私政策');
+  String get policyTermsTab => tr('Terms of Use', '使用条款',
+      'Conditions d\'utilisation', 'Nutzungsbedingungen', '使用條款');
 
   // ---- Changelog screen (v2.0.0) ----
-  String get changelogTitle => lang == AppLanguage.english
-      ? 'Changelog'
-      : '更新日志';
+  String get changelogTitle => tr('Changelog', '更新日志', 'Journal des versions',
+      'Änderungsprotokoll', '更新誌');
 
   // ---- About facts (shared by the About card & screen) ----
-  String get aboutAuthor => lang == AppLanguage.english ? 'Author' : '作者';
-  String get aboutAlgo => lang == AppLanguage.english
-      ? 'Algorithm'
-      : '算法';
-  String get aboutAlgoValue => lang == AppLanguage.english
-      ? 'VCT-Crypt v1.2\nTriple AES-256-GCM + PBKDF2\n600,000 iterations\n+ Decoy / Duress partitions\n+ ML-KEM-768 hybrid (FIPS 203)'
-      : 'VCT-Crypt v1.2\n三层 AES-256-GCM + PBKDF2\n60万次迭代\n+ 伪装分区 / 胁迫销毁\n+ ML-KEM-768 混合加密（FIPS 203）';
+  String get aboutAuthor => tr('Author', '作者', 'Auteur', 'Autor', '作者');
+  String get aboutAlgo => tr('Algorithm', '算法', 'Algorithme', 'Algorithmus',
+      '算法');
+  String get aboutAlgoValue => tr(
+      'VCT-Crypt v1.2\nTriple AES-256-GCM + PBKDF2\n600,000 iterations\n+ Decoy / Duress partitions\n+ ML-KEM-768 hybrid (FIPS 203)',
+      'VCT-Crypt v1.2\n三层 AES-256-GCM + PBKDF2\n60万次迭代\n+ 伪装分区 / 胁迫销毁\n+ ML-KEM-768 混合加密（FIPS 203）',
+      'VCT-Crypt v1.2\nTriple AES-256-GCM + PBKDF2\n600 000 itérations\n+ Partitions leurre / contrainte\n+ Hybride ML-KEM-768 (FIPS 203)',
+      'VCT-Crypt v1.2\nDreifach AES-256-GCM + PBKDF2\n600.000 Iterationen\n+ Täuschungs-/Zwangs-Partitionen\n+ ML-KEM-768 Hybrid (FIPS 203)',
+      'VCT-Crypt v1.2\n三層 AES-256-GCM + PBKDF2\n60萬次迭代\n+ 偽分區 / 脅毀\n+ ML-KEM-768 混合碼化（FIPS 203）');
 
   // ---- Misc ----
-  String get passwordStrengthWeak => lang == AppLanguage.english
-      ? 'Weak'
-      : '弱';
-  String get passwordStrengthMedium => lang == AppLanguage.english
-      ? 'Medium'
-      : '中等';
-  String get passwordStrengthStrong => lang == AppLanguage.english
-      ? 'Strong'
-      : '强';
-  String get noFileSelected => lang == AppLanguage.english
-      ? 'No file selected'
-      : '未选择文件';
-  String get fileSelected => lang == AppLanguage.english
-      ? 'Selected'
-      : '已选择';
-  String get dialogOk => lang == AppLanguage.english ? 'OK' : '好';
+  String get passwordStrengthWeak => tr('Weak', '弱', 'Faible', 'Schwach', '弱');
+  String get passwordStrengthMedium => tr('Medium', '中等', 'Moyen', 'Mittel',
+      '中');
+  String get passwordStrengthStrong => tr('Strong', '强', 'Fort', 'Stark', '強');
+  String get noFileSelected => tr('No file selected', '未选择文件',
+      'Aucun fichier sélectionné', 'Keine Datei ausgewählt', '未選檔案');
+  String get fileSelected => tr('Selected', '已选择', 'Sélectionné',
+      'Ausgewählt', '已選');
+  String get dialogOk => tr('OK', '好', 'OK', 'OK', '好');
 
   // ---- Password generator (v1.2.0) ----
-  String get generatorTitle => lang == AppLanguage.english
-      ? 'Password Generator'
-      : '密码生成器';
-  String get genLength => lang == AppLanguage.english
-      ? 'Length'
-      : '长度';
-  String get genCopy => lang == AppLanguage.english
-      ? 'Copy to clipboard'
-      : '复制到剪贴板';
-  String get genCopied => lang == AppLanguage.english
-      ? 'Copied to clipboard'
-      : '已复制到剪贴板';
-  String get genUse => lang == AppLanguage.english
-      ? 'Use this password'
-      : '使用此密码';
-  String get genRegenerate => lang == AppLanguage.english
-      ? 'Regenerate'
-      : '重新生成';
-  String genEntropy(int bits) => lang == AppLanguage.english
-      ? '~$bits bits of strength'
-      : '密码强度约 $bits 位';
-  String get genQualityExcellent => lang == AppLanguage.english
-      ? 'Excellent'
-      : '极强';
-  String get genExcludeAmbiguous => lang == AppLanguage.english
-      ? 'No 0O1lI'
-      : '排除 0O1lI';
-  String get genNoClassError => lang == AppLanguage.english
-      ? 'Select at least one character type.'
-      : '请至少选择一种字符类型。';
-  String get genApplied => lang == AppLanguage.english
-      ? 'Password generated'
-      : '已生成密码';
+  String get generatorTitle => tr('Password Generator', '密码生成器',
+      'Générateur de mots de passe', 'Passwortgenerator', '密碼生成器');
+  String get genLength => tr('Length', '长度', 'Longueur', 'Länge', '長度');
+  String get genCopy => tr('Copy to clipboard', '复制到剪贴板',
+      'Copier dans le presse-papiers', 'In Zwischenablage kopieren',
+      '複製入剪貼板');
+  String get genCopied => tr('Copied to clipboard', '已复制到剪贴板',
+      'Copié dans le presse-papiers', 'In Zwischenablage kopiert',
+      '已複製入剪貼板');
+  String get genUse => tr('Use this password', '使用此密码',
+      'Utiliser ce mot de passe', 'Dieses Passwort verwenden', '用此密碼');
+  String get genRegenerate => tr('Regenerate', '重新生成', 'Régénérer',
+      'Neu generieren', '重生');
+  String genEntropy(int bits) => tr('~$bits bits of strength', '密码强度约 $bits 位',
+      '~$bits bits de robustesse', '~$bits Bit Stärke', '密碼強度約 $bits 位');
+  String get genQualityExcellent => tr('Excellent', '极强', 'Excellent',
+      'Ausgezeichnet', '極強');
+  String get genExcludeAmbiguous => tr('No 0O1lI', '排除 0O1lI', 'Sans 0O1lI',
+      'Ohne 0O1lI', '除 0O1lI');
+  String get genNoClassError => tr('Select at least one character type.',
+      '请至少选择一种字符类型。',
+      'Sélectionnez au moins un type de caractères.',
+      'Wählen Sie mindestens einen Zeichentyp.', '請至少選一種字符類。');
+  String get genApplied => tr('Password generated', '已生成密码',
+      'Mot de passe généré', 'Passwort generiert', '已生密碼');
 
   // ---- File inspector (v1.2.0) ----
-  String get inspectTitle => lang == AppLanguage.english
-      ? 'File Info'
-      : '文件信息';
-  String get infoFileName => lang == AppLanguage.english
-      ? 'File name'
-      : '文件名';
-  String get infoFormat => lang == AppLanguage.english
-      ? 'Format'
-      : '格式';
-  String get infoFormatV1 => lang == AppLanguage.english
-      ? 'V1 (classic)'
-      : 'V1（经典格式）';
-  String get infoFormatV2 => lang == AppLanguage.english
-      ? 'V2 (advanced slots)'
-      : 'V2（支持高级分区）';
-  String get infoFormatV3 => lang == AppLanguage.english
-      ? 'V3 (ML-KEM hybrid)'
-      : 'V3（ML-KEM 混合格式）';
-  String get infoChannelPassword => lang == AppLanguage.english
-      ? 'Password channel'
-      : '密码通道';
-  String get infoChannelKem => lang == AppLanguage.english
-      ? 'ML-KEM recipient channel'
-      : 'ML-KEM 收件人通道';
-  String get infoYes => lang == AppLanguage.english ? 'yes' : '有';
-  String get infoNo => lang == AppLanguage.english ? 'no' : '无';
-  String get infoFormatInvalid => lang == AppLanguage.english
-      ? 'Not a VCT file'
-      : '不是 VCT 文件';
-  String get infoFileSize => lang == AppLanguage.english
-      ? 'File size'
-      : '文件大小';
-  String get infoPayload => lang == AppLanguage.english
-      ? 'Encrypted payload'
-      : '加密数据';
-  String get infoHeader => lang == AppLanguage.english
-      ? 'Header size (bytes)'
-      : '头部大小（字节）';
-  String get infoAlgo => lang == AppLanguage.english
-      ? 'Cipher'
-      : '加密算法';
-  String get infoKdf => lang == AppLanguage.english
-      ? 'Key derivation'
-      : '密钥派生';
+  String get inspectTitle => tr('File Info', '文件信息',
+      'Informations sur le fichier', 'Dateiinformationen', '檔案信息');
+  String get infoFileName => tr('File name', '文件名', 'Nom du fichier',
+      'Dateiname', '文件名');
+  String get infoFormat => tr('Format', '格式', 'Format', 'Format', '格式');
+  String get infoFormatV1 => tr('V1 (classic)', 'V1（经典格式）', 'V1 (classique)',
+      'V1 (klassisch)', 'V1（舊式）');
+  String get infoFormatV2 => tr('V2 (advanced slots)', 'V2（支持高级分区）',
+      'V2 (partitions avancées)', 'V2 (erweiterte Partitionen)',
+      'V2（高級分區）');
+  String get infoFormatV3 => tr('V3 (ML-KEM hybrid)', 'V3（ML-KEM 混合格式）',
+      'V3 (hybride ML-KEM)', 'V3 (ML-KEM-Hybrid)', 'V3（ML-KEM 混格式）');
+  String get infoChannelPassword => tr('Password channel', '密码通道',
+      'Canal mot de passe', 'Passwortkanal', '密碼通道');
+  String get infoChannelKem => tr('ML-KEM recipient channel', 'ML-KEM 收件人通道',
+      'Canal destinataire ML-KEM', 'ML-KEM-Empfängerkanal', 'ML-KEM 收件人通道');
+  String get infoYes => tr('yes', '有', 'oui', 'ja', '有');
+  String get infoNo => tr('no', '无', 'non', 'nein', '無');
+  String get infoFormatInvalid => tr('Not a VCT file', '不是 VCT 文件',
+      'Pas un fichier VCT', 'Keine VCT-Datei', '非 VCT 檔案');
+  String get infoFileSize => tr('File size', '文件大小', 'Taille du fichier',
+      'Dateigröße', '檔案大小');
+  String get infoPayload => tr('Encrypted payload', '加密数据', 'Données chiffrées',
+      'Verschlüsselte Nutzdaten', '碼化載');
+  String get infoHeader => tr('Header size (bytes)', '头部大小（字节）',
+      'Taille de l\'en-tête (octets)', 'Headergröße (Bytes)', '頭部大小（字節）');
+  String get infoAlgo => tr('Cipher', '加密算法', 'Chiffrement', 'Chiffre',
+      '算法');
+  String get infoKdf => tr('Key derivation', '密钥派生', 'Dérivation de clé',
+      'Schlüsselableitung', '派生密鑰');
   String get infoKdfValue => 'PBKDF2-SHA256 · 600K';
-  String get infoModified => lang == AppLanguage.english
-      ? 'Last modified'
-      : '修改时间';
-  String get infoDeniableNote => lang == AppLanguage.english
-      ? 'V2 files always contain all advanced slots. It is impossible to tell from this file whether a decoy or duress password is set - that is by design.'
-      : 'V2 文件始终包含全部高级分区。仅凭此文件无法判断是否设置了伪装或胁迫密码——这是有意为之的设计。';
+  String get infoModified => tr('Last modified', '修改时间',
+      'Dernière modification', 'Zuletzt geändert', '改時');
+  String get infoDeniableNote => tr(
+      'V2 files always contain all advanced slots. It is impossible to tell from this file whether a decoy or duress password is set - that is by design.',
+      'V2 文件始终包含全部高级分区。仅凭此文件无法判断是否设置了伪装或胁迫密码——这是有意为之的设计。',
+      'Les fichiers V2 contiennent toujours toutes les partitions avancées. Il est impossible de savoir depuis ce fichier si un mot de passe leurre ou de contrainte est défini — c\'est voulu.',
+      'V2-Dateien enthalten immer alle erweiterten Partitionen. Anhand dieser Datei ist nicht erkennbar, ob ein Täuschungs- oder Zwangs-Passwort gesetzt ist – das ist beabsichtigt.',
+      'V2 檔案常含全部高級分區。僅憑此檔案無法判斷是否設了偽或脅密碼——此為有意設計。');
 
   // ---- Panic lock (v1.2.0) ----
-  String get panicLock => lang == AppLanguage.english
-      ? 'Panic lock: clear all passwords now'
-      : '紧急锁定：立即清空所有密码';
-  String get panicLocked => lang == AppLanguage.english
-      ? 'All passwords cleared.'
-      : '已清空所有密码。';
+  String get panicLock => tr('Panic lock: clear all passwords now',
+      '紧急锁定：立即清空所有密码',
+      'Verrouillage d\'urgence : effacer tous les mots de passe',
+      'Notfall-Sperre: alle Passwörter jetzt leeren',
+      '急鎖：即清空所有密碼');
+  String get panicLocked => tr('All passwords cleared.', '已清空所有密码。',
+      'Tous les mots de passe effacés.', 'Alle Passwörter geleert.',
+      '已清空所有密碼。');
 
   // ---- Usage statistics (v1.2.0) ----
-  String get statsSection => lang == AppLanguage.english
-      ? 'Usage Statistics'
-      : '使用统计';
-  String get statsEncrypted => lang == AppLanguage.english
-      ? 'Files encrypted'
-      : '已加密文件';
-  String get statsDecrypted => lang == AppLanguage.english
-      ? 'Files decrypted'
-      : '已解密文件';
-  String get statsDataEnc => lang == AppLanguage.english
-      ? 'Data encrypted'
-      : '已加密数据量';
-  String get statsDataDec => lang == AppLanguage.english
-      ? 'Data decrypted'
-      : '已解密数据量';
-  String get statsDecoy => lang == AppLanguage.english
-      ? 'Decoy partitions'
-      : '伪装分区';
-  String get statsDuressArmed => lang == AppLanguage.english
-      ? 'Duress traps armed'
-      : '胁迫陷阱';
-  String get statsDuressTriggered => lang == AppLanguage.english
-      ? 'Duress wipes triggered'
-      : '胁迫销毁触发';
-  String get statsShredded => lang == AppLanguage.english
-      ? 'Files shredded'
-      : '已擦除文件';
-  String get statsEmpty => lang == AppLanguage.english
-      ? 'No operations recorded yet.'
-      : '暂无操作记录。';
-  String get statsReset => lang == AppLanguage.english
-      ? 'Reset statistics'
-      : '重置统计';
-  String get statsResetConfirmTitle => lang == AppLanguage.english
-      ? 'Reset statistics?'
-      : '重置统计？';
-  String get statsResetConfirmBody => lang == AppLanguage.english
-      ? 'All counters will be cleared. This cannot be undone.'
-      : '所有计数将被清零，此操作不可撤销。';
-  String get statsPrivacyNote => lang == AppLanguage.english
-      ? 'Statistics are stored locally on this device only. No file names, passwords or paths are ever recorded.'
-      : '统计数据仅保存在本设备，不记录任何文件名、密码或路径。';
+  String get statsSection => tr('Usage Statistics', '使用统计',
+      'Statistiques d\'utilisation', 'Nutzungsstatistik', '用統計');
+  String get statsEncrypted => tr('Files encrypted', '已加密文件',
+      'Fichiers chiffrés', 'Verschlüsselte Dateien', '已碼化檔案');
+  String get statsDecrypted => tr('Files decrypted', '已解密文件',
+      'Fichiers déchiffrés', 'Entschlüsselte Dateien', '已解碼檔案');
+  String get statsDataEnc => tr('Data encrypted', '已加密数据量',
+      'Données chiffrées', 'Verschlüsselte Daten', '已碼化數據');
+  String get statsDataDec => tr('Data decrypted', '已解密数据量',
+      'Données déchiffrées', 'Entschlüsselte Daten', '已解碼數據');
+  String get statsDecoy => tr('Decoy partitions', '伪装分区',
+      'Partitions leurres', 'Täuschungspartitionen', '偽分區');
+  String get statsDuressArmed => tr('Duress traps armed', '胁迫陷阱',
+      'Pièges de contrainte armés', 'Zwangs-Fallen aktiv', '脅陷阱');
+  String get statsDuressTriggered => tr('Duress wipes triggered', '胁迫销毁触发',
+      'Destructions sous contrainte déclenchées',
+      'Zwangs-Löschungen ausgelöst', '脅毀觸發');
+  String get statsShredded => tr('Files shredded', '已擦除文件',
+      'Fichiers effacés', 'Gelöschte Dateien', '已擦檔案');
+  String get statsEmpty => tr('No operations recorded yet.', '暂无操作记录。',
+      'Aucune opération enregistrée pour l\'instant.',
+      'Noch keine Vorgänge erfasst.', '暫無操作記錄。');
+  String get statsReset => tr('Reset statistics', '重置统计',
+      'Réinitialiser les statistiques', 'Statistik zurücksetzen', '重置統計');
+  String get statsResetConfirmTitle => tr('Reset statistics?', '重置统计？',
+      'Réinitialiser les statistiques ?', 'Statistik zurücksetzen?', '重置統計？');
+  String get statsResetConfirmBody => tr(
+      'All counters will be cleared. This cannot be undone.',
+      '所有计数将被清零，此操作不可撤销。',
+      'Tous les compteurs seront remis à zéro. Cette action est irréversible.',
+      'Alle Zähler werden zurückgesetzt. Dies kann nicht rückgängig gemacht werden.',
+      '所有計數將被清零，不可撤銷。');
+  String get statsPrivacyNote => tr(
+      'Statistics are stored locally on this device only. No file names, passwords or paths are ever recorded.',
+      '统计数据仅保存在本设备，不记录任何文件名、密码或路径。',
+      'Les statistiques sont stockées uniquement sur cet appareil. Aucun nom de fichier, mot de passe ou chemin n\'est jamais enregistré.',
+      'Statistiken werden nur auf diesem Gerät gespeichert. Es werden niemals Dateinamen, Passwörter oder Pfade erfasst.',
+      '統計僅存於本機，不記任何文件名、密碼或路徑。');
 
   // ---- Batch encryption (v1.3.0) ----
-  String batchSelectedCount(int n) => lang == AppLanguage.english
-      ? '$n files selected'
-      : '已选择 $n 个文件';
-  String get batchDecoyDisabled => lang == AppLanguage.english
-      ? 'Batch mode: the decoy partition is unavailable here. Encrypt files one by one to use a decoy.'
-      : '批量模式：此处无法使用伪装分区，如需伪装请逐个加密。';
-  String get errDecoyBatch => lang == AppLanguage.english
-      ? 'The decoy partition is not available in batch mode.'
-      : '批量模式下无法使用伪装分区。';
-  String batchEncrypting(int i, int n) => lang == AppLanguage.english
-      ? 'Encrypting $i of $n...'
-      : '正在加密 $i / $n...';
-  String batchAllOk(int n) => lang == AppLanguage.english
-      ? 'All $n files encrypted.'
-      : '全部 $n 个文件加密完成。';
-  String batchPartial(int ok, int fail) => lang == AppLanguage.english
-      ? '$ok succeeded, $fail failed.'
-      : '$ok 个成功，$fail 个失败。';
+  String batchSelectedCount(int n) => tr('$n files selected', '已选择 $n 个文件',
+      '$n fichiers sélectionnés', '$n Dateien ausgewählt', '已選 $n 個檔案');
+  String get batchDecoyDisabled => tr(
+      'Batch mode: the decoy partition is unavailable here. Encrypt files one by one to use a decoy.',
+      '批量模式：此处无法使用伪装分区，如需伪装请逐个加密。',
+      'Mode lot : la partition leurre n\'est pas disponible ici. Chiffrez les fichiers un par un pour utiliser un leurre.',
+      'Stapelmodus: Die Täuschungspartition ist hier nicht verfügbar. Verschlüsseln Sie Dateien einzeln, um eine Täuschung zu verwenden.',
+      '批量模式：此處不能用偽分區，如需偽請逐個碼化。');
+  String get errDecoyBatch => tr(
+      'The decoy partition is not available in batch mode.',
+      '批量模式下无法使用伪装分区。',
+      'La partition leurre n\'est pas disponible en mode lot.',
+      'Die Täuschungspartition ist im Stapelmodus nicht verfügbar.',
+      '批量模式下不能用偽分區。');
+  String batchEncrypting(int i, int n) => tr('Encrypting $i of $n...',
+      '正在加密 $i / $n...', 'Chiffrement $i sur $n...',
+      'Verschlüssele $i von $n...', '正在碼化 $i / $n...');
+  String batchAllOk(int n) => tr('All $n files encrypted.', '全部 $n 个文件加密完成。',
+      'Les $n fichiers ont été chiffrés.', 'Alle $n Dateien verschlüsselt.',
+      '全部 $n 個檔案碼化完。');
+  String batchPartial(int ok, int fail) => tr('$ok succeeded, $fail failed.',
+      '$ok 个成功，$fail 个失败。', '$ok réussis, $fail échoués.',
+      '$ok erfolgreich, $fail fehlgeschlagen.', '$ok 個成，$fail 個失。');
 
   // ---- Settings: personalization & guide (v1.3.0) ----
-  String get behaviorSection => lang == AppLanguage.english
-      ? 'Personalization'
-      : '个性化';
-  String get accentColorLabel => lang == AppLanguage.english
-      ? 'Accent color'
-      : '主题色';
-  String get accentColorHint => lang == AppLanguage.english
-      ? 'Pick the palette you like. Applies instantly.'
-      : '选择你喜欢的配色，立即生效。';
-  String get startPageLabel => lang == AppLanguage.english
-      ? 'Start page'
-      : '启动页';
-  String get startPageHint => lang == AppLanguage.english
-      ? 'Which screen the app opens on.'
-      : '启动应用时默认打开的页面。';
-  String get clipboardClearLabel => lang == AppLanguage.english
-      ? 'Clipboard auto-clear'
-      : '剪贴板自动清除';
-  String get clipboardClearHint => lang == AppLanguage.english
-      ? 'After you copy a generated password, the clipboard is wiped automatically.'
-      : '复制生成的密码后，到时自动清空剪贴板。';
-  String clipSeconds(int n) => lang == AppLanguage.english
-      ? '$n s'
-      : '$n 秒';
-  String get guideSection => lang == AppLanguage.english
-      ? 'Guide & Help'
-      : '引导与帮助';
-  String get showOnboardingBtn => lang == AppLanguage.english
-      ? 'View beginner guide'
-      : '查看新手引导';
-  String get helpTitle => lang == AppLanguage.english
-      ? 'Help & Usage'
-      : '使用说明';
-  String get obSkip => lang == AppLanguage.english ? 'Skip' : '跳过';
-  String get obNext => lang == AppLanguage.english ? 'Next' : '下一步';
-  String get obDone => lang == AppLanguage.english
-      ? 'Get started'
-      : '开始使用';
-  String genCopiedAuto(int n) => lang == AppLanguage.english
-      ? 'Copied. Clipboard clears in $n s.'
-      : '已复制，$n 秒后自动清空剪贴板。';
+  String get behaviorSection => tr('Personalization', '个性化',
+      'Personnalisation', 'Personalisierung', '個性化');
+  String get accentColorLabel => tr('Accent color', '主题色',
+      'Couleur d\'accent', 'Akzentfarbe', '主題色');
+  String get accentColorHint => tr('Pick the palette you like. Applies instantly.',
+      '选择你喜欢的配色，立即生效。',
+      'Choisissez la palette qui vous plaît. Appliquée instantanément.',
+      'Wählen Sie die gewünschte Palette. Wirkt sofort.',
+      '選你喜歡之配色，即時生效。');
+  String get startPageLabel => tr('Start page', '启动页', 'Page de démarrage',
+      'Startseite', '啟頁');
+  String get startPageHint => tr('Which screen the app opens on.',
+      '启动应用时默认打开的页面。', 'Écran sur lequel l\'application s\'ouvre.',
+      'Welcher Bildschirm beim Start geöffnet wird.', '啟動應用時默認打開之頁。');
+  String get clipboardClearLabel => tr('Clipboard auto-clear', '剪贴板自动清除',
+      'Effacement auto du presse-papiers', 'Zwischenablage automatisch leeren',
+      '剪貼板自清');
+  String get clipboardClearHint => tr(
+      'After you copy a generated password, the clipboard is wiped automatically.',
+      '复制生成的密码后，到时自动清空剪贴板。',
+      'Après avoir copié un mot de passe généré, le presse-papiers est effacé automatiquement.',
+      'Nach dem Kopieren eines generierten Passworts wird die Zwischenablage automatisch geleert.',
+      '複製生成之密碼後，到時自動清空剪貼板。');
+  String clipSeconds(int n) => tr('$n s', '$n 秒', '$n s', '$n s', '$n 秒');
+  String get guideSection => tr('Guide & Help', '引导与帮助', 'Guide & Aide',
+      'Anleitung & Hilfe', '引導與幫助');
+  String get showOnboardingBtn => tr('View beginner guide', '查看新手引导',
+      'Voir le guide de démarrage', 'Anfängeranleitung ansehen', '看新手引導');
+  String get helpTitle => tr('Help & Usage', '使用说明', 'Aide & Utilisation',
+      'Hilfe & Nutzung', '使用說明');
+  String get obSkip => tr('Skip', '跳过', 'Passer', 'Überspringen', '跳過');
+  String get obNext => tr('Next', '下一步', 'Suivant', 'Weiter', '下一步');
+  String get obDone => tr('Get started', '开始使用', 'Commencer', 'Loslegen',
+      '始用');
+  String genCopiedAuto(int n) => tr('Copied. Clipboard clears in $n s.',
+      '已复制，$n 秒后自动清空剪贴板。',
+      'Copié. Le presse-papiers s\'efface dans $n s.',
+      'Kopiert. Zwischenablage wird in $n s geleert.',
+      '已複製，$n 秒後自動清空剪貼板。');
 
   /// Map error code to localized message
   String errorMessage(String code) {

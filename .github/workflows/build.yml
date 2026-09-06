@@ -521,12 +521,11 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
-            ### What's New in v2.1.0
-            - 🔒 **Security hardening**: the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves
-            - ⚡ **Faster encryption**: platform-native crypto acceleration — Android gets native PBKDF2 + AES-GCM, iOS/macOS get native AES-GCM, desktop moves crypto off the UI thread. Same algorithms, same output
-            - 🔤 **Bolder typography**: Inter for Latin + Noto Sans SC for Chinese, one weight step bolder across the UI
-            - 📄 **License**: corrected from MIT to AGPL-3.0
-            - ♻️ **Backward compatible**: files created by older versions (1.x / 2.0.0) open unchanged via automatic legacy fallback
+            ### What's New in v2.2.1
+            - 🌍 **Five UI languages**: English, 简体中文, Français, Deutsch and 漢喃文 (Han-Nom / Chữ Nôm), switchable in Settings
+            - 🔤 **Tianheng font bundled**: TH-Feon (天珩全字庫) ships inside the app and renders Han-Nom and extended CJK glyphs (Unicode Ext B–F) that regular fonts lack
+            - 🔠 **Bolder Chinese text**: UI weights bumped two steps so Chinese reads clearly
+            - ♻️ **Backward compatible**: files created by all older versions (1.x / 2.0.x / 2.1.0) open unchanged
             - All previous features (ML-KEM-768 recipient keys, Secure Notes, decoy/duress, batch, shred, auto-lock, password generator) included
 
             100% offline. No analytics, no ads, no network code - keys never leave your device.

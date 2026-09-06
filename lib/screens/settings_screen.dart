@@ -55,6 +55,22 @@ class SettingsScreen extends StatelessWidget {
                       icon: const Text('中'),
                       label: Text('中文'),
                     ),
+                    // v2.2.1: French, German and Han-Nom (Chữ Nôm)
+                    ButtonSegment(
+                      value: AppLanguage.french,
+                      icon: const Text('FR'),
+                      label: Text('Français'),
+                    ),
+                    ButtonSegment(
+                      value: AppLanguage.german,
+                      icon: const Text('DE'),
+                      label: Text('Deutsch'),
+                    ),
+                    ButtonSegment(
+                      value: AppLanguage.hannom,
+                      icon: const Text('喃'),
+                      label: Text('漢喃文'),
+                    ),
                   ],
                   selected: {appState.lang},
                   onSelectionChanged: (selected) {

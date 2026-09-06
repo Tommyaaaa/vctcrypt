@@ -52,8 +52,7 @@ void main() async {
   final onboarded = prefs.getBool('onboarded') ?? false;
 
   runApp(VCTCryptApp(
-    initialLang:
-        langCode == 'zh' ? AppLanguage.chinese : AppLanguage.english,
+    initialLang: _langFromCode(langCode),
     initialThemeIndex: themeIndex,
     initialAutoLockMinutes: autoLockMinutes,
     initialSeedColor:
@@ -62,6 +61,23 @@ void main() async {
     initialClipboardClearSeconds: clipboardClearSeconds,
     initialOnboarded: onboarded,
   ));
+}
+
+/// v2.2.1: stored language code -> AppLanguage. Unknown / legacy codes
+/// fall back to English.
+AppLanguage _langFromCode(String code) {
+  switch (code) {
+    case 'zh':
+      return AppLanguage.chinese;
+    case 'fr':
+      return AppLanguage.french;
+    case 'de':
+      return AppLanguage.german;
+    case 'vi-Hani':
+      return AppLanguage.hannom;
+    default:
+      return AppLanguage.english;
+  }
 }
 
 class VCTCryptApp extends StatefulWidget {
@@ -251,16 +267,16 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
       brightness: Brightness.dark,
     );
 
-    // v2.1.0 typography: Inter (open alternative to Google Sans) for
-    // Latin + Noto Sans SC fallback for Chinese, with one-step-bolder
-    // defaults so UI text reads solid rather than thin. The base themes
-    // are resolved first so the platform text styles are correct, then
-    // the weights are bumped in a copy.
+    // v2.2.1 typography: Noto Sans SC is the base font (covers Latin
+    // for English / Français / Deutsch plus common Hanzi), with the
+    // bundled TH-Feon (天珩全字庫) as the fallback that supplies
+    // Han-Nom (Chữ Nôm) and extended CJK glyphs. Weights are bumped
+    // two steps below so Chinese reads visibly bolder.
     final lightTheme = ThemeData(
       useMaterial3: true,
       colorScheme: lightScheme,
-      fontFamily: 'Inter',
-      fontFamilyFallback: const ['Noto Sans SC'],
+      fontFamily: 'Noto Sans SC',
+      fontFamilyFallback: const ['TH-Feon'],
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: lightScheme.surface,
@@ -286,8 +302,8 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
     final darkTheme = ThemeData(
       useMaterial3: true,
       colorScheme: darkScheme,
-      fontFamily: 'Inter',
-      fontFamilyFallback: const ['Noto Sans SC'],
+      fontFamily: 'Noto Sans SC',
+      fontFamilyFallback: const ['TH-Feon'],
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: darkScheme.surface,
@@ -328,16 +344,16 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
     );
   }
 
-  /// v2.1.0 typography: bump every Material text role one weight step
-  /// (400→500, 500→600, 600→700) so the UI reads solid rather than thin
-  /// with Inter, while the M3 hierarchy (headline vs body vs label)
-  /// stays intact. Already-bold styles (700+) are left alone.
+  /// v2.2.1 typography: bump every Material text role two weight steps
+  /// (400→600, 500→700, capped at 700) so Chinese reads visibly bolder
+  /// than the old thin look, while the M3 hierarchy (headline vs body
+  /// vs label) stays intact. Already-bold styles (700+) are left alone.
   TextTheme _bolderText(TextTheme base) {
     TextStyle? bump(TextStyle? style) {
       if (style == null) return null;
       const maxIndex = 6; // FontWeight.w700
       final current = style.fontWeight?.index ?? FontWeight.w400.index;
-      final next = current >= maxIndex ? current : current + 1;
+      final next = current >= maxIndex - 1 ? maxIndex : current + 2;
       return style.copyWith(fontWeight: FontWeight.values[next]);
     }
 

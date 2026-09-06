@@ -1,0 +1,23 @@
+TH-Feon (天珩全字庫) — bundled font notice
+
+Copyright © 沈天珩 (Shen Tianheng / Cheonhyeong)
+Homepage: http://cheonhyeong.com/
+Download: http://cheonhyeong.com/File/TH-Feon.ttf
+
+TH-Feon is a freeware CJK "supplementary" font (全字庫 / full character
+library). It is bundled with VCTCrypt solely to render characters that
+the base font (Noto Sans SC) does not cover — in particular:
+
+  - Han-Nom / Chữ Nôm (Vietnamese ideographs, mostly CJK Ext B, e.g.
+    U+20B20 etc.)
+  - CJK Unified Ideographs Extension A-F and other rare / historical
+    Hanzi
+
+By design TH-Feon contains no basic Latin letters, punctuation or
+common Hanzi; it is meant to be used together with a base font.
+
+The font is distributed free of charge for personal and commercial
+use. No warranty is provided. If you redistribute it, keep this notice
+and the original file intact.
+
+本字型為免費字型，可自由使用與散佈（請保留原始檔案與本說明）。
