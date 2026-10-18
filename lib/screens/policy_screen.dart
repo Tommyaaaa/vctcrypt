@@ -157,24 +157,24 @@ List<_Section> _privacySections(AppStrings s) {
         ];
     case AppLanguage.hannom:
       return [
-        _Section('Thu thập dữ liệu:', [
-          'VCTCrypt 空 thu thập, truyền 或 留 trữ bất kỳ dữ liệu 𠊛 dùng nào. 空 固 碼 mạng 於 ứng dụng: 空 đo 自 xa, 空 phân tích, 空 quảng cáo, 空 báo cáo sự cố, 空 固 hệ thống tài khoản.',
-          'Nhà phát triển 空 thể 尋 hiểu bạn 碼 hóa những 集信 nào, bạn sử dụng mật khẩu nào 或 bạn 造 鎖 nào. Tất cả 碼 hóa 吧 giải 碼 chạy 100% 上 thiết bị 之 bạn.',
+        _Section('收集資料：空', [
+          'VCTCrypt 空收集、傳或留貯不分資料𠊛用那。空固碼網於應用：空遙測、空分析、空廣告、空報告事故、空固系統賬戶。',
+          '家發展空體別伴碼化仍集信那、用密口那、或造鎖那。每碼化吧解碼行 100% 上設備之伴。',
         ]),
-        _Section('Dữ liệu 得 留 trữ 上 thiết bị 之 bạn', [
-          'Cài đặt ứng dụng (ngôn ngữ, chủ đề, khoảng thời gian tự động 鎖, v.v.) 得 留 giữ 於 cửa hàng tùy 選 hệ thống 只 để khôi phục tùy 選 giao diện 𠊛 dùng 之 bạn.',
-          'Thống kê sử dụng (數 lượng 集信 得 碼 hóa/giải 碼 吧 總 數 byte) 只 羅 các bộ đếm cục bộ: 空 固 名 集信, 空 固 đường dẫn, 空 固 dấu thời gian, 空 bao 時 rời khỏi thiết bị 吧 固 thể đặt 來 bất cứ 時 nào 自 Cài đặt.',
+        _Section('資料留貯上設備之伴', [
+          '該設應用（言語、主題、曠自鎖、云云）得留於倉隨撰系統只抵復回隨撰界面之伴。',
+          '統計使用（數量集信碼化／解碼吧總數字節）只羅部點局步：空名集信、空塘引、空跡時間、空包時離設備，吧固體置來不分時那自該設。',
         ]),
-        _Section('集信 吧 quyền hạn', [
-          'VCTCrypt 只 讀 一 集信 時 bạn 選 nó 一 cách rõ ràng; 首 出 得 ghi 入 vị trí bạn 選 或 入 thư mục Tài liệu ứng dụng.',
-          'Các 集信 鎖 .vctpub/.vctkey 羅 các 集信 thông thường 下 sự kiểm soát hoàn toàn 之 bạn - chia sẻ, sao 留 吧 除 chúng hoạt động giống như bất kỳ 集信 hệ thống nào. 鎖 riêng 得 留 trữ bọc mật khẩu 吧 mật khẩu 底 空 bao 時 得 留 於 bất cứ đâu.',
+        _Section('集信吧權', [
+          'VCTCrypt 只讀𠬠集信期伴撰它昭昭；頭出得記入位置伴撰或入書目材料之應用。',
+          '.vctpub / .vctkey 羅仍集信鎖平常下完全控制之伴——分、留抄吧刪奴行如不分集信系統那。鎖私得留貯包密口，吧密口妸空包時得留於不分兜。',
         ]),
-        _Section('Bên thứ 三 吧 đám mây', [
-          '空 固 phân tích, quảng cáo 或 dịch vụ đám mây 之 bên thứ 三 nào 得 sử dụng 吧 空 固 chế độ 看 web nào 得 nhúng.',
-          'Hình ảnh QR 上 trang Quyên góp 得 送 bên 於 gói ứng dụng; nó 空 得 lấy 自 mạng.',
+        _Section('邊第三吧雲', [
+          '空分析、廣告咳服務雲之邊第三那得使用，吧空固視圖網絡那得嵌入。',
+          '形影 QR 上張捐納得包入內包應用；奴空得拉自網。',
         ]),
-        _Section('Các thay đổi đối 與 Chính sách 尼', [
-          '若 一 phiên bản 於 tương lai thay đổi chính sách 尼, nhật ký thay đổi 㑹 nêu rõ 吧 trang 尼 得 cập nhật 與 phiên bản.',
+        _Section('改換政策尼', [
+          '若𠬠版本將來改換政策尼，日記改換㑹昭吧張尼㑹得更新與版本。',
         ]),
         ];
     default:
@@ -268,22 +268,22 @@ List<_Section> _termsSections(AppStrings s) {
         ];
     case AppLanguage.hannom:
       return [
-        _Section('Chấp 認', [
-          'Bằng cách sử dụng VCTCrypt, bạn đồng ý 與 các điều khoản 尼. 若 bạn 空 đồng ý, hãy ngừng sử dụng 吧 除 ứng dụng.',
+        _Section('執認', [
+          '憑分使用 VCTCrypt，伴同意與各條款尼。若伴空同意，丐停使用吧刪應用。',
         ]),
-        _Section('miễn phí 源 開', [
-          'VCTCrypt 得 phát hành 隨 giấy phép AGPL-3.0 - miễn phí 吧 空 固 quảng cáo. Bạn 得 tự do sử dụng, nghiên cứu, 改 đổi 吧 phân phối 來 nó; các phiên bản 改 đổi 沛 得 phát hành 隨 共 一 giấy phép 吧 若 bạn cung cấp nó như 一 dịch vụ mạng, bạn 沛 cung cấp 碼 源 朱 những 𠊛 dùng 底. 看 集信 GIẤY PHÉP 於 thư mục gốc 之 kho 留 trữ.',
+        _Section('免費吧源開', [
+          'VCTCrypt 得發行隨許可 AGPL-3.0——免費吧空廣告。伴得自由使用、研究、修改吧分派來奴；各版本修改沛得發行隨共一許可，吧若伴供給奴如𠬠服務網，伴沛供給碼源朱仍𠊛用妸。看集信 LICENSE 於書目根之倉貯。',
         ]),
-        _Section('空 bảo hành; tuyên bố 自 chối trách nhiệm', [
-          '分 MỀM 得 CUNG CẤP "NGUYÊN TRẠNG", 空 BẢO ĐẢM 下 BẤT KỲ HÌNH THỨC NÀO, RÕ RÀNG 或 NGỤ Ý, BAO GỒM 如 空 GIỚI HẠN 於 CÁC BẢO ĐẢM 回 KHẢ NĂNG THƯƠNG MẠI, SỰ PHÙ HỢP 朱 一 MỤC ĐÍCH CỤ THỂ 吧 空 VI PHẠM.',
-          'Khả năng 空 thể phục hồi 羅 一 分 之 thiết kế bảo mật: 若 bạn quên mật khẩu 或 mất 鎖 riêng .vctkey, 空 埃 - kể cả tác 偽 - 固 thể khôi phục nội dung 集信. Sao 留 mật khẩu 吧 chìa 鎖 一 cách cẩn thận.',
-          'Bạn 偽 định tất cả các hậu quả 之 việc sử dụng xóa cưỡng bức, phân vùng 偽裝 吧 tính năng 碎安 toàn. Tác 偽 空 chịu trách nhiệm 朱 bất kỳ tổn thất dữ liệu trực tiếp 或 gián tiếp nào.',
+        _Section('空保修；宣辭責任', [
+          '分軟得供給「原狀」，空保擔下不分形式那、昭昭咳寓意，包兼仍空界限於各保擔回可能商賣、事符合朱𠬠目的具體吧空違犯。',
+          '可能空體復回羅一分之設計保密：若伴唅密口或失鎖私 .vctkey，空埃——計奇作者——固體復回內容集信。留抄密口吧鎖昭謹慎。',
+          '伴自定畢後果之役使用刪強逼、分區偽吧功能安碎。作者空受責任朱不分損失資料直接咳間接那。',
         ]),
-        _Section('Thông báo 空 tuân thủ', [
-          '一 數 khu vực pháp lý hạn chế việc sở hữu, sử dụng 或 出 分 mềm 碼 hóa. Bạn 固 trách nhiệm xác minh 吧 tuân thủ luật pháp hiện hành tại 處 bạn 生 sống.',
+        _Section('通報遵守', [
+          '𠬠數區域法律限制役所有、使用或出口分軟碼化。伴固責任核明吧遵守律法現行在坭伴生𤯩。',
         ]),
-        _Section('Quyên góp', [
-          'Các khoản quyên góp 羅 hoàn toàn tự nguyện, 空 開 鎖 các tính năng 吧 空 造 出 hợp đồng dịch vụ 或 nghĩa vụ hỗ trợ.',
+        _Section('捐納', [
+          '各款捐納羅完全自願，空開鎖功能那，吧空造出合同服務咳義務輔助。',
         ]),
         ];
     default:

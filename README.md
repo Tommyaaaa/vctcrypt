@@ -6,6 +6,7 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 
 ## Features
 
+- **Genuine Chữ Nôm UI & policies** (v2.3.1): the Han-Nom (𡸨喃) interface and the Han-Nom Privacy Policy / Terms are written in real Chữ Nôm — Vietnamese grammar and word order, generated through a free translation API instead of a word-for-word Chinese rendering
 - **Checksum / hash tool** (v2.3.0): compute SHA-256 / SHA-512 / SHA-3-256 of any file — streamed, so huge files work without filling memory — and compare it against an expected value to verify integrity
 - **Multilingual policies** (v2.3.0): Privacy Policy and Terms of Use are fully translated into all five UI languages
 - **Five UI languages** (v2.2.5): English, 简体中文, Français, Deutsch and 𡸨喃 (Chữ Nôm / Han-Nom) — switchable in Settings; the Han-Nom UI is genuine Chữ Nôm with Vietnamese grammar and word order, not Traditional Chinese
@@ -65,7 +66,8 @@ flutter run          # or: flutter run -d windows / macos / linux / chrome
 
 ## Version history
 
-- **2.3.0** — New checksum tool (SHA-256 / SHA-512 / SHA-3-256, streamed, compare against expected value) · Policies & Terms fully translated into all five UI languages · Han-Nom UI completed via free translation API · fully backward compatible
+- **2.3.1** — Han-Nom (𡸨喃) UI and Policies & Terms rewritten as genuine Chữ Nôm via a free translation API: Vietnamese grammar and word order instead of a word-for-word Chinese rendering · fully backward compatible
+- **2.3.0** — New checksum tool (SHA-256 / SHA-512 / SHA-3-256, streamed, compare against expected value) · Policies & Terms fully translated into all five UI languages · fully backward compatible
 - **2.2.5** — Han-Nom UI rewritten as genuine 𡸨喃 (Chữ Nôm): Vietnamese grammar and word order, not Traditional Chinese · Settings language picker is a vertical list with full horizontal names · fully backward compatible
 - **2.2.1** — Five UI languages (English / 简体中文 / Français / Deutsch / 漢喃文) · bundled Tianheng font TH-Feon renders Han-Nom and extended CJK glyphs (Ext B–F) · Chinese text two weight steps bolder · fully backward compatible
 - **2.1.0** — Verification-key hardening (600K PBKDF2, legacy files auto-supported) · platform-native crypto acceleration on mobile · bolder typography · license corrected to AGPL-3.0

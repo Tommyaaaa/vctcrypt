@@ -104,13 +104,94 @@ class _ChangelogCard extends StatelessWidget {
 }
 
 List<_Entry> _entries(AppStrings s) {
+  if (s.lang == AppLanguage.hannom) {
+    return [
+      const _Entry('2.3.1', [
+        '界面吧政策𡨸喃㐌改寫為真正之𡨸喃：語法吧詞序㗂越，得造來憑 API 譯免費，非以𡨸中文逐字譯',
+        '政策吧條款（隱私政策、使用條款）於𡨸喃㐌得重譯完全',
+        '包兼工具總檢吧政策五言語自 v2.3.0',
+      ], major: true),
+      const _Entry('2.3.0', [
+        '工具總檢新：算 SHA-256 / SHA-512 / SHA-3-256 之不分集信那（處理隨流，能集信大空包時盈記憶）吧比較與價值豫見抵核明原完',
+        '政策吧條款今固於法語、德語吧𡨸喃——全文於畢五種界面言語',
+      ], major: true),
+      const _Entry('2.2.5', [
+        '界面𡨸喃㐌改寫為真正之𡨸喃：語法吧詞序㗂越（㐌／空／之…），非繁體中文',
+        '列表撰言語今羅縱——每名言語，含𡨸喃，得讀橫完全',
+        '集信自畢版本舊（1.x / 2.0.x / 2.1.0 / 2.2.1）常得扶助完全',
+      ], major: true),
+      const _Entry('2.2.1', [
+        '言語界面新：法語、德語吧𡨸喃——共五言語界面',
+        '字庫天珩內置（TH-Feon）顯𡨸喃吧字形中日韓擴展（Ext B-F）完全',
+        '文本界面中文今加兩級粗，顯更清楚',
+        '集信自畢版本舊（1.x / 2.0.x / 2.1.0）常得扶助完全',
+      ], major: true),
+      const _Entry('2.1.0', [
+        '加固保密：鎖核口令吧鎖碼化共得 60 萬次 PBKDF2，猜密口離線空固捷徑',
+        '提速碼化：於移動得開碼化原生之平台，引出鎖吧碼化空占線界面',
+        '字形更粗、更清楚（Inter + 思源黑體排拉丁／中日韓）',
+        '許可得改正自 MIT 朱 AGPL-3.0',
+        '集信造自版本舊（1.x / 2.0.0）常合完全憑自退舊式',
+      ], major: true),
+      const _Entry('2.0.0', [
+        '版塊「別」新：介紹（圖標、網頁、作者、許可）、擁護（支付寶 QR）、政策與條款（隱私政策吧使用條款）、更新誌',
+        '倉裡加許可（LICENSE）',
+        '里程碑大：功能系趨完全，號版本升朱 2.0',
+      ], major: true),
+      const _Entry('1.6.0', [
+        '碼化後量子隨選：鎖𠊛認 ML-KEM-768（NIST FIPS 203）',
+        '頁「鎖」新：造／入／分／刪鎖公開 .vctpub 吧鎖私 .vctkey',
+        '頁碼化得撰鎖公開𠊛認，密口變隨選——雙通道（密口或鎖）或只鎖集信（V3 格式）',
+        '頁解碼得開集信碼化𠊛認憑 .vctkey + 密口保護之',
+        'ML-KEM 純 Dart 得對證與庫標準之 Go 憑向量 KAT 內置',
+      ]),
+      const _Entry('1.5.0', [
+        '記註保密：文本碼化為集信 .VCT 標準，明文空包時觸碟',
+        '計強度密口',
+        '捷徑電腦 Ctrl+1..5（頁）吧 Ctrl+L（急鎖）',
+        '鈕分全寬於牌結果移動',
+      ]),
+      const _Entry('1.4.0', [
+        '正顯於 App 集信 iOS：寫原子（集信暫 + 改名）',
+        '板分／留於移動',
+        '圖標應用新（盾黑上白）吧名統一 VCTCrypt',
+      ]),
+      const _Entry('1.3.0', [
+        '引導始用吧中心幫助（FAQ）',
+        '碼化批量憑結果每集信',
+        '自清板暫如式 KeePass',
+        '個性化：8 色按、偏頁啟',
+      ]),
+      const _Entry('1.2.0', [
+        '生器密口（CSPRNG + 估強度）',
+        '器查集信 .VCT 空密口',
+        '統計使用局步（只數，空名／塘引）',
+        '急鎖：清每框密口一并',
+      ]),
+      const _Entry('1.1.0', [
+        '分區偽：密口二出集信偽無害',
+        '密口脅迫：入它時解碼永久碎集信',
+        '可辭憑設計：每集信 V2 常含畢三槽',
+        '碎安吧自鎖',
+      ]),
+      const _Entry('1.0.x', [
+        '重寫 Flutter（Win32 GUI → Material 3）',
+        '構建 CI 五平台（Windows / macOS / Linux / Android / iOS）',
+        '合字節與格式 V1 / CLI',
+      ]),
+    ];
+  }
   final en = s.lang == AppLanguage.english;
   if (!en) {
     return [
+      const _Entry('2.3.1', [
+        '汉喃文界面与汉喃文政策条款改写为真正的 𡨸喃（Chữ Nôm）：遵循越南语语法与词序，由免费翻译 API 生成，不再是逐字的越南语直译中文',
+        '隐私政策、使用条款的汉喃文版本全部重译',
+        '包含 v2.3.0 的哈希校验工具与五种语言政策条款',
+      ], major: true),
       const _Entry('2.3.0', [
         '新增哈希校验工具：计算任意文件的 SHA-256 / SHA-512 / SHA-3-256 校验和（流式计算，大文件不占内存），并与预期值比对验证完整性',
         '政策与条款新增法语、德语、汉喃文版本，五种界面语言各自完整显示',
-        '汉喃文界面补全：校验和等新文本由免费翻译 API 生成，遵循越南语语法',
       ], major: true),
       const _Entry('2.2.5', [
         '汉喃文界面重写为真正的 𡨸喃（Chữ Nôm）：遵循越南语语法与词序（đã / không / của …），不再是繁体中文',
@@ -179,10 +260,14 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry('2.3.1', [
+      'The Han-Nom (𡨸喃) UI and the Han-Nom Policies & Terms were rewritten as genuine Chữ Nôm - Vietnamese grammar and word order, produced through a free translation API rather than a word-for-word Chinese rendering',
+      'Privacy Policy and Terms of Use fully re-translated into Han-Nom',
+      'Includes the v2.3.0 checksum tool and the five-language policies',
+    ], major: true),
     const _Entry('2.3.0', [
       'New checksum tool: compute SHA-256 / SHA-512 / SHA-3-256 of any file (streamed, so huge files never fill memory) and compare against an expected value to verify integrity',
       'Policies & Terms now available in Français, Deutsch and Han-Nom - full text in all five UI languages',
-      'Han-Nom UI completed: new strings such as the checksum tool were produced through the free translation API, keeping Vietnamese grammar',
     ], major: true),
     const _Entry('2.2.5', [
       'Han-Nom UI rewritten as genuine 𡨸喃 (Chữ Nôm): Vietnamese grammar and word order (đã / không / của …), not Traditional Chinese',

@@ -521,10 +521,14 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
+            ### What's New in v2.3.1
+            - 🀄 **Genuine Chữ Nôm, for real this time**: the Han-Nom (𡸨喃) UI *and* the Han-Nom Policies & Terms were rewritten as real Chữ Nôm — Vietnamese grammar and word order, generated through a free translation API instead of a word-for-word Chinese rendering
+            - 📜 **Han-Nom policies re-translated**: Privacy Policy and Terms of Use now read naturally in Chữ Nôm
+            - ♻️ **Backward compatible**: includes the v2.3.0 checksum tool and the five-language policies; files from all older versions still open unchanged
+
             ### What's New in v2.3.0
             - 🔐 **Checksum tool**: compute SHA-256 / SHA-512 / SHA-3-256 of any file (streamed, so huge files work) and compare against an expected value to verify integrity
             - 🌍 **Multilingual policies**: Privacy Policy and Terms of Use fully translated into all five UI languages
-            - 🀄 **Han-Nom completed**: the remaining UI strings were generated through the free translation API, keeping genuine Vietnamese grammar (đã / không / của …)
             - ♻️ **Backward compatible**: files created by all older versions (1.x / 2.0.x / 2.1.0 / 2.2.1 / 2.2.5) open unchanged
 
             ### What's New in v2.2.5
