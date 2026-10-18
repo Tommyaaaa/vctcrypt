@@ -107,6 +107,11 @@ List<_Entry> _entries(AppStrings s) {
   final en = s.lang == AppLanguage.english;
   if (!en) {
     return [
+      const _Entry('2.3.0', [
+        '新增哈希校验工具：计算任意文件的 SHA-256 / SHA-512 / SHA-3-256 校验和（流式计算，大文件不占内存），并与预期值比对验证完整性',
+        '政策与条款新增法语、德语、汉喃文版本，五种界面语言各自完整显示',
+        '汉喃文界面补全：校验和等新文本由免费翻译 API 生成，遵循越南语语法',
+      ], major: true),
       const _Entry('2.2.5', [
         '汉喃文界面重写为真正的 𡨸喃（Chữ Nôm）：遵循越南语语法与词序（đã / không / của …），不再是繁体中文',
         '语言选择改为纵向列表，语言名称（𡨸喃等）完整横排显示，不再挤在一排',
@@ -174,6 +179,11 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry('2.3.0', [
+      'New checksum tool: compute SHA-256 / SHA-512 / SHA-3-256 of any file (streamed, so huge files never fill memory) and compare against an expected value to verify integrity',
+      'Policies & Terms now available in Français, Deutsch and Han-Nom - full text in all five UI languages',
+      'Han-Nom UI completed: new strings such as the checksum tool were produced through the free translation API, keeping Vietnamese grammar',
+    ], major: true),
     const _Entry('2.2.5', [
       'Han-Nom UI rewritten as genuine 𡨸喃 (Chữ Nôm): Vietnamese grammar and word order (đã / không / của …), not Traditional Chinese',
       'Language picker is now a vertical list - every language name, 𡨸喃 included, reads in full horizontally',

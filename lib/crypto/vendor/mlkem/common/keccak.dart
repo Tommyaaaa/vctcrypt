@@ -314,6 +314,69 @@ Uint8List sha3384(Uint8List input) =>
 Uint8List sha3512(Uint8List input) =>
     _fixedDigest(input, Fips202Parameters.sha3512);
 
+/// Incremental SHA3-256 (FIPS 202) hashing sink.
+///
+/// Feed arbitrary chunks with [add], then call [digest] once for the 32-byte
+/// hash. State is the fixed 200-byte sponge plus a single 136-byte rate block,
+/// so arbitrarily large inputs are hashed in constant memory (unlike the
+/// one-shot [sha3256], which buffers the whole input).
+class Sha3256Sink {
+  static final int _rate = Fips202Parameters.sha3256.rateBytes;
+  static const int _domain = 0x06;
+
+  final Uint32List _a = Uint32List(50);
+  final Uint32List _b = Uint32List(50);
+  final Uint32List _c = Uint32List(10);
+  final Uint32List _d = Uint32List(10);
+  final Uint8List _block = Uint8List(_rate);
+  int _pos = 0;
+  bool _closed = false;
+
+  /// Absorb the next chunk of input.
+  void add(List<int> data) {
+    if (_closed) throw StateError('Sink is closed');
+    var off = 0;
+    while (off < data.length) {
+      final room = _rate - _pos;
+      final take = room < (data.length - off) ? room : (data.length - off);
+      _block.setRange(_pos, _pos + take, data, off);
+      _pos += take;
+      off += take;
+      if (_pos == _rate) {
+        _xorBlock(_a, _block, 0, _rate);
+        _permute(_a, _b, _c, _d);
+        _pos = 0;
+      }
+    }
+  }
+
+  /// Finalize (pad10*1 with the SHA-3 domain) and return the digest.
+  ///
+  /// Can be called only once; the sponge state is wiped afterwards.
+  Uint8List digest() {
+    if (_closed) throw StateError('Sink is closed');
+    _closed = true;
+    _block[_pos] = _domain;
+    for (var i = _pos + 1; i < _rate; i++) {
+      _block[i] = 0;
+    }
+    _block[_rate - 1] ^= 0x80;
+    _xorBlock(_a, _block, 0, _rate);
+    _permute(_a, _b, _c, _d);
+    final out = Uint8List(Fips202Parameters.sha3256.digestBytes!);
+    try {
+      _extractBlock(_a, out, 0, out.length);
+      return out;
+    } finally {
+      secureZeroUint32(_a);
+      secureZeroUint32(_b);
+      secureZeroUint32(_c);
+      secureZeroUint32(_d);
+      secureZero(_block);
+    }
+  }
+}
+
 /// SHAKE128 (FIPS 202): XOF, rate 168 bytes, domain `0x1F`.
 Uint8List shake128(Uint8List input, int outLen) =>
     _xof(input, Fips202Parameters.shake128, outLen);

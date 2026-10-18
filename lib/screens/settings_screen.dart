@@ -14,6 +14,7 @@ import '../widgets/onboarding.dart';
 import 'about_screen.dart';
 import 'changelog_screen.dart';
 import 'donate_screen.dart';
+import 'hash_screen.dart';
 import 'help_screen.dart';
 import 'policy_screen.dart';
 
@@ -374,6 +375,20 @@ class SettingsScreen extends StatelessWidget {
                   margin: EdgeInsets.zero,
                   child: Column(
                     children: [
+                      // 0. Checksum / Hash (v2.3.0)
+                      ListTile(
+                        leading: Icon(
+                          Icons.fingerprint,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: Text(strings.hashEntry),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const HashScreen()),
+                        ),
+                      ),
+                      const Divider(height: 1),
                       // 1. About
                       ListTile(
                         leading: Icon(

@@ -29,3 +29,7 @@ symbols/
 
 # Generated
 *.g.dart
+
+# Python tooling caches
+__pycache__/
+*.pyc

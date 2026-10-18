@@ -67,7 +67,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v2.2.5';
+  String get appVersion => 'v2.3.0';
   String get guiVersion => tr(
       '[GUI Version]', '[图形界面版]', '[Version GUI]', '[GUI-Version]',
       '[界面版]');
@@ -79,11 +79,11 @@ class AppStrings {
       'Algorithmus: VCT-Crypt (AES-256 x3 + ML-KEM-768)',
       '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)');
   String get whatsNew => tr(
-      'New in v2.2.5: the Han-Nom UI is now genuine Chữ Nôm - Vietnamese grammar and word order, not Traditional Chinese; the language picker is a vertical list with full horizontal names. Files from all older versions remain fully supported',
-      'v2.2.5 正式版新特性：汉喃文界面重写为真正的 𡨸喃（遵循越南语语法与词序，不再是繁体中文）；语言选择改为纵向列表，语言名称完整横排显示。旧版本文件完整兼容',
-      'Nouveautés de la v2.2.5 : l\'interface hán nôm est désormais un véritable chữ Nôm — grammaire et ordre des mots vietnamiens, plus du chinois traditionnel ; le sélecteur de langue est une liste verticale avec des noms complets en écriture horizontale. Les fichiers des anciennes versions restent pris en charge.',
-      'Neues in v2.2.5: Die Hán-Nôm-Oberfläche ist jetzt echtes Chữ Nôm – vietnamesische Grammatik und Wortreihenfolge, nicht traditionelles Chinesisch; die Sprachauswahl ist eine vertikale Liste mit vollständigen horizontalen Namen. Dateien aller älteren Versionen bleiben voll unterstützt.',
-      'v2.2.5 新版：𡨸喃界面㐌改為正𡨸喃（㗂越文法與詞序，空沛中文）；言語選擇㐌改為縱名冊，名橫排完整。舊版集信完整相合。');
+      'New in v2.3.0: a checksum tool computes SHA-256 / SHA-512 / SHA-3-256 of any file - streamed, so huge files work - and verifies it against an expected value; Policies & Terms are now fully translated into all five UI languages.',
+      'v2.3.0 正式版新特性：新增哈希校验工具，可计算任意文件的 SHA-256 / SHA-512 / SHA-3-256 校验和（流式计算，大文件也没问题），并与预期值比对验证完整性；政策与条款已完整翻译为全部五种界面语言',
+      'Nouveautés de la v2.3.0 : un outil de somme de contrôle calcule le SHA-256 / SHA-512 / SHA-3-256 de n\'importe quel fichier — en flux, donc même les gros fichiers — et le vérifie par rapport à une valeur attendue ; les politiques et conditions sont désormais entièrement traduites dans les cinq langues de l\'interface.',
+      'Neues in v2.3.0: Ein Prüfsummen-Tool berechnet SHA-256 / SHA-512 / SHA-3-256 jeder Datei — gestreamt, funktioniert also auch bei großen Dateien — und prüft sie gegen einen erwarteten Wert; Richtlinien und Bedingungen sind jetzt vollständig in alle fünf UI-Sprachen übersetzt.',
+      'v2.3.0 新版：㐌加驗和工具，算每集信之 SHA-256 / SHA-512 / SHA-3-256 驗和（流式，大集信亦空碍），與預期值比對驗證完整；政策與條款㐌完整譯為五種界面言語。');
 
   /// v1.4.0: share / save button label (mobile result cards).
   String get shareBtn => tr(
@@ -758,6 +758,58 @@ class AppStrings {
       'Les fichiers V2 contiennent toujours toutes les partitions avancées. Il est impossible de savoir depuis ce fichier si un mot de passe leurre ou de contrainte est défini — c\'est voulu.',
       'V2-Dateien enthalten immer alle erweiterten Partitionen. Anhand dieser Datei ist nicht erkennbar, ob ein Täuschungs- oder Zwangs-Passwort gesetzt ist – das ist beabsichtigt.',
       'V2 集信常含每高級分區。空得從集信尼知固設偽或脅密口或空——底羅有意設計。');
+
+  // ---- Checksum / Hash (v2.3.0) ----
+  String get hashTitle => tr('Checksum (SHA)', '哈希校验（SHA）',
+      'Somme de contrôle (SHA)', 'Prüfsumme (SHA)',
+      '總 kiểm tra (SHA)');
+  String get hashSubtitle => tr(
+      'Compute SHA-256 / SHA-512 / SHA-3-256 of any file - streamed, so huge files work too - and compare it against an expected checksum.',
+      '计算任意文件的 SHA-256 / SHA-512 / SHA-3-256 校验和（流式计算，大文件也没问题），并与预期值比对验证完整性。',
+      'Calculez la somme de contrôle SHA-256 / SHA-512 / SHA-3-256 de n\'importe quel fichier — en flux, donc même les gros fichiers — et comparez-la à une valeur attendue.',
+      'Berechnen Sie die SHA-256 / SHA-512 / SHA-3-256-Prüfsumme jeder Datei — gestreamt, funktioniert also auch bei großen Dateien — und vergleichen Sie sie mit einem erwarteten Wert.',
+      '算 SHA-256 / SHA-512 / SHA-3-256 之 bất kỳ 集信 nào - xử lý theo luồng, 宜 集信 大 亦 得 行 - 吧 so sánh nó 與 總 kiểm tra dự kiến.');
+  String get hashEntry => tr('Checksum', '哈希校验', 'Somme de contrôle',
+      'Prüfsumme', '總 kiểm tra');
+  String get hashAlgo => tr('Algorithm', '算法', 'Algorithme', 'Algorithmus', '算法');
+  String get hashCompute => tr('Compute', '开始计算', 'Calculer', 'Berechnen', '算');
+  String get hashComputing => tr('Hashing…', '正在计算…', 'Hachage…',
+      'Hashing…', '當 băm…');
+  String get hashResult => tr('checksum', '校验和', 'somme de contrôle',
+      'Prüfsumme', '總 kiểm tra');
+  String get hashCopy => tr('Copy', '复制', 'Copier', 'Kopieren', '抄');
+  String get hashExpectedLabel => tr('Expected checksum', '预期校验和',
+      'Somme attendue', 'Erwartete Prüfsumme', '總 kiểm tra dự kiến');
+  String get hashExpectedHint => tr(
+      'Paste the checksum you were given, then tap Compare',
+      '粘贴收到的校验和，点击比对',
+      'Collez la somme reçue, puis touchez Comparer',
+      'Fügen Sie die erhaltene Prüfsumme ein und tippen Sie auf Vergleichen',
+      'Dán 總 kiểm tra 伴 㐌 得 cung cấp, 後 底 按 So sánh');
+  String get hashCompare => tr('Compare', '比对', 'Comparer', 'Vergleichen', 'So sánh');
+  String get hashMatch => tr('Checksum matches', '校验和一致',
+      'Somme de contrôle conforme', 'Prüfsumme stimmt überein',
+      '總 kiểm tra trùng khớp');
+  String get hashMatchBody => tr(
+      'The file is intact - it matches the expected checksum.',
+      '文件完整，与预期校验和一致。',
+      'Le fichier est intact — conforme à la somme attendue.',
+      'Die Datei ist intakt — sie entspricht der erwarteten Prüfsumme.',
+      '集信 còn nguyên vẹn - khớp 與 總 kiểm tra dự kiến.');
+  String get hashMismatch => tr('Checksum differs', '校验和不一致',
+      'Somme de contrôle différente', 'Prüfsumme weicht ab', '總 kiểm tra 別 nhau');
+  String get hashMismatchBody => tr(
+      'The file does NOT match the expected checksum. It may be corrupted or tampered with.',
+      '文件与预期校验和不一致，可能已损坏或被篡改。',
+      'Le fichier ne correspond PAS à la somme attendue. Il est peut-être corrompu ou altéré.',
+      'Die Datei entspricht NICHT der erwarteten Prüfsumme. Sie ist möglicherweise beschädigt oder manipuliert.',
+      '集信 空 khớp 與 總 kiểm tra dự kiến. Nó 固 thể bị hỏng 或 bị 偽 mạo.');
+  String get hashEmptyResult => tr('Compute the checksum first',
+      '请先计算校验和', 'Calculez d\'abord la somme de contrôle',
+      'Berechnen Sie zuerst die Prüfsumme', '算 總 kiểm tra 先');
+  String get hashNoExpected => tr('Enter an expected checksum first',
+      '请先输入预期校验和', 'Saisissez d\'abord une somme attendue',
+      'Geben Sie zuerst eine erwartete Prüfsumme ein', '入 總 kiểm tra dự kiến 先');
 
   // ---- Panic lock (v1.2.0) ----
   String get panicLock => tr('Panic lock: clear all passwords now',
