@@ -28,7 +28,8 @@ class _HashScreenState extends State<HashScreen> {
   bool _busy = false;
   double _progress = 0;
 
-  Hash? _algorithm() => _algo == 2 ? null : (_algo == 1 ? Sha512() : Sha256());
+  HashAlgorithm? _algorithm() =>
+      _algo == 2 ? null : (_algo == 1 ? Sha512() : Sha256());
 
   static String _toHex(int b) => b.toRadixString(16).padLeft(2, '0');
 
