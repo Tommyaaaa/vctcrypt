@@ -29,6 +29,27 @@
 ///   3. HMAC(PBKDF2(P::V, xsalt),  xsalt)           == DURESS HMAC -> PERMANENTLY SHRED file
 ///   4. Otherwise -> wrong password
 
+/// V4 file format (.VCT, GUI 2.5.0+) - authenticated header + HKDF split:
+///   [MAGIC 12B "VCTCRYPT4\0\0\0"]
+///   [VER 1B] [FLAGS 1B] [REAL_CT_LEN 8B LE]
+///   [REAL:   SALT 48B] [N1 12B] [N2 12B] [N3 12B] [HMAC 32B]
+///   [DECOY:  DSALT 48B] [DN1 12B] [DN2 12B] [DN3 12B] [DHMAC 32B]
+///   [DURESS: XSALT 48B] [XHMAC 32B]
+///   [REAL_L3_CT NB] [T3 16B]
+///   [DECOY_L3_CT NB] [DT3 16B]
+///
+/// Two changes over V2 (same deniability properties, same 3-way uniform
+/// verification):
+///   1. Every GCM layer authenticates an AAD built from the header
+///      (magic || ver || flags || realCtLen || salt || n1 || n2 || n3),
+///      so flipping a length/flag/salt byte is detected by GCM instead of
+///      silently re-routing decryption into the wrong branch.
+///   2. One PBKDF2 per partition instead of four: the master key is split
+///      into k1/k2/k3/vk with HMAC (HKDF-Expand style). The attacker's
+///      cost is unchanged (still one full-strength PBKDF2 per guess and
+///      per partition); the honest path just stops deriving the same
+///      password four times under the same salt.
+///
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' show Random;
@@ -42,10 +63,15 @@ import 'vct_keys.dart';
 import 'vendor/mlkem/mlkem.dart';
 
 // ---- Constants ----
-const _magicV1 = 'VCTCRYPT1\x00\x00\x00'; // 12 bytes (matches C: "VCTCRYPT1\0\0" + implicit C null)
-const _magicV1Old = 'VCTCRYPT1\x00\x00'; // 11 bytes - buggy old Flutter format (missing trailing \0)
+const _magicV1 =
+    'VCTCRYPT1\x00\x00\x00'; // 12 bytes (matches C: "VCTCRYPT1\0\0" + implicit C null)
+const _magicV1Old =
+    'VCTCRYPT1\x00\x00'; // 11 bytes - buggy old Flutter format (missing trailing \0)
 const _magicV2 = 'VCTCRYPT2\x00\x00\x00'; // 12 bytes
-const _magicV3 = 'VCTCRYPT3\x00\x00\x00'; // 12 bytes - hybrid ML-KEM mode (v1.6.0)
+const _magicV3 =
+    'VCTCRYPT3\x00\x00\x00'; // 12 bytes - hybrid ML-KEM mode (v1.6.0)
+const _magicV4 =
+    'VCTCRYPT4\x00\x00\x00'; // 12 bytes - AAD + HKDF split (v2.5.0)
 const _magicLen = 12;
 const _saltSize = 48;
 const _nonceSize = 12;
@@ -60,6 +86,19 @@ const _pbkdf2Iters = 600000;
 const _pbkdf2VIters = 600000;
 const _pbkdf2VItersLegacy = 10000;
 const _maxFname = 512;
+
+/// v2.5.0 (M2): hard ceiling on the plaintext we will load into memory.
+///
+/// The engine is whole-file (three nested GCM layers each copy the whole
+/// buffer), so peak RSS is roughly 5-7x the file size. Mobile devices can
+/// be limited to ~256 MB for the whole app, so 64 MB is the largest value
+/// that stays safe everywhere. Refusing early is better than an
+/// unpredictable OOM kill mid-encryption.
+const _maxFileBytes = 64 * 1024 * 1024;
+// v2.5.0 (M2): decrypting also loads the whole container. A V4 file is at
+// most ~2x the plaintext (real + equally sized decoy slot) plus overhead,
+// so the accept ceiling is wider than the encryption one.
+const _maxVctBytes = 160 * 1024 * 1024;
 
 // ---- V2 layout offsets ----
 // [magic 12][realCtLen 8][salt 48][n1 12][n2 12][n3 12][hmac 32]
@@ -112,12 +151,31 @@ const _v3FlagPassword = 0x01;
 const _v3FlagKem = 0x02;
 const _kemCtLen = _v3KemCtLen;
 
+// ---- V4 layout offsets (v2.5.0) ----
+// [magic 12][ver 1][flags 1][realCtLen 8][real 116][decoy 116][duress 80]
+const _v4VerOff = _magicLen; // 12
+const _v4FlagsOff = _v4VerOff + 1; // 13
+const _v4RealCtLenOff = _v4FlagsOff + 1; // 14
+const _v4RealSaltOff = _v4RealCtLenOff + 8; // 22
+const _v4RealHmacOff = _v4RealSaltOff + _saltSize + _nonceSize * 3; // 106
+const _v4DecoySaltOff = _v4RealHmacOff + _hmacSize; // 138
+const _v4DecoyHmacOff = _v4DecoySaltOff + _saltSize + _nonceSize * 3; // 222
+const _v4DuressSaltOff = _v4DecoyHmacOff + _hmacSize; // 254
+const _v4DuressHmacOff = _v4DuressSaltOff + _saltSize; // 302
+const _v4HeaderLen = _v4DuressHmacOff + _hmacSize; // 334
+const _v4LayoutVer = 0x01;
+
+/// Reserved flags byte. It carries no configuration (always 0) but IS
+/// authenticated, so a profile can grow later without a format change.
+const _v4Flags = 0x00;
+
 // ---- Format codes ----
 const fmtNone = 0;
 const fmtV1 = 1; // 12-byte V1 magic (CLI-compatible)
 const fmtV1Old = 2; // 11-byte buggy V1 magic (old Flutter builds)
 const fmtV2 = 3; // V2 with decoy/duress slots
 const fmtV3 = 4; // V3 hybrid envelope (password and/or ML-KEM-768)
+const fmtV4 = 5; // V4: authenticated header + HKDF key split (v2.5.0)
 
 // ---- Crypto primitives ----
 
@@ -185,18 +243,36 @@ Future<_Keys> _deriveBodyKeys(
   return _Keys(k1, k2, k3, const []);
 }
 
+/// v2.5.0 (M3): one full-strength PBKDF2 per partition, then HMAC-Expand
+/// (HKDF-Expand style) for k1/k2/k3/vk.
+///
+/// Security is unchanged: an offline attacker still pays one 600k-iteration
+/// PBKDF2 per guessed password per partition, because each partition has a
+/// different salt. The four-fold redundancy the V1/V2 derivation had (same
+/// salt, same password, four times) only slowed the honest path down.
+Future<_Keys> _deriveKeysV4(String password, List<int> salt) async {
+  final master = await _pbkdf2('$password::M4', salt, _pbkdf2Iters, 32);
+  Future<List<int>> sub(String label) => _hmacSha256(
+        master,
+        <int>[...utf8.encode('VCT4::$label'), ...salt],
+      );
+  return _Keys(await sub('1'), await sub('2'), await sub('3'), await sub('V'));
+}
+
 // ---- AES-GCM wrappers ----
 
 Future<({List<int> cipherText, List<int> tag})> _aesGcmEncrypt(
   List<int> key,
   List<int> nonce,
-  List<int> plainText,
-) async {
+  List<int> plainText, {
+  List<int>? aad,
+}) async {
   final aesGcm = AesGcm.with256bits();
   final secretBox = await aesGcm.encrypt(
     plainText,
     secretKey: SecretKey(key),
     nonce: nonce,
+    aad: aad ?? const <int>[],
   );
   return (cipherText: secretBox.cipherText, tag: secretBox.mac.bytes);
 }
@@ -205,15 +281,48 @@ Future<List<int>> _aesGcmDecrypt(
   List<int> key,
   List<int> nonce,
   List<int> cipherText,
-  List<int> tag,
-) async {
+  List<int> tag, {
+  List<int>? aad,
+}) async {
   final aesGcm = AesGcm.with256bits();
   final secretBox = SecretBox(
     cipherText,
     nonce: nonce,
     mac: Mac(tag),
   );
-  return aesGcm.decrypt(secretBox, secretKey: SecretKey(key));
+  return aesGcm.decrypt(secretBox,
+      secretKey: SecretKey(key), aad: aad ?? const <int>[]);
+}
+
+/// v2.5.0 (H5): AAD binding a V4 partition's ciphertext to its header.
+///
+/// Everything a parser reads before decrypting goes in here: magic, layout
+/// version, flags, the real ciphertext length, this partition's salt and
+/// its three nonces. Any flip in those bytes makes every GCM layer fail
+/// with an authentication error instead of silently steering decryption
+/// into a different branch (e.g. a forged realCtLen pointing the "decoy"
+/// slice at real ciphertext).
+List<int> _buildV4Aad({
+  required List<int> salt,
+  required List<int> n1,
+  required List<int> n2,
+  required List<int> n3,
+  required int ctLen,
+}) {
+  final b = BytesBuilder();
+  b.add(utf8.encode(_magicV4));
+  b.addByte(_v4LayoutVer);
+  b.addByte(_v4Flags);
+  var v = ctLen;
+  for (var i = 0; i < 8; i++) {
+    b.addByte(v & 0xFF);
+    v = v ~/ 256;
+  }
+  b.add(salt);
+  b.add(n1);
+  b.add(n2);
+  b.add(n3);
+  return b.takeBytes();
 }
 
 // ---- File helpers ----
@@ -248,9 +357,12 @@ void _writeFile(String path, List<int> data) {
   }
 }
 
-/// Overwrite the entire file with random bytes (same length kept, so the
-/// file still "exists" but is unrecoverable noise - looks like corruption,
-/// not deletion). Best-effort; modern storage makes multi-pass pointless.
+/// Best-effort secure delete: one pass of random data, then unlink.
+///
+/// Honest limits: on SSDs, snapshots and copy-on-write filesystems the
+/// overwrite may never reach the original physical blocks. This is
+/// "looks like corruption" defence, not a guarantee - encryption is the
+/// real protection.
 Future<void> _shredFile(String path) async {
   final f = File(path);
   if (!f.existsSync()) return;
@@ -273,16 +385,31 @@ Future<void> _shredFile(String path) async {
   } finally {
     raf.closeSync();
   }
+  // v2.5.0 (M5): remove the directory entry too, so the file is gone
+  // rather than left behind as an unreadable random blob.
+  try {
+    f.deleteSync();
+  } catch (_) {}
 }
 
 // ---- Format detection ----
 
 /// Detects file format:
-/// fmtNone (0) / fmtV1 (1) / fmtV1Old (2) / fmtV2 (3) / fmtV3 (4)
+/// fmtNone (0) / fmtV1 (1) / fmtV1Old (2) / fmtV2 (3) / fmtV3 (4) / fmtV4 (5)
 int detectFormat(Uint8List data) {
   if (data.length < 11) return fmtNone;
 
   if (data.length >= 12) {
+    final v4 = utf8.encode(_magicV4);
+    bool v4Match = true;
+    for (int i = 0; i < 12; i++) {
+      if (data[i] != v4[i]) {
+        v4Match = false;
+        break;
+      }
+    }
+    if (v4Match) return fmtV4;
+
     final v3 = utf8.encode(_magicV3);
     bool v3Match = true;
     for (int i = 0; i < 12; i++) {
@@ -354,17 +481,23 @@ class VctFileInfo {
   /// File modification time.
   final DateTime modified;
 
-  /// Size of the encrypted real payload (V2/V3 only; null for V1).
+  /// Size of the encrypted real payload (V2/V4 only; null for V1/V3).
   final int? realCtLen;
 
-  /// Header size in bytes (V3: 1394, V2: 332, V1/V1-old: 128).
+  /// Header size in bytes (V4: 334, V3: 1394, V2: 332, V1/V1-old: 128).
   final int headerLen;
 
-  /// V3 only: the file carries an active ML-KEM recipient channel.
-  final bool hasKemChannel;
+  /// v2.5.0 (H4): no channel information is exposed any more.
+  ///
+  /// V3 used to store "password channel active / KEM channel active" in a
+  /// plaintext flags byte, and the inspector reported it - which handed an
+  /// observer the one fact the deniability design exists to hide. The
+  /// field is retained only so callers keep compiling; it is always null,
+  /// meaning "unknown until a key or password is actually tried".
+  bool? get hasKemChannel => null;
 
-  /// V3 only: the file carries an active password channel.
-  final bool hasPasswordChannel;
+  /// See [hasKemChannel] - always null (unknown without a password/key).
+  bool? get hasPasswordChannel => null;
 
   const VctFileInfo({
     required this.format,
@@ -372,13 +505,12 @@ class VctFileInfo {
     required this.modified,
     this.realCtLen,
     required this.headerLen,
-    this.hasKemChannel = false,
-    this.hasPasswordChannel = false,
   });
 
   bool get isValid => format != fmtNone;
   bool get isV2 => format == fmtV2;
   bool get isV3 => format == fmtV3;
+  bool get isV4 => format == fmtV4;
 }
 
 /// Read only the header of [path] and return its public metadata.
@@ -417,15 +549,30 @@ VctFileInfo inspectVctFile(String path) {
       );
     }
     final ctLen = _readU64LE(head, _v3CtLenOff);
-    final flags = head[_v3FlagsOff];
     return VctFileInfo(
       format: format,
       fileSize: size,
       modified: modified,
       realCtLen: ctLen,
       headerLen: _v3HeaderLen,
-      hasKemChannel: (flags & _v3FlagKem) != 0,
-      hasPasswordChannel: (flags & _v3FlagPassword) != 0,
+    );
+  }
+
+  if (format == fmtV4) {
+    if (head.length < _v4HeaderLen) {
+      return VctFileInfo(
+        format: format,
+        fileSize: size,
+        modified: modified,
+        headerLen: _v4HeaderLen,
+      );
+    }
+    return VctFileInfo(
+      format: format,
+      fileSize: size,
+      modified: modified,
+      realCtLen: _readU64LE(head, _v4RealCtLenOff),
+      headerLen: _v4HeaderLen,
     );
   }
 
@@ -463,7 +610,8 @@ VctFileInfo inspectVctFile(String path) {
 String _encFileName(String input) {
   final base = p.basename(input);
   final ext = p.extension(base);
-  final name = ext.isNotEmpty ? base.substring(0, base.length - ext.length) : base;
+  final name =
+      ext.isNotEmpty ? base.substring(0, base.length - ext.length) : base;
   return '$name.VCT';
 }
 
@@ -723,64 +871,159 @@ Future<_Partition> _randomPartition({int? targetLen}) async {
   );
 }
 
+/// V4: triple-encrypt one payload with the header bound in as AAD.
+///
+/// [headerCtLen] is the value that will be written into the file header's
+/// REAL_CT_LEN field. Both partitions authenticate the SAME header bytes
+/// (the file has only one length field), so the decoy partition must be
+/// encrypted with the real partition's length, not its own.
+Future<_Partition> _encryptPartitionV4(
+  String password,
+  List<int> payload,
+  String progressCode,
+  ProgressCallback? onProgress, {
+  required int headerCtLen,
+}) async {
+  onProgress?.call('DERIVING');
+
+  final salt = await _secureRandom(_saltSize);
+  final n1 = await _secureRandom(_nonceSize);
+  final n2 = await _secureRandom(_nonceSize);
+  final n3 = await _secureRandom(_nonceSize);
+
+  // GCM keeps the plaintext length, so the ciphertext length that will be
+  // written into the header is already known here - and it is part of the
+  // AAD, which means a forged length breaks authentication.
+  final aad = _buildV4Aad(
+    salt: salt,
+    n1: n1,
+    n2: n2,
+    n3: n3,
+    ctLen: headerCtLen,
+  );
+
+  final keys = await _deriveKeysV4(password, salt);
+
+  onProgress?.call(progressCode);
+
+  final l1 = await _aesGcmEncrypt(keys.k1, n1, payload, aad: aad);
+  final l1b = BytesBuilder()
+    ..add(l1.tag)
+    ..add(l1.cipherText);
+
+  final l2 = await _aesGcmEncrypt(keys.k2, n2, l1b.toBytes(), aad: aad);
+  final l2b = BytesBuilder()
+    ..add(l2.tag)
+    ..add(l2.cipherText);
+
+  final l3 = await _aesGcmEncrypt(keys.k3, n3, l2b.toBytes(), aad: aad);
+
+  final hData = BytesBuilder()
+    ..add(salt)
+    ..add(n1)
+    ..add(n2)
+    ..add(n3);
+  final hmacVal = await _hmacSha256(keys.vk, hData.toBytes());
+
+  return _Partition(
+    salt: salt,
+    n1: n1,
+    n2: n2,
+    n3: n3,
+    hmac: hmacVal,
+    ct: l3.cipherText,
+    tag: l3.tag,
+  );
+}
+
+/// V4 uniform verification: one PBKDF2, returns the ready-to-use key set
+/// (or null when the password does not belong to this partition).
+Future<_Keys?> _v4VerifyPartition(
+  String password,
+  List<int> salt,
+  List<int> n1,
+  List<int> n2,
+  List<int> n3,
+  List<int> storedHmac,
+) async {
+  final keys = await _deriveKeysV4(password, salt);
+  final hData = BytesBuilder()
+    ..add(salt)
+    ..add(n1)
+    ..add(n2)
+    ..add(n3);
+  final computed = await _hmacSha256(keys.vk, hData.toBytes());
+  return _constantTimeEq(computed, storedHmac) ? keys : null;
+}
+
 /// Internal result carrying decrypted bytes (not yet written to disk)
 class _InternalResult {
   final bool success;
   final String? error;
   final String? originalName;
   final List<int>? fileBytes;
-  _InternalResult({this.success = true, this.error, this.originalName, this.fileBytes});
+  _InternalResult(
+      {this.success = true, this.error, this.originalName, this.fileBytes});
 }
 
 /// Decrypt the 3-layer body of one partition with pre-derived keys.
+/// [aad] is non-null for V4 partitions (authenticated header binding).
 Future<_InternalResult> _decryptBody(
   _Keys keys,
   List<int> n1,
   List<int> n2,
   List<int> n3,
   List<int> l3Ct,
-  List<int> t3,
-) async {
-  final l2b = await _aesGcmDecrypt(keys.k3, n3, l3Ct, t3);
-  if (l2b.length < _tagSize) {
-    return _InternalResult(success: false, error: 'CORRUPT');
-  }
-  final t2 = l2b.sublist(0, _tagSize);
-  final l2Ct = l2b.sublist(_tagSize);
-
-  final l1b = await _aesGcmDecrypt(keys.k2, n2, l2Ct, t2);
-  if (l1b.length < _tagSize) {
-    return _InternalResult(success: false, error: 'CORRUPT');
-  }
-  final t1 = l1b.sublist(0, _tagSize);
-  final l1Ct = l1b.sublist(_tagSize);
-
-  final payload = await _aesGcmDecrypt(keys.k1, n1, l1Ct, t1);
-  if (payload.length < 2) {
-    return _InternalResult(success: false, error: 'PAYLOAD_CORRUPT');
-  }
-
-  // Parse payload: [name_len 2B LE] [name] [file_data]
-  final nameLen = payload[0] | (payload[1] << 8);
-  if (2 + nameLen > payload.length) {
-    return _InternalResult(success: false, error: 'PAYLOAD_CORRUPT');
-  }
-
-  var origNameLen = nameLen;
-  if (origNameLen >= _maxFname) origNameLen = _maxFname - 1;
-  String origName;
+  List<int> t3, {
+  List<int>? aad,
+}) async {
+  // v2.5.0 (H5): with AAD-bound headers a tampered byte makes GCM throw.
+  // Convert that into the same "corrupted" result the rest of the code
+  // returns instead of leaking an exception message to the caller.
   try {
-    origName = utf8.decode(payload.sublist(2, 2 + origNameLen));
-  } catch (_) {
-    return _InternalResult(success: false, error: 'PAYLOAD_CORRUPT');
-  }
-  final fileBytes = payload.sublist(2 + nameLen);
+    final l2b = await _aesGcmDecrypt(keys.k3, n3, l3Ct, t3, aad: aad);
+    if (l2b.length < _tagSize) {
+      return _InternalResult(success: false, error: 'CORRUPT');
+    }
+    final t2 = l2b.sublist(0, _tagSize);
+    final l2Ct = l2b.sublist(_tagSize);
 
-  return _InternalResult(
-    success: true,
-    originalName: origName,
-    fileBytes: fileBytes,
-  );
+    final l1b = await _aesGcmDecrypt(keys.k2, n2, l2Ct, t2, aad: aad);
+    if (l1b.length < _tagSize) {
+      return _InternalResult(success: false, error: 'CORRUPT');
+    }
+    final t1 = l1b.sublist(0, _tagSize);
+    final l1Ct = l1b.sublist(_tagSize);
+
+    final payload = await _aesGcmDecrypt(keys.k1, n1, l1Ct, t1, aad: aad);
+    if (payload.length < 2) {
+      return _InternalResult(success: false, error: 'PAYLOAD_CORRUPT');
+    }
+
+    // Parse payload: [name_len 2B LE] [name] [file_data]
+    final nameLen = payload[0] | (payload[1] << 8);
+    if (2 + nameLen > payload.length) {
+      return _InternalResult(success: false, error: 'PAYLOAD_CORRUPT');
+    }
+
+    var origNameLen = nameLen;
+    if (origNameLen >= _maxFname) origNameLen = _maxFname - 1;
+    String origName;
+    try {
+      origName = utf8.decode(payload.sublist(2, 2 + origNameLen));
+    } catch (_) {
+      return _InternalResult(success: false, error: 'PAYLOAD_CORRUPT');
+    }
+    final fileBytes = payload.sublist(2 + nameLen);
+
+    return _InternalResult(
+      success: true,
+      originalName: origName,
+      fileBytes: fileBytes,
+    );
+  } catch (_) {
+    return _InternalResult(success: false, error: 'CORRUPT');
+  }
 }
 
 /// Constant-time comparison of two equal-length byte lists.
@@ -816,8 +1059,7 @@ Future<bool> _verifyPartitionHmac(
   final computed = await _hmacSha256(vk, hb);
   if (_constantTimeEq(computed, storedHmac)) return true;
 
-  final legacyVk =
-      await _pbkdf2('$password::V', salt, _pbkdf2VItersLegacy, 32);
+  final legacyVk = await _pbkdf2('$password::V', salt, _pbkdf2VItersLegacy, 32);
   final legacyComputed = await _hmacSha256(legacyVk, hb);
   return _constantTimeEq(legacyComputed, storedHmac);
 }
@@ -846,8 +1088,7 @@ Future<bool> _verifyDuressHmac(
 Future<DecryptResult> _writeDecrypted(String vctPath, _InternalResult internal,
     {String? outputPath}) async {
   final origName = internal.originalName ?? 'decrypted_file';
-  final outPath =
-      outputPath ?? await _chooseOutputPath(origName, vctPath);
+  final outPath = outputPath ?? await _chooseOutputPath(origName, vctPath);
   _writeFile(outPath, internal.fileBytes!);
   return DecryptResult(
     success: true,
@@ -859,7 +1100,7 @@ Future<DecryptResult> _writeDecrypted(String vctPath, _InternalResult internal,
 
 // ---- Public API ----
 
-/// Options for V2 encryption (GUI 1.1.0+).
+/// Options for V2/V4 encryption (GUI 1.1.0+).
 class EncryptOptions {
   /// Decoy password: entering it during decryption reveals [decoyFilePath]
   /// instead of the real file (plausible deniability).
@@ -991,6 +1232,17 @@ Future<EncryptResult> encryptFile(
       }
     }
 
+    // v2.5.0 (M2): refuse oversized inputs BEFORE loading them, so the
+    // user gets a clear message instead of an OOM kill.
+    try {
+      final srcLen = File(filePath).lengthSync();
+      if (srcLen > _maxFileBytes) {
+        return EncryptResult(success: false, error: 'FILE_TOO_LARGE');
+      }
+    } catch (_) {
+      // fall through - _readFile will surface the IO error
+    }
+
     final fileData = _readFile(filePath);
     if (fileData.isEmpty) {
       return EncryptResult(success: false, error: 'EMPTY_FILE');
@@ -998,12 +1250,19 @@ Future<EncryptResult> encryptFile(
 
     final realPayload = _buildPayload(filePath, fileData);
 
-    // ---- Real partition ----
-    final realPart = await _encryptPartition(
+    // ---- Real partition (v2.5.0: V4 - authenticated header + HKDF) ----
+    // The header stores the REAL partition's L3 ciphertext length, which is
+    // the payload plus the two inner GCM tags (L1 and L2), and that exact
+    // value is what every layer authenticates as AAD. Using the plaintext
+    // length here would make the real partition's AAD disagree with the
+    // header on decryption.
+    final realCtLen = realPayload.length + _tagSize * 2;
+    final realPart = await _encryptPartitionV4(
       password,
       realPayload,
       'ENCRYPTING',
       onProgress,
+      headerCtLen: realCtLen,
     );
 
     // ---- Decoy partition (random filler when disabled) ----
@@ -1013,12 +1272,16 @@ Future<EncryptResult> encryptFile(
       if (decoyData.isEmpty) {
         return EncryptResult(success: false, error: 'DECOY_FILE_EMPTY');
       }
+      if (decoyData.length > _maxFileBytes) {
+        return EncryptResult(success: false, error: 'FILE_TOO_LARGE');
+      }
       final decoyPayload = _buildPayload(decoyPath, decoyData);
-      decoyPart = await _encryptPartition(
+      decoyPart = await _encryptPartitionV4(
         decoyPw,
         decoyPayload,
         'ENCRYPTING_DECOY',
         onProgress,
+        headerCtLen: realPart.ct.length,
       );
     } else {
       // v2.4.0 (H2): size the filler like the real partition so its length
@@ -1038,9 +1301,11 @@ Future<EncryptResult> encryptFile(
       xhmac = await _secureRandom(_hmacSize);
     }
 
-    // ---- Assemble V2 file ----
+    // ---- Assemble V4 file ----
     final output = BytesBuilder();
-    output.add(utf8.encode(_magicV2));
+    output.add(utf8.encode(_magicV4));
+    output.addByte(_v4LayoutVer);
+    output.addByte(_v4Flags);
     _writeU64LE(output, realPart.ct.length);
     output.add(realPart.salt);
     output.add(realPart.n1);
@@ -1059,15 +1324,15 @@ Future<EncryptResult> encryptFile(
     output.add(decoyPart.ct);
     output.add(decoyPart.tag);
 
-    final outPath = outputPath ??
-        await _chooseOutputPath(_encFileName(filePath), filePath);
+    final outPath =
+        outputPath ?? await _chooseOutputPath(_encFileName(filePath), filePath);
     _writeFile(outPath, output.toBytes());
 
     // ---- Optional: shred the original after verifying the output ----
     var shredded = false;
     if (shred) {
       onProgress?.call('SHREDDING');
-      final outputOk = await _verifyWrittenV2(outPath, password);
+      final outputOk = await _verifyWrittenV4(outPath, password);
       if (!outputOk) {
         // NEVER destroy the original unless the output is provably valid.
         return EncryptResult(
@@ -1092,25 +1357,24 @@ Future<EncryptResult> encryptFile(
   }
 }
 
-/// Cheap sanity check of a freshly written V2 file (magic + real HMAC,
-/// full-strength 600K PBKDF2 iterations, v2.1.0) before we allow
-/// shredding the original.
-Future<bool> _verifyWrittenV2(String outPath, String password) async {
+/// Cheap sanity check of a freshly written V4 file (magic + real HMAC at
+/// full-strength 600K iterations) before we allow shredding the original.
+Future<bool> _verifyWrittenV4(String outPath, String password) async {
   try {
     final data = _readFile(outPath);
-    if (detectFormat(data) != fmtV2) return false;
-    if (data.length < _v2HeaderLen + _tagSize) return false;
+    if (detectFormat(data) != fmtV4) return false;
+    if (data.length < _v4HeaderLen + _tagSize) return false;
 
-    final salt = data.sublist(_v2RealSaltOff, _v2RealSaltOff + _saltSize);
+    final salt = data.sublist(_v4RealSaltOff, _v4RealSaltOff + _saltSize);
     final n1 = data.sublist(
-        _v2RealSaltOff + _saltSize, _v2RealSaltOff + _saltSize + _nonceSize);
-    final n2 = data.sublist(_v2RealSaltOff + _saltSize + _nonceSize,
-        _v2RealSaltOff + _saltSize + _nonceSize * 2);
-    final n3 = data.sublist(_v2RealSaltOff + _saltSize + _nonceSize * 2,
-        _v2RealSaltOff + _saltSize + _nonceSize * 3);
-    final hmac = data.sublist(_v2RealHmacOff, _v2RealHmacOff + _hmacSize);
+        _v4RealSaltOff + _saltSize, _v4RealSaltOff + _saltSize + _nonceSize);
+    final n2 = data.sublist(_v4RealSaltOff + _saltSize + _nonceSize,
+        _v4RealSaltOff + _saltSize + _nonceSize * 2);
+    final n3 = data.sublist(_v4RealSaltOff + _saltSize + _nonceSize * 2,
+        _v4RealSaltOff + _saltSize + _nonceSize * 3);
+    final hmac = data.sublist(_v4RealHmacOff, _v4RealHmacOff + _hmacSize);
 
-    return _verifyPartitionHmac(password, salt, n1, n2, n3, hmac);
+    return await _v4VerifyPartition(password, salt, n1, n2, n3, hmac) != null;
   } catch (_) {
     return false;
   }
@@ -1143,15 +1407,16 @@ Future<_Keys> _v3DeriveBodyKeys(List<int> cek, List<int> salt2) async {
 
 /// Encrypt [payload] with the triple-GCM body under CEK-derived keys.
 /// Returns the body header material + ciphertext + tag.
-Future<({
-  List<int> salt2,
-  List<int> n1,
-  List<int> n2,
-  List<int> n3,
-  List<int> hmac,
-  List<int> ct,
-  List<int> tag,
-})> _v3EncryptBody(List<int> cek, List<int> payload) async {
+Future<
+    ({
+      List<int> salt2,
+      List<int> n1,
+      List<int> n2,
+      List<int> n3,
+      List<int> hmac,
+      List<int> ct,
+      List<int> tag,
+    })> _v3EncryptBody(List<int> cek, List<int> payload) async {
   final salt2 = await _secureRandom(_saltSize);
   final n1 = await _secureRandom(_nonceSize);
   final n2 = await _secureRandom(_nonceSize);
@@ -1159,9 +1424,13 @@ Future<({
   final keys = await _v3DeriveBodyKeys(cek, salt2);
 
   final l1 = await _aesGcmEncrypt(keys.k1, n1, payload);
-  final l1b = BytesBuilder()..add(l1.tag)..add(l1.cipherText);
+  final l1b = BytesBuilder()
+    ..add(l1.tag)
+    ..add(l1.cipherText);
   final l2 = await _aesGcmEncrypt(keys.k2, n2, l1b.toBytes());
-  final l2b = BytesBuilder()..add(l2.tag)..add(l2.cipherText);
+  final l2b = BytesBuilder()
+    ..add(l2.tag)
+    ..add(l2.cipherText);
   final l3 = await _aesGcmEncrypt(keys.k3, n3, l2b.toBytes());
 
   final hData = BytesBuilder()
@@ -1186,8 +1455,15 @@ Future<({
 Future<Uint8List> _v3Assemble({
   required List<int> cek,
   required List<int> body,
-  required ({List<int> salt2, List<int> n1, List<int> n2, List<int> n3,
-      List<int> hmac, List<int> ct, List<int> tag}) enc,
+  required ({
+    List<int> salt2,
+    List<int> n1,
+    List<int> n2,
+    List<int> n3,
+    List<int> hmac,
+    List<int> ct,
+    List<int> tag
+  }) enc,
   required bool usePassword,
   required bool useKem,
   String? password,
@@ -1198,8 +1474,8 @@ Future<Uint8List> _v3Assemble({
   if (useKem) {
     final (ct, ss) = _kem768.encapsulate(recipient!.ek);
     kemCt = ct;
-    final wrapK = await _hmacSha256(
-        ss, utf8.encode('VCT3::KEM').followedBy(ct).toList());
+    final wrapK =
+        await _hmacSha256(ss, utf8.encode('VCT3::KEM').followedBy(ct).toList());
     final nonce = await _secureRandom(_nonceSize);
     final box = await _aesGcmEncrypt(wrapK, nonce, cek);
     kwNonce = nonce;
@@ -1271,8 +1547,8 @@ Future<bool> _verifyWrittenV3(String outPath, List<int> cek) async {
     final salt2 = data.sublist(_v3Salt2Off, _v3Salt2Off + _saltSize);
     final n1 = data.sublist(_v3N1Off, _v3N1Off + _nonceSize);
     final n2 = data.sublist(_v3N1Off + _nonceSize, _v3N1Off + _nonceSize * 2);
-    final n3 = data.sublist(
-        _v3N1Off + _nonceSize * 2, _v3N1Off + _nonceSize * 3);
+    final n3 =
+        data.sublist(_v3N1Off + _nonceSize * 2, _v3N1Off + _nonceSize * 3);
     final stored = data.sublist(_v3HmacOff, _v3HmacOff + _hmacSize);
 
     final keys = await _v3DeriveBodyKeys(cek, salt2);
@@ -1339,8 +1615,8 @@ Future<EncryptResult> encryptFileHybrid(
       return EncryptResult(success: false, error: 'BAD_KEY_FILE');
     }
 
-    final outPath = outputPath ??
-        await _chooseOutputPath(_encFileName(filePath), filePath);
+    final outPath =
+        outputPath ?? await _chooseOutputPath(_encFileName(filePath), filePath);
     _writeFile(outPath, assembled);
 
     var shredded = false;
@@ -1415,12 +1691,10 @@ Future<DecryptResult> _v3DecryptBody(
 
   final salt2 = fileData.sublist(_v3Salt2Off, _v3Salt2Off + _saltSize);
   final n1 = fileData.sublist(_v3N1Off, _v3N1Off + _nonceSize);
-  final n2 =
-      fileData.sublist(_v3N1Off + _nonceSize, _v3N1Off + _nonceSize * 2);
+  final n2 = fileData.sublist(_v3N1Off + _nonceSize, _v3N1Off + _nonceSize * 2);
   final n3 =
       fileData.sublist(_v3N1Off + _nonceSize * 2, _v3N1Off + _nonceSize * 3);
-  final storedHmac =
-      fileData.sublist(_v3HmacOff, _v3HmacOff + _hmacSize);
+  final storedHmac = fileData.sublist(_v3HmacOff, _v3HmacOff + _hmacSize);
 
   final keys = await _v3DeriveBodyKeys(cek, salt2);
   final hData = BytesBuilder()
@@ -1442,8 +1716,7 @@ Future<DecryptResult> _v3DecryptBody(
   final bodyCt = fileData.sublist(bodyStart, ctEnd);
   final bodyTag = fileData.sublist(ctEnd, ctEnd + _tagSize);
 
-  final internal =
-      await _decryptBody(keys, n1, n2, n3, bodyCt, bodyTag);
+  final internal = await _decryptBody(keys, n1, n2, n3, bodyCt, bodyTag);
   if (!internal.success) {
     return DecryptResult(success: false, error: internal.error);
   }
@@ -1468,8 +1741,7 @@ Future<DecryptResult> _decryptV3WithPassword(
   final wrap = await _pbkdf2('${password}::V3', pwSalt, _pbkdf2Iters, 32);
 
   if ((flags & _v3FlagPassword) != 0) {
-    final pwNonce =
-        fileData.sublist(_v3PwNonceOff, _v3PwNonceOff + _nonceSize);
+    final pwNonce = fileData.sublist(_v3PwNonceOff, _v3PwNonceOff + _nonceSize);
     final pwCt = fileData.sublist(_v3PwCtOff, _v3PwCtOff + 32);
     final pwTag = fileData.sublist(_v3PwTagOff, _v3PwTagOff + _tagSize);
     try {
@@ -1544,8 +1816,7 @@ Future<DecryptResult> _decryptV2(
       _v2RealSaltOff + _saltSize + _nonceSize * 2);
   final realN3 = fileData.sublist(_v2RealSaltOff + _saltSize + _nonceSize * 2,
       _v2RealSaltOff + _saltSize + _nonceSize * 3);
-  final realHmac =
-      fileData.sublist(_v2RealHmacOff, _v2RealHmacOff + _hmacSize);
+  final realHmac = fileData.sublist(_v2RealHmacOff, _v2RealHmacOff + _hmacSize);
 
   final decoySalt =
       fileData.sublist(_v2DecoySaltOff, _v2DecoySaltOff + _saltSize);
@@ -1581,10 +1852,10 @@ Future<DecryptResult> _decryptV2(
   onProgress?.call('VERIFYING');
 
   // ---- Uniform 3-way verification (constant work, no timing leak) ----
-  final realOk =
-      await _verifyPartitionHmac(password, realSalt, realN1, realN2, realN3, realHmac);
-  final decoyOk =
-      await _verifyPartitionHmac(password, decoySalt, decoyN1, decoyN2, decoyN3, decoyHmac);
+  final realOk = await _verifyPartitionHmac(
+      password, realSalt, realN1, realN2, realN3, realHmac);
+  final decoyOk = await _verifyPartitionHmac(
+      password, decoySalt, decoyN1, decoyN2, decoyN3, decoyHmac);
   final duressOk = await _verifyDuressHmac(password, duressSalt, duressHmac);
 
   // ---- Real password ----
@@ -1592,7 +1863,8 @@ Future<DecryptResult> _decryptV2(
     onProgress?.call('VERIFIED');
     onProgress?.call('DECRYPTING');
     final keys = await _deriveBodyKeys(password, realSalt);
-    final internal = await _decryptBody(keys, realN1, realN2, realN3, realCt, realTag);
+    final internal =
+        await _decryptBody(keys, realN1, realN2, realN3, realCt, realTag);
     if (!internal.success) {
       return DecryptResult(success: false, error: internal.error);
     }
@@ -1609,7 +1881,8 @@ Future<DecryptResult> _decryptV2(
     if (!internal.success) {
       return DecryptResult(success: false, error: internal.error);
     }
-    final result = await _writeDecrypted(filePath, internal, outputPath: outputPath);
+    final result =
+        await _writeDecrypted(filePath, internal, outputPath: outputPath);
     return DecryptResult(
       success: true,
       outputPath: result.outputPath,
@@ -1624,6 +1897,129 @@ Future<DecryptResult> _decryptV2(
     await _shredFile(filePath);
     // Return the same error as a wrong password on purpose:
     // observers must not be able to tell that duress was triggered.
+    return DecryptResult(
+      success: false,
+      error: 'WRONG_PASSWORD',
+      duressTriggered: true,
+    );
+  }
+
+  return DecryptResult(success: false, error: 'WRONG_PASSWORD');
+}
+
+/// Decrypt a V4 file (authenticated header, HKDF-split keys).
+Future<DecryptResult> _decryptV4(
+  Uint8List fileData,
+  String filePath,
+  String password,
+  ProgressCallback? onProgress, {
+  String? outputPath,
+}) async {
+  if (fileData.length < _v4HeaderLen + _tagSize + _tagSize) {
+    return DecryptResult(success: false, error: 'FILE_TOO_SMALL');
+  }
+  if (fileData[_v4VerOff] != _v4LayoutVer) {
+    return DecryptResult(success: false, error: 'UNSUPPORTED_FORMAT');
+  }
+
+  // ---- Parse header ----
+  final realCtLen = _readU64LE(fileData, _v4RealCtLenOff);
+
+  final realSalt = fileData.sublist(_v4RealSaltOff, _v4RealSaltOff + _saltSize);
+  final realN1 = fileData.sublist(
+      _v4RealSaltOff + _saltSize, _v4RealSaltOff + _saltSize + _nonceSize);
+  final realN2 = fileData.sublist(_v4RealSaltOff + _saltSize + _nonceSize,
+      _v4RealSaltOff + _saltSize + _nonceSize * 2);
+  final realN3 = fileData.sublist(_v4RealSaltOff + _saltSize + _nonceSize * 2,
+      _v4RealSaltOff + _saltSize + _nonceSize * 3);
+  final realHmac = fileData.sublist(_v4RealHmacOff, _v4RealHmacOff + _hmacSize);
+
+  final decoySalt =
+      fileData.sublist(_v4DecoySaltOff, _v4DecoySaltOff + _saltSize);
+  final decoyN1 = fileData.sublist(
+      _v4DecoySaltOff + _saltSize, _v4DecoySaltOff + _saltSize + _nonceSize);
+  final decoyN2 = fileData.sublist(_v4DecoySaltOff + _saltSize + _nonceSize,
+      _v4DecoySaltOff + _saltSize + _nonceSize * 2);
+  final decoyN3 = fileData.sublist(_v4DecoySaltOff + _saltSize + _nonceSize * 2,
+      _v4DecoySaltOff + _saltSize + _nonceSize * 3);
+  final decoyHmac =
+      fileData.sublist(_v4DecoyHmacOff, _v4DecoyHmacOff + _hmacSize);
+
+  final duressSalt =
+      fileData.sublist(_v4DuressSaltOff, _v4DuressSaltOff + _saltSize);
+  final duressHmac =
+      fileData.sublist(_v4DuressHmacOff, _v4DuressHmacOff + _hmacSize);
+
+  // ---- Parse body: [realCt][realTag][decoyCt][decoyTag] ----
+  final bodyStart = _v4HeaderLen;
+  final realCtEnd = bodyStart + realCtLen;
+  if (realCtLen <= 0 ||
+      realCtEnd + _tagSize > fileData.length ||
+      realCtEnd + _tagSize + _tagSize > fileData.length) {
+    return DecryptResult(success: false, error: 'CORRUPT');
+  }
+  final realCt = fileData.sublist(bodyStart, realCtEnd);
+  final realTag = fileData.sublist(realCtEnd, realCtEnd + _tagSize);
+  final decoyStart = realCtEnd + _tagSize;
+  final decoyCtEnd = fileData.length - _tagSize;
+  final decoyCt = fileData.sublist(decoyStart, decoyCtEnd);
+  final decoyTag = fileData.sublist(decoyCtEnd);
+
+  // The header fields a parser trusts are authenticated as AAD, so a
+  // forged realCtLen now fails GCM instead of steering decryption.
+  final realAad = _buildV4Aad(
+      salt: realSalt, n1: realN1, n2: realN2, n3: realN3, ctLen: realCtLen);
+  final decoyAad = _buildV4Aad(
+      salt: decoySalt, n1: decoyN1, n2: decoyN2, n3: decoyN3, ctLen: realCtLen);
+
+  onProgress?.call('VERIFYING');
+
+  // ---- Uniform 3-way verification (constant work, no timing leak) ----
+  final realKeys = await _v4VerifyPartition(
+      password, realSalt, realN1, realN2, realN3, realHmac);
+  final decoyKeys = await _v4VerifyPartition(
+      password, decoySalt, decoyN1, decoyN2, decoyN3, decoyHmac);
+  final duressOk = await _verifyDuressHmac(password, duressSalt, duressHmac);
+
+  // ---- Real password ----
+  if (realKeys != null) {
+    onProgress?.call('VERIFIED');
+    onProgress?.call('DECRYPTING');
+    final internal = await _decryptBody(
+        realKeys, realN1, realN2, realN3, realCt, realTag,
+        aad: realAad);
+    if (!internal.success) {
+      return DecryptResult(success: false, error: internal.error);
+    }
+    return await _writeDecrypted(filePath, internal, outputPath: outputPath);
+  }
+
+  // ---- Decoy password (identical success behavior - deniability) ----
+  if (decoyKeys != null) {
+    onProgress?.call('VERIFIED');
+    onProgress?.call('DECRYPTING');
+    final internal = await _decryptBody(
+        decoyKeys, decoyN1, decoyN2, decoyN3, decoyCt, decoyTag,
+        aad: decoyAad);
+    if (!internal.success) {
+      return DecryptResult(success: false, error: internal.error);
+    }
+    final result =
+        await _writeDecrypted(filePath, internal, outputPath: outputPath);
+    return DecryptResult(
+      success: true,
+      outputPath: result.outputPath,
+      originalName: result.originalName,
+      outputSize: result.outputSize,
+      isDecoy: true,
+    );
+  }
+
+  // ---- Duress password: permanently destroy the file ----
+  if (duressOk) {
+    await _shredFile(filePath);
+    // Same error as a wrong password on purpose: observers must not be
+    // able to tell that duress was triggered.
     return DecryptResult(
       success: false,
       error: 'WRONG_PASSWORD',
@@ -1709,6 +2105,14 @@ Future<DecryptResult> decryptFile(
   String? outputPath,
 }) async {
   try {
+    // v2.5.0 (M2): refuse a container that cannot fit comfortably in memory.
+    try {
+      if (File(filePath).lengthSync() > _maxVctBytes) {
+        return DecryptResult(success: false, error: 'FILE_TOO_LARGE');
+      }
+    } catch (_) {
+      // fall through - _readFile will surface the IO error
+    }
     final fileData = _readFile(filePath);
     final format = detectFormat(fileData);
 
@@ -1723,26 +2127,31 @@ Future<DecryptResult> decryptFile(
       if (fileData[_v3VerOff] != _v3LayoutVer) {
         return DecryptResult(success: false, error: 'UNSUPPORTED_FORMAT');
       }
-      return await _decryptV3WithPassword(fileData, filePath, password,
-          onProgress,
+      return await _decryptV3WithPassword(
+          fileData, filePath, password, onProgress,
+          outputPath: outputPath);
+    }
+
+    if (format == fmtV4) {
+      return await _decryptV4(fileData, filePath, password, onProgress,
           outputPath: outputPath);
     }
 
     if (format == fmtV2) {
       return await _decryptV2(fileData, filePath, password, onProgress,
-        outputPath: outputPath);
+          outputPath: outputPath);
     }
 
     if (format == fmtV1) {
-      final result =
-          await _decryptV1(fileData, filePath, password, 12, onProgress,
-            outputPath: outputPath);
+      final result = await _decryptV1(
+          fileData, filePath, password, 12, onProgress,
+          outputPath: outputPath);
       // Edge case: old buggy file where salt[0] happened to be 0x00.
       // The 12-byte magic check passes (false positive), but data is
       // shifted - retry with the 11-byte offset.
       if (!result.success && result.error == 'WRONG_PASSWORD') {
-        final result11 =
-            await _decryptV1(fileData, filePath, password, 11, onProgress,
+        final result11 = await _decryptV1(
+            fileData, filePath, password, 11, onProgress,
             outputPath: outputPath);
         if (result11.success) return result11;
       }
@@ -1751,7 +2160,7 @@ Future<DecryptResult> decryptFile(
 
     // fmtV1Old: 11-byte buggy magic
     return await _decryptV1(fileData, filePath, password, 11, onProgress,
-            outputPath: outputPath);
+        outputPath: outputPath);
   } catch (e) {
     return DecryptResult(success: false, error: e.toString());
   }
@@ -1794,7 +2203,16 @@ Future<EncryptResult> encryptText(
       outputPath: outputPath,
     );
   } finally {
-    if (tmp.existsSync()) tmp.deleteSync();
+    // v2.5.0 (M1): the plaintext note is shredded, not merely unlinked.
+    if (tmp.existsSync()) {
+      try {
+        await _shredFile(tmp.path);
+      } catch (_) {
+        try {
+          tmp.deleteSync();
+        } catch (_) {}
+      }
+    }
   }
 }
 

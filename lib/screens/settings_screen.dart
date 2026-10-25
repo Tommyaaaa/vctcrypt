@@ -57,8 +57,7 @@ class SettingsScreen extends StatelessWidget {
                         RadioListTile<AppLanguage>(
                           value: lang,
                           groupValue: appState.lang,
-                          onChanged: (value) =>
-                              appState.changeLanguage(value!),
+                          onChanged: (value) => appState.changeLanguage(value!),
                           secondary: Text(
                             lang.code.toUpperCase(),
                             style: theme.textTheme.labelSmall?.copyWith(
@@ -139,10 +138,9 @@ class SettingsScreen extends StatelessWidget {
                             for (final c in _kSeedColors)
                               _SeedSwatch(
                                 color: c,
-                                selected:
-                                    (appState.seedColor ?? _defaultSeed)
+                                selected: (appState.seedColor ?? _defaultSeed)
                                         .value ==
-                                        c.value,
+                                    c.value,
                                 onTap: (_) => appState.setSeedColor(c),
                               ),
                           ],
@@ -356,8 +354,7 @@ class SettingsScreen extends StatelessWidget {
                         title: Text(strings.helpTitle),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const HelpScreen()),
+                          MaterialPageRoute(builder: (_) => const HelpScreen()),
                         ),
                       ),
                     ],
@@ -384,8 +381,7 @@ class SettingsScreen extends StatelessWidget {
                         title: Text(strings.hashEntry),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const HashScreen()),
+                          MaterialPageRoute(builder: (_) => const HashScreen()),
                         ),
                       ),
                       const Divider(height: 1),
@@ -629,40 +625,19 @@ class _StatsCardState extends State<_StatsCard> {
               _StatRow(
                 icon: Icons.cloud_upload_outlined,
                 label: strings.statsDataEnc,
-                value: UsageStats.formatBytes(
-                    stats.bytesEncrypted, strings.bytes),
+                value:
+                    UsageStats.formatBytes(stats.bytesEncrypted, strings.bytes),
               ),
               _StatRow(
                 icon: Icons.cloud_download_outlined,
                 label: strings.statsDataDec,
-                value: UsageStats.formatBytes(
-                    stats.bytesDecrypted, strings.bytes),
+                value:
+                    UsageStats.formatBytes(stats.bytesDecrypted, strings.bytes),
               ),
-              if (stats.decoyPartitions > 0)
-                _StatRow(
-                  icon: Icons.theater_comedy,
-                  label: strings.statsDecoy,
-                  value: '${stats.decoyPartitions}',
-                ),
-              if (stats.duressArmed > 0)
-                _StatRow(
-                  icon: Icons.local_fire_department_outlined,
-                  label: strings.statsDuressArmed,
-                  value: '${stats.duressArmed}',
-                ),
-              if (stats.duressTriggered > 0)
-                _StatRow(
-                  icon: Icons.local_fire_department,
-                  label: strings.statsDuressTriggered,
-                  value: '${stats.duressTriggered}',
-                  highlight: true,
-                ),
-              if (stats.filesShredded > 0)
-                _StatRow(
-                  icon: Icons.delete_forever_outlined,
-                  label: strings.statsShredded,
-                  value: '${stats.filesShredded}',
-                ),
+              // v2.5.0 (H3): decoy / duress / shred counters are no longer
+              // displayed. Showing them handed an observer exactly the fact
+              // deniability is supposed to hide. The counters are still
+              // recorded locally (no network) for potential diagnostics.
               const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerRight,

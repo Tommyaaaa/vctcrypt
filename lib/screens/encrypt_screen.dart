@@ -56,7 +56,6 @@ class _EncryptScreenState extends State<EncryptScreen> {
 
   // ---- Recipient public key state (v1.6.0) ----
   bool _recipientOn = false;
-  String? _recipientPath;
   keys.VctPublicKey? _recipientPub;
 
   // ---- Advanced options state ----
@@ -209,7 +208,6 @@ class _EncryptScreenState extends State<EncryptScreen> {
       final bytes = File(path).readAsBytesSync();
       final pub = keys.VctPublicKey.parse(bytes);
       setState(() {
-        _recipientPath = path;
         _recipientPub = pub;
         // Picking a key implies turning the recipient channel on.
         _recipientOn = true;
@@ -223,7 +221,6 @@ class _EncryptScreenState extends State<EncryptScreen> {
   void _clearRecipient() {
     setState(() {
       _recipientOn = false;
-      _recipientPath = null;
       _recipientPub = null;
       _resultText = null;
     });
@@ -282,9 +279,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
       }
       // V3 has no decoy/duress slots - guard even though the UI hides
       // them while a recipient is selected.
-      if (decoyPw.isNotEmpty ||
-          duressPw.isNotEmpty ||
-          _decoyFilePath != null) {
+      if (decoyPw.isNotEmpty || duressPw.isNotEmpty || _decoyFilePath != null) {
         _showSnackBar(strings.errHybridAdvanced, isError: true);
         return;
       }
@@ -370,13 +365,15 @@ class _EncryptScreenState extends State<EncryptScreen> {
     String? firstError;
     String? singleOutputPath;
     int? singleOutputSize;
-    var anyDecoy = false, anyDuress = false, anyShredded = false,
+    var anyDecoy = false,
+        anyDuress = false,
+        anyShredded = false,
         anyKem = false;
 
     for (var i = 0; i < _files.length; i++) {
       if (mounted) {
-        setState(() =>
-            _statusText = strings.batchEncrypting(i + 1, _files.length));
+        setState(
+            () => _statusText = strings.batchEncrypting(i + 1, _files.length));
       }
       final result = useKem
           ? await crypto.encryptFileHybrid(
@@ -615,9 +612,8 @@ class _EncryptScreenState extends State<EncryptScreen> {
                           color: _recipientPub != null
                               ? theme.colorScheme.tertiary
                               : theme.colorScheme.onSurfaceVariant,
-                          fontWeight: _recipientPub != null
-                              ? FontWeight.w600
-                              : null,
+                          fontWeight:
+                              _recipientPub != null ? FontWeight.w600 : null,
                         ),
                       ),
                       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -628,6 +624,27 @@ class _EncryptScreenState extends State<EncryptScreen> {
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
+                        // v2.5.0 (M7): selecting a recipient silently switched
+                        // the file to V3, which has no decoy/duress slots.
+                        if (_recipientPub != null) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.info_outline,
+                                  size: 16, color: theme.colorScheme.tertiary),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  strings.recipientDeniabilityNote,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.tertiary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         Row(
                           children: [
@@ -657,8 +674,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
                               style: theme.textTheme.bodySmall,
                             ),
                             value: _recipientOn,
-                            onChanged: (v) =>
-                                setState(() => _recipientOn = v),
+                            onChanged: (v) => setState(() => _recipientOn = v),
                           ),
                         ],
                       ],
@@ -713,7 +729,8 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                 : pwStrength == strings.passwordStrengthMedium
                                     ? 0.66
                                     : 1.0,
-                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
                             color: _strengthColor(pwStrength),
                             minHeight: 6,
                           ),
@@ -811,8 +828,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                   child: Text(
                                     strings.hybridAdvancedDisabled,
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color:
-                                          theme.colorScheme.onSurfaceVariant,
+                                      color: theme.colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                                 ),
@@ -835,8 +851,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                   child: Text(
                                     strings.batchDecoyDisabled,
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color:
-                                          theme.colorScheme.onSurfaceVariant,
+                                      color: theme.colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                                 ),
@@ -893,8 +908,8 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                   title: Text(
                                     strings.shredOption,
                                     style: theme.textTheme.titleSmall?.copyWith(
-                                      color:
-                                          theme.colorScheme.onSecondaryContainer,
+                                      color: theme
+                                          .colorScheme.onSecondaryContainer,
                                     ),
                                   ),
                                   value: _shredOriginal,
@@ -907,8 +922,8 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                   child: Text(
                                     strings.shredHint,
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color:
-                                          theme.colorScheme.onSecondaryContainer,
+                                      color: theme
+                                          .colorScheme.onSecondaryContainer,
                                     ),
                                   ),
                                 ),
@@ -1000,48 +1015,42 @@ class _EncryptScreenState extends State<EncryptScreen> {
                               Text(
                                 strings.batchPartial(_okCount, _failCount),
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color:
-                                      theme.colorScheme.onPrimaryContainer,
+                                  color: theme.colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               Text(
                                 '${strings.fileSize}: ${_formatSize(_totalBytes)}',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color:
-                                      theme.colorScheme.onPrimaryContainer,
+                                  color: theme.colorScheme.onPrimaryContainer,
                                 ),
                               ),
                             ] else if (_okCount > 1) ...[
                               Text(
                                 strings.batchAllOk(_okCount),
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color:
-                                      theme.colorScheme.onPrimaryContainer,
+                                  color: theme.colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               Text(
                                 '${strings.fileSize}: ${_formatSize(_totalBytes)}',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color:
-                                      theme.colorScheme.onPrimaryContainer,
+                                  color: theme.colorScheme.onPrimaryContainer,
                                 ),
                               ),
                             ] else if (_outputPath != null) ...[
                               Text(
                                 '${strings.outputFile}: $_outputPath',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color:
-                                      theme.colorScheme.onPrimaryContainer,
+                                  color: theme.colorScheme.onPrimaryContainer,
                                 ),
                               ),
                               if (_outputSize != null)
                                 Text(
                                   '${strings.fileSize}: ${_formatSize(_outputSize!)}',
                                   style: theme.textTheme.bodySmall?.copyWith(
-                                    color:
-                                        theme.colorScheme.onPrimaryContainer,
+                                    color: theme.colorScheme.onPrimaryContainer,
                                   ),
                                 ),
                             ],

@@ -362,6 +362,9 @@ jobs:
       - name: Generate platform scaffolding
         run: flutter create --platforms=linux --org ${{ env.ORG_NAME }} --project-name ${{ env.PROJECT_NAME }} .
 
+      - name: Harden Linux runner (L2 RELRO + L5 no-display hint)
+        run: python3 scripts/harden_linux.py
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -369,6 +372,8 @@ jobs:
         run: flutter build linux --release --obfuscate --split-debug-info=./symbols
 
       - name: Create AppImage
+        env:
+          APPIMAGE_GPG_KEY: ${{ secrets.APPIMAGE_GPG_KEY }}
         run: |
           # Download appimagetool
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
@@ -477,14 +482,34 @@ jobs:
           chmod +x AppDir/AppRun
 
           # Build AppImage (fallback to --appimage-extract-and-run if FUSE fails)
-          ARCH=x86_64 ./appimagetool-x86_64.AppImage AppDir VCTCrypt-Linux-x86_64.AppImage || \
-            ARCH=x86_64 ./appimagetool-x86_64.AppImage --appimage-extract-and-run AppDir VCTCrypt-Linux-x86_64.AppImage
+          # v2.5.0 (L4): embed zsync update information so AppImageUpdate can
+          # find future releases; sign when an APPIMAGE_GPG_KEY secret exists.
+          UPDATE_INFO="gh-releases-zsync|Tommyaaaa|vctcrypt|latest|VCTCrypt-Linux-*.AppImage.zsync"
+          SIGN_ARGS=""
+          if [ -n "${APPIMAGE_GPG_KEY:-}" ]; then
+            printf '%s' "$APPIMAGE_GPG_KEY" | base64 -d > /tmp/appimage.key
+            gpg --batch --import /tmp/appimage.key
+            SIGN_ARGS="--sign"
+            echo "AppImage signing: enabled"
+          else
+            echo "AppImage signing: skipped (no APPIMAGE_GPG_KEY secret)"
+          fi
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage $SIGN_ARGS -u "$UPDATE_INFO" AppDir VCTCrypt-Linux-x86_64.AppImage || \
+            ARCH=x86_64 ./appimagetool-x86_64.AppImage $SIGN_ARGS -u "$UPDATE_INFO" --appimage-extract-and-run AppDir VCTCrypt-Linux-x86_64.AppImage
+
+          # v2.5.0 (L4): publish a checksum users can verify even when the
+          # build is unsigned.
+          sha256sum VCTCrypt-Linux-x86_64.AppImage > VCTCrypt-Linux-x86_64.AppImage.sha256
 
       - uses: actions/upload-artifact@v4
         with:
           name: VCTCrypt-Linux-AppImage
-          path: VCTCrypt-Linux-x86_64.AppImage
+          path: |
+            VCTCrypt-Linux-x86_64.AppImage
+            VCTCrypt-Linux-x86_64.AppImage.sha256
+            VCTCrypt-Linux-x86_64.AppImage.zsync
           retention-days: 90
+          if-no-files-found: warn
 
   # ============================================================
   # GitHub Release (on tag push)
@@ -520,6 +545,18 @@ jobs:
             | iOS (unsigned) | VCTCrypt-iOS-unsigned.ipa |
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
+
+            ### What's New in v2.5.0
+            - 🧾 **V4 format - authenticated header (H5)**: every header field a parser trusts (magic, version, flags, real ciphertext length, salt, nonces) is bound into AES-GCM as AAD, so flipping a length/salt/flag byte is detected instead of silently re-routing decryption
+            - ⚡ **One PBKDF2 + HKDF (M3)**: keys are derived once per partition and split with HKDF-Expand instead of four full 600K-iteration PBKDF2 runs - encryption/decryption are ~3x faster, attacker cost unchanged
+            - 🕵️ **H3 - settings no longer expose coercion history**: decoy / duress / shred counters are no longer displayed (they are still local-only)
+            - 🔒 **H4 - no channel leak in the inspector**: `inspectVctFile` no longer reports whether a password or ML-KEM channel exists
+            - 🔑 **M6 - 64-bit key fingerprints**: public-key display id grew from 4 to 8 bytes
+            - 🗑️ **M1 / M5 - honest shredding**: Secure Note plaintext temp files are overwritten, not just unlinked; the shred wording now states its limits on SSDs and copy-on-write filesystems
+            - 📦 **M2 - 64 MB ceiling**: oversized inputs get a clear "file too large" message instead of an OOM kill
+            - 🧪 **M4 - decoy / duress / V1 acceptance tests** added
+            - 🐧 **L2 / L4 / L5 - Linux hardening**: Full RELRO + BIND_NOW, AppImage zsync update info + optional GPG signing + SHA-256 checksum, and a readable message when no display is available
+            - ⚠️ **Format note**: V4 files are *not* readable by older releases; all older files (V1/V2/V3) still open unchanged
 
             ### What's New in v2.4.0
             - 🛡️ **H1 - output path sanitization**: the file name carried inside the ciphertext is now reduced to a safe basename (last segment only, `..` and separators stripped, Windows reserved names avoided) plus a directory guard, so a crafted `.VCT` can no longer write outside the target folder (Zip Slip / CWE-73)
@@ -563,4 +600,6 @@ jobs:
             artifacts/*/*.dmg
             artifacts/*/*.ipa
             artifacts/*/*.AppImage
+            artifacts/*/*.AppImage.zsync
+            artifacts/*/*.AppImage.sha256
           fail_on_unmatched_files: false

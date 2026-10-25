@@ -8,7 +8,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../i18n/strings.dart';
 import '../main.dart';
 
 enum _Quality { weak, fair, good, strong }
