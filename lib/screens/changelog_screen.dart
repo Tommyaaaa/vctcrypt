@@ -106,10 +106,16 @@ class _ChangelogCard extends StatelessWidget {
 List<_Entry> _entries(AppStrings s) {
   if (s.lang == AppLanguage.hannom) {
     return [
+      const _Entry('2.4.0', [
+        '[H1] 修正保密：名集信解碼今得淨化（只留段末，除 .. 吧分隔符，避名設備 Windows），吧加底目錄——集信 .VCT 巧造空仍得寫出外目錄',
+        '[H2] 修正保密：空用偽時，分區填今同量級與分區真（±20%），體積集信空仍露固設偽或密口脅空',
+        '端桌面加增名（name (1)），空仍默覆集信固',
+        '加測試驗收 H1 / H2；集信自版本舊開如常',
+      ], major: true),
       const _Entry('2.3.1', [
         '界面吧政策𡨸喃㐌改寫為真正之𡨸喃：語法吧詞序㗂越，得造來憑 API 譯免費，非以𡨸中文逐字譯',
         '政策吧條款（隱私政策、使用條款）於𡨸喃㐌得重譯完全',
-        '包兼工具總檢吧政策五言語自 v2.3.0',
+        '包兼工具碼檢查吧政策五言語自 v2.3.0',
       ], major: true),
       const _Entry('2.3.0', [
         '工具總檢新：算 SHA-256 / SHA-512 / SHA-3-256 之不分集信那（處理隨流，能集信大空包時盈記憶）吧比較與價值豫見抵核明原完',
@@ -184,6 +190,12 @@ List<_Entry> _entries(AppStrings s) {
   final en = s.lang == AppLanguage.english;
   if (!en) {
     return [
+      const _Entry('2.4.0', [
+        '[H1] 安全修复：解密时对密文携带的文件名做净化（只保留最后一段、过滤 ..与分隔符、规避 Windows 保留名），并加目录兜底，构造的 .VCT 无法再把内容写到目标目录之外',
+        '[H2] 安全修复：未启用诱饵时，填充分区长度改为与真实分区同量级（±20%），文件体积不再泄漏“是否设置了诱饵或胁迫密码”',
+        '桌面端补上同名递增（name (1)），不再静默覆盖已有文件',
+        '新增 H1 / H2 验收测试；旧版本文件打开方式不变',
+      ], major: true),
       const _Entry('2.3.1', [
         '汉喃文界面与汉喃文政策条款改写为真正的 𡨸喃（Chữ Nôm）：遵循越南语语法与词序，由免费翻译 API 生成，不再是逐字的越南语直译中文',
         '隐私政策、使用条款的汉喃文版本全部重译',
@@ -260,6 +272,12 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry('2.4.0', [
+      '[H1] Security fix: the file name carried inside the ciphertext is now sanitized (last segment only, ".." and separators stripped, Windows reserved names avoided) with a directory guard - a crafted .VCT can no longer write outside the target folder',
+      '[H2] Security fix: when no decoy is set, the filler partition is now sized to the same magnitude as the real one (±20%), so file size no longer reveals whether a decoy or duress password is configured',
+      'Desktop now appends " (n)" instead of silently overwriting an existing file',
+      'New H1 / H2 acceptance tests; files from older versions open unchanged',
+    ], major: true),
     const _Entry('2.3.1', [
       'The Han-Nom (𡨸喃) UI and the Han-Nom Policies & Terms were rewritten as genuine Chữ Nôm - Vietnamese grammar and word order, produced through a free translation API rather than a word-for-word Chinese rendering',
       'Privacy Policy and Terms of Use fully re-translated into Han-Nom',

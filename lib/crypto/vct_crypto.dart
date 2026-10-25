@@ -467,6 +467,57 @@ String _encFileName(String input) {
   return '$name.VCT';
 }
 
+/// Collapse an untrusted, ciphertext-supplied file name into a safe basename.
+///
+/// The decrypted name is fully attacker controlled - joining it into a path
+/// un-sanitized allows a crafted .VCT to write anywhere on disk (Zip Slip /
+/// CWE-73). Only the last path segment is kept, '..' and '.' are dropped and
+/// characters that are illegal or dangerous on any platform are removed.
+///
+/// Public so the UI can display the same name that will be written, and so
+/// the test suite can exhaustively exercise the traversal cases.
+String sanitizeFileName(String raw) {
+  const fallback = 'decrypted_file';
+  if (raw.isEmpty) return fallback;
+
+  // 1) Strip NUL and control characters (incl. DEL).
+  var s = raw.replaceAll(RegExp(r'[\x00-\x1f\x7f]'), '');
+  if (s.isEmpty) return fallback;
+
+  // 2) Treat both separators as separators, then keep the last real segment.
+  s = s.replaceAll('\\', '/');
+  final segs = s
+      .split('/')
+      .where((part) => part.isNotEmpty && part != '.' && part != '..')
+      .toList();
+  if (segs.isEmpty) return fallback;
+  var name = segs.last;
+
+  // 3) Trailing dots/spaces are silently ignored by Windows and can be used
+  //    to sneak a name past extension checks.
+  name = name.trim().replaceAll(RegExp(r'[. ]+$'), '');
+
+  // 4) Characters illegal on Windows (and never desired elsewhere).
+  name = name.replaceAll(RegExp(r'[<>:"\\/|?*]'), '_');
+
+  // 5) Avoid Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9).
+  const reserved = {
+    'CON', 'PRN', 'AUX', 'NUL', //
+    'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+    'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9',
+  };
+  if (reserved.contains(name.split('.').first.toUpperCase())) {
+    name = '_$name';
+  }
+
+  // 6) Truncate by UTF-8 bytes (encoding first avoids splitting a character).
+  final bytes = utf8.encode(name);
+  if (bytes.length > 200) {
+    name = utf8.decode(bytes.sublist(0, 200), allowMalformed: true);
+  }
+  return name.isEmpty ? fallback : name;
+}
+
 /// Decide where an output file should be written.
 ///
 /// Desktop: next to the input file (classic behaviour).
@@ -480,14 +531,25 @@ String _encFileName(String input) {
 /// Never silently overwrites an existing file: appends " (n)" before the
 /// extension. Also refuses to overwrite the input itself.
 Future<String> _chooseOutputPath(String fileName, String inputPath) async {
+  // The name comes from the ciphertext and is fully attacker controlled.
+  // Never join it into a path un-sanitized.
+  final safeName = sanitizeFileName(fileName);
+
   if (!Platform.isIOS && !Platform.isAndroid) {
-    var out = p.join(p.dirname(inputPath), fileName);
+    final baseDir = p.dirname(inputPath);
+    var out = p.join(baseDir, safeName);
     // Re-encrypting a .VCT must not clobber the source file.
     if (p.equals(out, inputPath)) {
-      final dot = fileName.lastIndexOf('.');
-      final stem = dot > 0 ? fileName.substring(0, dot) : fileName;
-      final ext = dot > 0 ? fileName.substring(dot) : '';
-      out = p.join(p.dirname(inputPath), '${stem}_enc$ext');
+      final dot = safeName.lastIndexOf('.');
+      final stem = dot > 0 ? safeName.substring(0, dot) : safeName;
+      final ext = dot > 0 ? safeName.substring(dot) : '';
+      out = p.join(baseDir, '${stem}_enc$ext');
+    }
+    out = _uniquePath(out);
+    // Defence in depth: even if sanitization is ever bypassed, never
+    // leave the target directory.
+    if (!p.isWithin(baseDir, out)) {
+      out = p.join(baseDir, 'decrypted_file');
     }
     return out;
   }
@@ -504,25 +566,36 @@ Future<String> _chooseOutputPath(String fileName, String inputPath) async {
     }
   } catch (_) {
     // Path provider unavailable - fall back to old behaviour.
-    return p.join(p.dirname(inputPath), fileName);
+    final dir = p.dirname(inputPath);
+    final out = p.join(dir, safeName);
+    return p.isWithin(dir, out) ? out : p.join(dir, 'decrypted_file');
   }
 
-  var out = p.join(baseDir, fileName);
+  var out = p.join(baseDir, safeName);
   if (p.equals(out, inputPath)) {
-    final dot = fileName.lastIndexOf('.');
-    final stem = dot > 0 ? fileName.substring(0, dot) : fileName;
-    final ext = dot > 0 ? fileName.substring(dot) : '';
+    final dot = safeName.lastIndexOf('.');
+    final stem = dot > 0 ? safeName.substring(0, dot) : safeName;
+    final ext = dot > 0 ? safeName.substring(dot) : '';
     out = p.join(baseDir, '${stem}_enc$ext');
   }
+  out = _uniquePath(out);
+  if (!p.isWithin(baseDir, out)) {
+    out = p.join(baseDir, 'decrypted_file');
+  }
+  return out;
+}
 
-  // name, name (1), name (2), ...
-  final dir = p.dirname(out);
-  final base = p.basename(out);
+/// Append " (n)" before the extension until the path is free.
+/// Shared by desktop and mobile so neither silently overwrites a file.
+String _uniquePath(String path) {
+  if (!File(path).existsSync()) return path;
+  final dir = p.dirname(path);
+  final base = p.basename(path);
   final dot = base.lastIndexOf('.');
   final stem = dot > 0 ? base.substring(0, dot) : base;
   final ext = dot > 0 ? base.substring(dot) : '';
-  var candidate = out;
   var i = 1;
+  var candidate = path;
   while (File(candidate).existsSync()) {
     candidate = p.join(dir, '$stem ($i)$ext');
     i++;
@@ -621,9 +694,24 @@ Future<_Partition> _encryptPartition(
 
 /// A partition whose slots are pure random filler (used when a feature is
 /// disabled, so every V2 file has identical shape -> plausible deniability).
-Future<_Partition> _randomPartition() async {
+///
+/// [targetLen]: when set, the filler is sized to be *comparable* to the real
+/// partition (+/- 20% jitter) instead of a fixed 240..2039 bytes. A fixed
+/// range leaks whether a decoy exists: the real ciphertext length is stored
+/// in the header in plaintext, so `fileSize - realCtLen - overhead` reveals
+/// the filler size - and therefore "a decoy was set" - at a glance.
+Future<_Partition> _randomPartition({int? targetLen}) async {
   final rng = Random.secure();
-  final fillerCtLen = 240 + rng.nextInt(1800); // plausible body size
+  int fillerCtLen;
+  if (targetLen != null && targetLen > 0) {
+    // +/-20% jitter around the real partition so the two are
+    // indistinguishable by length. The floor keeps tiny files sensible.
+    final jitter = (targetLen * 0.2).round().clamp(1, 4096);
+    fillerCtLen = targetLen - jitter + rng.nextInt(2 * jitter + 1);
+    if (fillerCtLen < 240) fillerCtLen = 240 + rng.nextInt(1800);
+  } else {
+    fillerCtLen = 240 + rng.nextInt(1800); // plausible body size
+  }
   return _Partition(
     salt: await _secureRandom(_saltSize),
     n1: await _secureRandom(_nonceSize),
@@ -933,7 +1021,9 @@ Future<EncryptResult> encryptFile(
         onProgress,
       );
     } else {
-      decoyPart = await _randomPartition();
+      // v2.4.0 (H2): size the filler like the real partition so its length
+      // cannot be used to infer that no decoy was configured.
+      decoyPart = await _randomPartition(targetLen: realPart.ct.length);
     }
 
     // ---- Duress section (random filler when disabled) ----

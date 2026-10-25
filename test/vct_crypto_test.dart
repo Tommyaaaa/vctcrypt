@@ -338,4 +338,101 @@ void main() {
           equals(utf8.encode('end to end')));
     });
   });
+
+  // ============================================================
+  // 5. H1 - output path sanitization (Zip Slip, v2.4.0)
+  // ============================================================
+  group('H1 - output path sanitization', () {
+    test('rejects path traversal and platform tricks', () {
+      for (final raw in [
+        '../evil.sh',
+        '../../.bashrc',
+        '../../.config/autostart/evil.desktop',
+        '../etc/./passwd',
+        '/etc/cron.d/evil',
+        r'..\..\evil.exe', // Windows separators
+        r'C:\Windows\Temp\evil.exe',
+        '会议纪要.pdf/../../../.bashrc',
+        'safe.txt\x00../evil',
+        '${'a' * 600}/../evil',
+      ]) {
+        final safe = crypto.sanitizeFileName(raw);
+        expect(safe.contains('/'), isFalse, reason: '$raw -> $safe');
+        expect(safe.contains(r'\'), isFalse, reason: '$raw -> $safe');
+        expect(safe.contains('..'), isFalse, reason: '$raw -> $safe');
+        expect(safe, isNotEmpty);
+      }
+    });
+
+    test('preserves normal file names', () {
+      expect(crypto.sanitizeFileName('report.pdf'), 'report.pdf');
+      expect(crypto.sanitizeFileName('季度财报.xlsx'), '季度财报.xlsx');
+      expect(crypto.sanitizeFileName('a.b.c.tar.gz'), 'a.b.c.tar.gz');
+      expect(crypto.sanitizeFileName('my file (1).txt'), 'my file (1).txt');
+    });
+
+    test('handles degenerate input', () {
+      for (final raw in [
+        '',
+        '/',
+        '.',
+        '..',
+        '   ',
+        'evil.exe. ',
+        'CON',
+        'nul.txt',
+      ]) {
+        final safe = crypto.sanitizeFileName(raw);
+        expect(safe, isNotEmpty, reason: raw);
+        expect(safe.contains('/'), isFalse, reason: raw);
+      }
+    });
+
+    test('decrypted output never escapes the input directory', () async {
+      final src = _tmpFile('inside.txt', utf8.encode('contained payload'));
+      final enc = await crypto.encryptFile(src.path, 'pass1234', null);
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final dec = await crypto.decryptFile(enc.outputPath!, 'pass1234', null);
+      expect(dec.success, isTrue, reason: dec.error ?? '');
+      expect(dec.originalName, 'inside.txt');
+      expect(dec.outputPath, isNotNull);
+      expect(File(dec.outputPath!).parent.path, equals(_tmp.path));
+    });
+  });
+
+  // ============================================================
+  // 6. H2 - filler length must not betray whether a decoy is set
+  // ============================================================
+  group('H2 - filler length indistinguishable', () {
+    const headerLen = 332; // magic + realCtLen + 2 partitions + duress slot
+    const tagLen = 16;
+
+    int decoyAreaLen(Uint8List blob) {
+      final realCtLen = ByteData.sublistView(blob, 12, 20)
+          .getUint64(0, Endian.little);
+      return blob.length - headerLen - realCtLen - tagLen * 2;
+    }
+
+    test('filler scales with the real partition', () async {
+      for (final size in [50 * 1024, 400 * 1024]) {
+        final src = _tmpFile('f$size.bin', List.generate(size, (i) => i & 0xFF));
+        final enc = await crypto.encryptFile(src.path, 'pw123456', null);
+        expect(enc.success, isTrue, reason: enc.error ?? '');
+
+        final blob = File(enc.outputPath!).readAsBytesSync();
+        final realCtLen =
+            ByteData.sublistView(blob, 12, 20).getUint64(0, Endian.little);
+        final decoyLen = decoyAreaLen(blob);
+
+        // The hole that made "a decoy exists" inferable: a fixed 240..2039
+        // byte filler next to a much larger real partition.
+        expect(decoyLen, greaterThan(240));
+        expect(decoyLen, greaterThan((realCtLen * 0.75).round()),
+            reason: 'filler must be comparable to realCtLen=$realCtLen');
+        expect(decoyLen, lessThan((realCtLen * 1.25).round()),
+            reason: 'filler must be comparable to realCtLen=$realCtLen');
+      }
+    });
+  });
 }
