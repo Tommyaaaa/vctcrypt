@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
 import '../crypto/vct_crypto.dart' as crypto;
-import '../i18n/strings.dart';
 import '../main.dart';
 import '../utils/usage_stats.dart';
 

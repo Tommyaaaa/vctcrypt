@@ -153,9 +153,11 @@ class HelpScreen extends StatelessWidget {
         Icons.delete_forever_outlined,
         en ? 'Secure shred' : '安全擦除',
         en
-            ? 'Enable "Shred original after encryption" to overwrite the original file with random data before deleting it, so it cannot be recovered with undelete tools.\n\n'
+            ? 'Enable "Shred original after encryption" to overwrite the original file with one pass of random data, then delete it, so undelete tools find nothing useful.\n\n'
+                'Honest limits: on SSDs, snapshots and copy-on-write filesystems the overwrite cannot be guaranteed to reach the original physical blocks - encryption is the real protection.\n\n'
                 'Shredding only runs after the encrypted output has been verified - if encryption fails, your original stays intact.'
-            : '开启“加密后安全擦除原文件”，会用随机数据覆写原文件后再删除，防止被恢复工具找回。\n\n'
+            : '开启“加密后安全擦除原文件”，会用随机数据单遍覆写原文件后再删除，恢复工具只能看到噪声。\n\n'
+                '诚实的边界：在 SSD、快照与写时复制文件系统上，无法保证覆写到原始物理块——真正的保护是加密本身。\n\n'
                 '只有加密产物校验通过后才会执行擦除；若加密失败，原文件保持原样。',
       ),
       _HelpEntry(

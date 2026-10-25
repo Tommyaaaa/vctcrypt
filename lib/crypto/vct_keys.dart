@@ -73,10 +73,11 @@ class VctPublicKey {
 
   const VctPublicKey({required this.name, required this.ek});
 
-  /// Short display id taken from the first bytes of the key itself
-  /// ("A1B2C3D4" style hex) - enough to eyeball-match two exports.
+  /// Short display id ("A1B2C3D4E5F60718" style hex) taken from the first
+  /// 8 bytes of the key itself - enough to eyeball-match two exports.
+  /// v2.5.0 (M6): 64 bits instead of 32, so a collision needs ~2^32 keys.
   String get fingerprint {
-    final b = ek.sublist(0, 4);
+    final b = ek.sublist(0, 8);
     return b
         .map((x) => x.toRadixString(16).padLeft(2, '0'))
         .join()

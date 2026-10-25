@@ -106,44 +106,76 @@ class _ChangelogCard extends StatelessWidget {
 List<_Entry> _entries(AppStrings s) {
   if (s.lang == AppLanguage.hannom) {
     return [
-      const _Entry('2.4.0', [
-        '[H1] 修正保密：名集信解碼今得淨化（只留段末，除 .. 吧分隔符，避名設備 Windows），吧加底目錄——集信 .VCT 巧造空仍得寫出外目錄',
-        '[H2] 修正保密：空用偽時，分區填今同量級與分區真（±20%），體積集信空仍露固設偽或密口脅空',
-        '端桌面加增名（name (1)），空仍默覆集信固',
-        '加測試驗收 H1 / H2；集信自版本舊開如常',
-      ], major: true),
-      const _Entry('2.3.1', [
-        '界面吧政策𡨸喃㐌改寫為真正之𡨸喃：語法吧詞序㗂越，得造來憑 API 譯免費，非以𡨸中文逐字譯',
-        '政策吧條款（隱私政策、使用條款）於𡨸喃㐌得重譯完全',
-        '包兼工具碼檢查吧政策五言語自 v2.3.0',
-      ], major: true),
-      const _Entry('2.3.0', [
-        '工具總檢新：算 SHA-256 / SHA-512 / SHA-3-256 之不分集信那（處理隨流，能集信大空包時盈記憶）吧比較與價值豫見抵核明原完',
-        '政策吧條款今固於法語、德語吧𡨸喃——全文於畢五種界面言語',
-      ], major: true),
-      const _Entry('2.2.5', [
-        '界面𡨸喃㐌改寫為真正之𡨸喃：語法吧詞序㗂越（㐌／空／之…），非繁體中文',
-        '列表撰言語今羅縱——每名言語，含𡨸喃，得讀橫完全',
-        '集信自畢版本舊（1.x / 2.0.x / 2.1.0 / 2.2.1）常得扶助完全',
-      ], major: true),
-      const _Entry('2.2.1', [
-        '言語界面新：法語、德語吧𡨸喃——共五言語界面',
-        '字庫天珩內置（TH-Feon）顯𡨸喃吧字形中日韓擴展（Ext B-F）完全',
-        '文本界面中文今加兩級粗，顯更清楚',
-        '集信自畢版本舊（1.x / 2.0.x / 2.1.0）常得扶助完全',
-      ], major: true),
-      const _Entry('2.1.0', [
-        '加固保密：鎖核口令吧鎖碼化共得 60 萬次 PBKDF2，猜密口離線空固捷徑',
-        '提速碼化：於移動得開碼化原生之平台，引出鎖吧碼化空占線界面',
-        '字形更粗、更清楚（Inter + 思源黑體排拉丁／中日韓）',
-        '許可得改正自 MIT 朱 AGPL-3.0',
-        '集信造自版本舊（1.x / 2.0.0）常合完全憑自退舊式',
-      ], major: true),
-      const _Entry('2.0.0', [
-        '版塊「別」新：介紹（圖標、網頁、作者、許可）、擁護（支付寶 QR）、政策與條款（隱私政策吧使用條款）、更新誌',
-        '倉裡加許可（LICENSE）',
-        '里程碑大：功能系趨完全，號版本升朱 2.0',
-      ], major: true),
+      const _Entry(
+          '2.5.0',
+          [
+            '格式集信陞爲 V4：場頭（magic、版本、標誌、長度、鹽、nonce）得入認證 AES-GCM 如 AAD——每改一字節皆得檢出，空仍轉解碼朱支差',
+            '鑰鎖分拆：沛次 PBKDF2 得主鎖，再憑 HKDF 分 k1/k2/k3/vk——碼化吧解碼快約三倍，費力猜密口空減',
+            '[H3] 頁設置空仍顯計數偽／脅／碎；[H4] 機檢查空仍露通道解鎖固',
+            '[M1] 臨文記註保密得覆寫而空只刪；[M5] 言碎今明界（SSD／寫時複製空保）；[M6] 指紋鎖 64 位',
+            '[M2] 集信過 64 MB 得通報明；[M4] 加測試驗收偽／脅／V1；[L2/L4/L5] Linux 加固（RELRO、AppImage zsync、提示空有顯示）',
+            '集信舊（V1 / V2 / V3）開如常；集信 V4 新空得開於版本舊',
+          ],
+          major: true),
+      const _Entry(
+          '2.4.0',
+          [
+            '[H1] 修正保密：名集信解碼今得淨化（只留段末，除 .. 吧分隔符，避名設備 Windows），吧加底目錄——集信 .VCT 巧造空仍得寫出外目錄',
+            '[H2] 修正保密：空用偽時，分區填今同量級與分區真（±20%），體積集信空仍露固設偽或密口脅空',
+            '端桌面加增名（name (1)），空仍默覆集信固',
+            '加測試驗收 H1 / H2；集信自版本舊開如常',
+          ],
+          major: true),
+      const _Entry(
+          '2.3.1',
+          [
+            '界面吧政策𡨸喃㐌改寫為真正之𡨸喃：語法吧詞序㗂越，得造來憑 API 譯免費，非以𡨸中文逐字譯',
+            '政策吧條款（隱私政策、使用條款）於𡨸喃㐌得重譯完全',
+            '包兼工具碼檢查吧政策五言語自 v2.3.0',
+          ],
+          major: true),
+      const _Entry(
+          '2.3.0',
+          [
+            '工具總檢新：算 SHA-256 / SHA-512 / SHA-3-256 之不分集信那（處理隨流，能集信大空包時盈記憶）吧比較與價值豫見抵核明原完',
+            '政策吧條款今固於法語、德語吧𡨸喃——全文於畢五種界面言語',
+          ],
+          major: true),
+      const _Entry(
+          '2.2.5',
+          [
+            '界面𡨸喃㐌改寫為真正之𡨸喃：語法吧詞序㗂越（㐌／空／之…），非繁體中文',
+            '列表撰言語今羅縱——每名言語，含𡨸喃，得讀橫完全',
+            '集信自畢版本舊（1.x / 2.0.x / 2.1.0 / 2.2.1）常得扶助完全',
+          ],
+          major: true),
+      const _Entry(
+          '2.2.1',
+          [
+            '言語界面新：法語、德語吧𡨸喃——共五言語界面',
+            '字庫天珩內置（TH-Feon）顯𡨸喃吧字形中日韓擴展（Ext B-F）完全',
+            '文本界面中文今加兩級粗，顯更清楚',
+            '集信自畢版本舊（1.x / 2.0.x / 2.1.0）常得扶助完全',
+          ],
+          major: true),
+      const _Entry(
+          '2.1.0',
+          [
+            '加固保密：鎖核口令吧鎖碼化共得 60 萬次 PBKDF2，猜密口離線空固捷徑',
+            '提速碼化：於移動得開碼化原生之平台，引出鎖吧碼化空占線界面',
+            '字形更粗、更清楚（Inter + 思源黑體排拉丁／中日韓）',
+            '許可得改正自 MIT 朱 AGPL-3.0',
+            '集信造自版本舊（1.x / 2.0.0）常合完全憑自退舊式',
+          ],
+          major: true),
+      const _Entry(
+          '2.0.0',
+          [
+            '版塊「別」新：介紹（圖標、網頁、作者、許可）、擁護（支付寶 QR）、政策與條款（隱私政策吧使用條款）、更新誌',
+            '倉裡加許可（LICENSE）',
+            '里程碑大：功能系趨完全，號版本升朱 2.0',
+          ],
+          major: true),
       const _Entry('1.6.0', [
         '碼化後量子隨選：鎖𠊛認 ML-KEM-768（NIST FIPS 203）',
         '頁「鎖」新：造／入／分／刪鎖公開 .vctpub 吧鎖私 .vctkey',
@@ -190,44 +222,76 @@ List<_Entry> _entries(AppStrings s) {
   final en = s.lang == AppLanguage.english;
   if (!en) {
     return [
-      const _Entry('2.4.0', [
-        '[H1] 安全修复：解密时对密文携带的文件名做净化（只保留最后一段、过滤 ..与分隔符、规避 Windows 保留名），并加目录兜底，构造的 .VCT 无法再把内容写到目标目录之外',
-        '[H2] 安全修复：未启用诱饵时，填充分区长度改为与真实分区同量级（±20%），文件体积不再泄漏“是否设置了诱饵或胁迫密码”',
-        '桌面端补上同名递增（name (1)），不再静默覆盖已有文件',
-        '新增 H1 / H2 验收测试；旧版本文件打开方式不变',
-      ], major: true),
-      const _Entry('2.3.1', [
-        '汉喃文界面与汉喃文政策条款改写为真正的 𡨸喃（Chữ Nôm）：遵循越南语语法与词序，由免费翻译 API 生成，不再是逐字的越南语直译中文',
-        '隐私政策、使用条款的汉喃文版本全部重译',
-        '包含 v2.3.0 的哈希校验工具与五种语言政策条款',
-      ], major: true),
-      const _Entry('2.3.0', [
-        '新增哈希校验工具：计算任意文件的 SHA-256 / SHA-512 / SHA-3-256 校验和（流式计算，大文件不占内存），并与预期值比对验证完整性',
-        '政策与条款新增法语、德语、汉喃文版本，五种界面语言各自完整显示',
-      ], major: true),
-      const _Entry('2.2.5', [
-        '汉喃文界面重写为真正的 𡨸喃（Chữ Nôm）：遵循越南语语法与词序（đã / không / của …），不再是繁体中文',
-        '语言选择改为纵向列表，语言名称（𡨸喃等）完整横排显示，不再挤在一排',
-        '旧版本文件（1.x / 2.0.x / 2.1.0 / 2.2.1）完整兼容',
-      ], major: true),
-      const _Entry('2.2.1', [
-        '新增法语、德语、汉喃文（Chữ Nôm）三语界面，共五种界面语言',
-        '内置天珩全字库（TH-Feon），完整显示汉喃字与扩展 CJK 汉字（Ext B-F）',
-        '中文界面字重加粗两级，显示更粗更清晰',
-        '旧版本文件（1.x / 2.0.x / 2.1.0）完整兼容',
-      ], major: true),
-      const _Entry('2.1.0', [
-        '安全加固：口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，离线猜测密码不再有捷径',
-        '加密提速：移动端启用平台原生加密，密钥派生与加解密不再占用界面线程',
-        '界面字体更粗、更易读（Inter + 思源黑体中英文混排）',
-        '开源协议由 MIT 更正为 AGPL-3.0',
-        '旧版本文件（1.x / 2.0.0）完整兼容，自动回退到旧校验方式',
-      ], major: true),
-      const _Entry('2.0.0', [
-        '全新「其它」板块：关于（图标、官网、作者、协议）、捐赠（支付宝收款码）、政策与条款（隐私政策与使用条款）、更新日志',
-        '仓库新增开源协议（LICENSE）',
-        '大版本里程碑：功能体系趋于完整，主版本号升至 2.0',
-      ], major: true),
+      const _Entry(
+          '2.5.0',
+          [
+            '文件格式升级为 V4：头部字段（magic、版本、标志位、长度、盐、nonce）纳入 AES-GCM 认证（AAD），改动任一字节都会被检出，不再被悄悄导入错误分支',
+            '密钥拆分：一次 PBKDF2 得到主密钥，再用 HKDF 派生出 k1/k2/k3/vk——加解密快约三倍，攻击者猜密码的成本不变',
+            '[H3] 设置页不再显示诱饵／胁迫／擦除计数；[H4] 文件检查器不再透露存在哪些解锁通道',
+            '[M1] 安全笔记的明文临时文件改为覆写后删除；[M5] 擦除说明标注 SSD／写时复制系统上的真实边界；[M6] 公钥指纹扩至 64 位',
+            '[M2] 超过 64 MB 的文件会得到明确提示；[M4] 新增诱饵／胁迫／V1 兼容测试；[L2/L4/L5] Linux 加固（RELRO、AppImage 更新信息与校验和、无显示环境提示）',
+            '旧文件（V1 / V2 / V3）照常打开；新的 V4 文件无法被旧版本打开',
+          ],
+          major: true),
+      const _Entry(
+          '2.4.0',
+          [
+            '[H1] 安全修复：解密时对密文携带的文件名做净化（只保留最后一段、过滤 ..与分隔符、规避 Windows 保留名），并加目录兜底，构造的 .VCT 无法再把内容写到目标目录之外',
+            '[H2] 安全修复：未启用诱饵时，填充分区长度改为与真实分区同量级（±20%），文件体积不再泄漏“是否设置了诱饵或胁迫密码”',
+            '桌面端补上同名递增（name (1)），不再静默覆盖已有文件',
+            '新增 H1 / H2 验收测试；旧版本文件打开方式不变',
+          ],
+          major: true),
+      const _Entry(
+          '2.3.1',
+          [
+            '汉喃文界面与汉喃文政策条款改写为真正的 𡨸喃（Chữ Nôm）：遵循越南语语法与词序，由免费翻译 API 生成，不再是逐字的越南语直译中文',
+            '隐私政策、使用条款的汉喃文版本全部重译',
+            '包含 v2.3.0 的哈希校验工具与五种语言政策条款',
+          ],
+          major: true),
+      const _Entry(
+          '2.3.0',
+          [
+            '新增哈希校验工具：计算任意文件的 SHA-256 / SHA-512 / SHA-3-256 校验和（流式计算，大文件不占内存），并与预期值比对验证完整性',
+            '政策与条款新增法语、德语、汉喃文版本，五种界面语言各自完整显示',
+          ],
+          major: true),
+      const _Entry(
+          '2.2.5',
+          [
+            '汉喃文界面重写为真正的 𡨸喃（Chữ Nôm）：遵循越南语语法与词序（đã / không / của …），不再是繁体中文',
+            '语言选择改为纵向列表，语言名称（𡨸喃等）完整横排显示，不再挤在一排',
+            '旧版本文件（1.x / 2.0.x / 2.1.0 / 2.2.1）完整兼容',
+          ],
+          major: true),
+      const _Entry(
+          '2.2.1',
+          [
+            '新增法语、德语、汉喃文（Chữ Nôm）三语界面，共五种界面语言',
+            '内置天珩全字库（TH-Feon），完整显示汉喃字与扩展 CJK 汉字（Ext B-F）',
+            '中文界面字重加粗两级，显示更粗更清晰',
+            '旧版本文件（1.x / 2.0.x / 2.1.0）完整兼容',
+          ],
+          major: true),
+      const _Entry(
+          '2.1.0',
+          [
+            '安全加固：口令校验密钥与加密密钥同用 60 万次 PBKDF2 迭代，离线猜测密码不再有捷径',
+            '加密提速：移动端启用平台原生加密，密钥派生与加解密不再占用界面线程',
+            '界面字体更粗、更易读（Inter + 思源黑体中英文混排）',
+            '开源协议由 MIT 更正为 AGPL-3.0',
+            '旧版本文件（1.x / 2.0.0）完整兼容，自动回退到旧校验方式',
+          ],
+          major: true),
+      const _Entry(
+          '2.0.0',
+          [
+            '全新「其它」板块：关于（图标、官网、作者、协议）、捐赠（支付宝收款码）、政策与条款（隐私政策与使用条款）、更新日志',
+            '仓库新增开源协议（LICENSE）',
+            '大版本里程碑：功能体系趋于完整，主版本号升至 2.0',
+          ],
+          major: true),
       const _Entry('1.6.0', [
         '可选后量子加密：ML-KEM-768（NIST FIPS 203）收件人密钥',
         '新增「密钥」页：生成 / 导入 / 分享 / 删除 .vctpub 公钥与 .vctkey 私钥',
@@ -272,44 +336,76 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
-    const _Entry('2.4.0', [
-      '[H1] Security fix: the file name carried inside the ciphertext is now sanitized (last segment only, ".." and separators stripped, Windows reserved names avoided) with a directory guard - a crafted .VCT can no longer write outside the target folder',
-      '[H2] Security fix: when no decoy is set, the filler partition is now sized to the same magnitude as the real one (±20%), so file size no longer reveals whether a decoy or duress password is configured',
-      'Desktop now appends " (n)" instead of silently overwriting an existing file',
-      'New H1 / H2 acceptance tests; files from older versions open unchanged',
-    ], major: true),
-    const _Entry('2.3.1', [
-      'The Han-Nom (𡨸喃) UI and the Han-Nom Policies & Terms were rewritten as genuine Chữ Nôm - Vietnamese grammar and word order, produced through a free translation API rather than a word-for-word Chinese rendering',
-      'Privacy Policy and Terms of Use fully re-translated into Han-Nom',
-      'Includes the v2.3.0 checksum tool and the five-language policies',
-    ], major: true),
-    const _Entry('2.3.0', [
-      'New checksum tool: compute SHA-256 / SHA-512 / SHA-3-256 of any file (streamed, so huge files never fill memory) and compare against an expected value to verify integrity',
-      'Policies & Terms now available in Français, Deutsch and Han-Nom - full text in all five UI languages',
-    ], major: true),
-    const _Entry('2.2.5', [
-      'Han-Nom UI rewritten as genuine 𡨸喃 (Chữ Nôm): Vietnamese grammar and word order (đã / không / của …), not Traditional Chinese',
-      'Language picker is now a vertical list - every language name, 𡨸喃 included, reads in full horizontally',
-      'Files from all older versions (1.x / 2.0.x / 2.1.0 / 2.2.1) remain fully supported',
-    ], major: true),
-    const _Entry('2.2.1', [
-      'New UI languages: Français, Deutsch and Han-Nom (Chữ Nôm) - five UI languages in total',
-      'Bundled Tianheng font (TH-Feon) renders Han-Nom and extended CJK glyphs (Ext B-F) completely',
-      'Chinese UI text is now two weight steps bolder for a clearer display',
-      'Files from all older versions (1.x / 2.0.x / 2.1.0) remain fully supported',
-    ], major: true),
-    const _Entry('2.1.0', [
-      'Security hardening: the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves',
-      'Faster encryption: platform-native crypto on mobile moves key derivation and bulk encryption off the UI thread',
-      'Bolder, clearer typography (Inter + Noto Sans SC mixed Latin/CJK text)',
-      'License corrected from MIT to AGPL-3.0',
-      'Files created by older versions (1.x / 2.0.0) remain fully compatible via automatic legacy fallback',
-    ], major: true),
-    const _Entry('2.0.0', [
-      'New "Other" section: About (icon, website, author, license), Donate (Alipay QR), Policies & Terms (privacy policy and terms of use), Changelog',
-      'License (LICENSE) added to the repository',
-      'Major milestone: the feature set is complete; version bumped to 2.0',
-    ], major: true),
+    const _Entry(
+        '2.5.0',
+        [
+          'File format moves to V4: header fields (magic, version, flags, length, salt, nonces) are authenticated as AES-GCM AAD - any changed byte is detected instead of silently steering decryption into the wrong branch',
+          'Key splitting: one PBKDF2 produces a master key, HKDF derives k1/k2/k3/vk from it - encryption and decryption are ~3x faster while the attacker\'s per-guess cost is unchanged',
+          '[H3] Settings no longer shows decoy / duress / shred counters; [H4] the file inspector no longer reveals which unlock channels exist',
+          '[M1] Secure Note plaintext temp files are overwritten before deletion; [M5] shred wording now states its real limits on SSD / copy-on-write storage; [M6] public-key fingerprints are 64-bit',
+          '[M2] files over 64 MB get a clear message; [M4] decoy / duress / V1 compatibility tests added; [L2/L4/L5] Linux hardening (RELRO, AppImage update info + checksum, no-display message)',
+          'Older files (V1 / V2 / V3) still open unchanged; new V4 files cannot be opened by older releases',
+        ],
+        major: true),
+    const _Entry(
+        '2.4.0',
+        [
+          '[H1] Security fix: the file name carried inside the ciphertext is now sanitized (last segment only, ".." and separators stripped, Windows reserved names avoided) with a directory guard - a crafted .VCT can no longer write outside the target folder',
+          '[H2] Security fix: when no decoy is set, the filler partition is now sized to the same magnitude as the real one (±20%), so file size no longer reveals whether a decoy or duress password is configured',
+          'Desktop now appends " (n)" instead of silently overwriting an existing file',
+          'New H1 / H2 acceptance tests; files from older versions open unchanged',
+        ],
+        major: true),
+    const _Entry(
+        '2.3.1',
+        [
+          'The Han-Nom (𡨸喃) UI and the Han-Nom Policies & Terms were rewritten as genuine Chữ Nôm - Vietnamese grammar and word order, produced through a free translation API rather than a word-for-word Chinese rendering',
+          'Privacy Policy and Terms of Use fully re-translated into Han-Nom',
+          'Includes the v2.3.0 checksum tool and the five-language policies',
+        ],
+        major: true),
+    const _Entry(
+        '2.3.0',
+        [
+          'New checksum tool: compute SHA-256 / SHA-512 / SHA-3-256 of any file (streamed, so huge files never fill memory) and compare against an expected value to verify integrity',
+          'Policies & Terms now available in Français, Deutsch and Han-Nom - full text in all five UI languages',
+        ],
+        major: true),
+    const _Entry(
+        '2.2.5',
+        [
+          'Han-Nom UI rewritten as genuine 𡨸喃 (Chữ Nôm): Vietnamese grammar and word order (đã / không / của …), not Traditional Chinese',
+          'Language picker is now a vertical list - every language name, 𡨸喃 included, reads in full horizontally',
+          'Files from all older versions (1.x / 2.0.x / 2.1.0 / 2.2.1) remain fully supported',
+        ],
+        major: true),
+    const _Entry(
+        '2.2.1',
+        [
+          'New UI languages: Français, Deutsch and Han-Nom (Chữ Nôm) - five UI languages in total',
+          'Bundled Tianheng font (TH-Feon) renders Han-Nom and extended CJK glyphs (Ext B-F) completely',
+          'Chinese UI text is now two weight steps bolder for a clearer display',
+          'Files from all older versions (1.x / 2.0.x / 2.1.0) remain fully supported',
+        ],
+        major: true),
+    const _Entry(
+        '2.1.0',
+        [
+          'Security hardening: the password verification key now uses the same 600K PBKDF2 iterations as the encryption keys, so offline password guessing is no easier than attacking the files themselves',
+          'Faster encryption: platform-native crypto on mobile moves key derivation and bulk encryption off the UI thread',
+          'Bolder, clearer typography (Inter + Noto Sans SC mixed Latin/CJK text)',
+          'License corrected from MIT to AGPL-3.0',
+          'Files created by older versions (1.x / 2.0.0) remain fully compatible via automatic legacy fallback',
+        ],
+        major: true),
+    const _Entry(
+        '2.0.0',
+        [
+          'New "Other" section: About (icon, website, author, license), Donate (Alipay QR), Policies & Terms (privacy policy and terms of use), Changelog',
+          'License (LICENSE) added to the repository',
+          'Major milestone: the feature set is complete; version bumped to 2.0',
+        ],
+        major: true),
     const _Entry('1.6.0', [
       'Optional post-quantum encryption: ML-KEM-768 (NIST FIPS 203) recipient keys',
       'New Keys tab: generate / import / share / delete .vctpub public and .vctkey private keys',

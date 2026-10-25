@@ -10,7 +10,6 @@ import 'dart:math' show Random, log;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../i18n/strings.dart';
 import '../main.dart';
 
 const _kUpper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
