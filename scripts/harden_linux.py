@@ -12,6 +12,7 @@ L7), so these two fixes are applied to the generated tree:
 Idempotent: running it twice is a no-op.
 """
 
+import glob
 import os
 import sys
 
@@ -69,13 +70,28 @@ def patch_main(path: str) -> bool:
     return True
 
 
+def find_runner() -> str | None:
+    """Locate the generated main.cc.
+
+    Flutter <= 3.24 writes linux/main.cc; newer templates moved it to
+    linux/runner/main.cc. Accept either so this script does not depend
+    on the exact SDK version in CI.
+    """
+    for candidate in ("linux/runner/main.cc", "linux/main.cc"):
+        if os.path.isfile(candidate):
+            return candidate
+    matches = sorted(glob.glob(os.path.join("linux", "**", "main.cc"),
+                               recursive=True))
+    return matches[0] if matches else None
+
+
 def main() -> int:
     cmake = os.path.join("linux", "CMakeLists.txt")
-    runner = os.path.join("linux", "runner", "main.cc")
-    for p in (cmake, runner):
-        if not os.path.exists(p):
-            print(f"FATAL: {p} missing - run flutter create --platforms=linux first")
-            return 1
+    runner = find_runner()
+    if not os.path.isfile(cmake) or runner is None:
+        print("FATAL: linux/ scaffolding missing - run "
+              "flutter create --platforms=linux first")
+        return 1
 
     cmake_changed = patch_cmake(cmake)
     main_changed = patch_main(runner)
