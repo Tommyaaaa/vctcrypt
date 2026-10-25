@@ -521,6 +521,14 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
+            ### What's New in v2.4.0
+            - 🛡️ **H1 - output path sanitization**: the file name carried inside the ciphertext is now reduced to a safe basename (last segment only, `..` and separators stripped, Windows reserved names avoided) plus a directory guard, so a crafted `.VCT` can no longer write outside the target folder (Zip Slip / CWE-73)
+            - 🕵️ **H2 - filler length no longer leaks**: when no decoy is configured the filler partition is now sized to the same magnitude as the real one (±20%), so `fileSize - realCtLen - overhead` can no longer reveal whether a decoy or duress password is set
+            - 🗂️ **Desktop no-overwrite**: desktop now appends ` (n)` like mobile instead of silently overwriting an existing file
+            - ✅ **New acceptance tests** for H1 and H2
+            - ♻️ **Backward compatible**: files created by all older versions (1.x / 2.0.x / 2.1.0 / 2.2.1 / 2.2.5 / 2.3.x) open unchanged
+            - Note: files encrypted *without* a decoy are now roughly twice as large — that is the cost of making the two partitions indistinguishable by length
+
             ### What's New in v2.3.1
             - 🀄 **Genuine Chữ Nôm, for real this time**: the Han-Nom (𡸨喃) UI *and* the Han-Nom Policies & Terms were rewritten as real Chữ Nôm — Vietnamese grammar and word order, generated through a free translation API instead of a word-for-word Chinese rendering
             - 📜 **Han-Nom policies re-translated**: Privacy Policy and Terms of Use now read naturally in Chữ Nôm
