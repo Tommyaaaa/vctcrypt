@@ -85,8 +85,19 @@ const _pbkdf2Iters = 600000;
 // so every verify/decrypt path falls back to the legacy count below.
 const _pbkdf2VIters = 600000;
 const _pbkdf2VItersLegacy = 10000;
-const _maxFname = 512;
 
+/// v2.6.0 (V-08): minimum password length in Unicode CODE POINTS.
+/// `String.length` is UTF-16 code units, so "🔐🔐" used to count as 4 and
+/// pass a 4-character check while carrying only 2 symbols. Counting runes
+/// and requiring 8 removes that loophole (and makes 4-char brute force,
+/// ~40 s on one GPU, no longer an accepted configuration).
+const _minPasswordChars = 8;
+
+int _passwordChars(String password) => password.runes.length;
+
+bool _passwordTooShort(String password) =>
+    _passwordChars(password) < _minPasswordChars;
+const _maxFname = 512;
 /// v2.5.0 (M2): hard ceiling on the plaintext we will load into memory.
 ///
 /// The engine is whole-file (three nested GCM layers each copy the whole
@@ -163,7 +174,13 @@ const _v4DecoyHmacOff = _v4DecoySaltOff + _saltSize + _nonceSize * 3; // 222
 const _v4DuressSaltOff = _v4DecoyHmacOff + _hmacSize; // 254
 const _v4DuressHmacOff = _v4DuressSaltOff + _saltSize; // 302
 const _v4HeaderLen = _v4DuressHmacOff + _hmacSize; // 334
-const _v4LayoutVer = 0x01;
+// v2.6.0 (V-01/V-02/V-10): layout 0x02 binds the partition's slot id, the
+// on-disk version/flags bytes and the duress slot into the GCM AAD. Files
+// written by v2.5.0 (layout 0x01) stay readable through the legacy path.
+const _v4LayoutVer = 0x02;
+const _v4LayoutVerLegacy = 0x01;
+const _v4SlotReal = 0x01;
+const _v4SlotDecoy = 0x02;
 
 /// Reserved flags byte. It carries no configuration (always 0) but IS
 /// authenticated, so a profile can grow later without a format change.
@@ -302,17 +319,31 @@ Future<List<int>> _aesGcmDecrypt(
 /// with an authentication error instead of silently steering decryption
 /// into a different branch (e.g. a forged realCtLen pointing the "decoy"
 /// slice at real ciphertext).
+///
+/// v2.6.0 (V-01/V-02/V-10): layout 0x02 additionally binds:
+///   * [slot] - so a real ciphertext copied into the decoy slot (or vice
+///     versa) no longer authenticates, killing the silent slot swap;
+///   * the on-disk version/flags bytes - previously rebuilt from constants,
+///     so flipping flags "authenticated" the original value instead;
+///   * the duress salt + HMAC - so a duress slot grafted from another file
+///     invalidates the real/decoy partitions it is attached to.
+/// Callers handling a legacy 0x01 file simply omit the new arguments.
 List<int> _buildV4Aad({
   required List<int> salt,
   required List<int> n1,
   required List<int> n2,
   required List<int> n3,
   required int ctLen,
+  int layoutVer = _v4LayoutVerLegacy,
+  int flags = _v4Flags,
+  int slot = 0,
+  List<int>? duressSalt,
+  List<int>? duressHmac,
 }) {
   final b = BytesBuilder();
   b.add(utf8.encode(_magicV4));
-  b.addByte(_v4LayoutVer);
-  b.addByte(_v4Flags);
+  b.addByte(layoutVer);
+  b.addByte(flags);
   var v = ctLen;
   for (var i = 0; i < 8; i++) {
     b.addByte(v & 0xFF);
@@ -322,6 +353,11 @@ List<int> _buildV4Aad({
   b.add(n1);
   b.add(n2);
   b.add(n3);
+  if (layoutVer >= _v4LayoutVer) {
+    b.addByte(slot);
+    b.add(duressSalt ?? const <int>[]);
+    b.add(duressHmac ?? const <int>[]);
+  }
   return b.takeBytes();
 }
 
@@ -363,15 +399,23 @@ void _writeFile(String path, List<int> data) {
 /// overwrite may never reach the original physical blocks. This is
 /// "looks like corruption" defence, not a guarantee - encryption is the
 /// real protection.
-Future<void> _shredFile(String path) async {
+///
+/// [quick] (v2.6.0, V-13): truncate the file and overwrite only a small
+/// fixed-size prefix instead of streaming random data over the whole
+/// length. Used by the duress path, where the size-proportional write
+/// time and disk activity made a duress trigger observable (a wrong
+/// password never costs I/O that scales with the file). The data is
+/// destroyed by truncation either way; only the overwrite pass is bounded.
+Future<void> _shredFile(String path, {bool quick = false}) async {
   final f = File(path);
   if (!f.existsSync()) return;
   final size = f.lengthSync();
   final rng = Random.secure();
   final raf = f.openSync(mode: FileMode.write); // truncates
   try {
+    final cap = quick ? 4 * 1024 : size;
     const chunkSize = 64 * 1024;
-    var remaining = size;
+    var remaining = cap;
     while (remaining > 0) {
       final n = remaining > chunkSize ? chunkSize : remaining;
       final buf = Uint8List(n);
@@ -606,13 +650,21 @@ VctFileInfo inspectVctFile(String path) {
   );
 }
 
-/// Encrypted output file name for [input]: "photo.jpg" -> "photo.VCT".
-String _encFileName(String input) {
-  final base = p.basename(input);
-  final ext = p.extension(base);
-  final name =
-      ext.isNotEmpty ? base.substring(0, base.length - ext.length) : base;
-  return '$name.VCT';
+/// Encrypted output file name for [input].
+///
+/// v2.6.0 (V-05): the output name no longer echoes the original one. A
+/// name like "offshore-bank-credentials.docx" used to be preserved as
+/// "offshore-bank-credentials.VCT" - anyone able to list the folder learned
+/// the document's topic without a password. A random 128-bit suffix keeps
+/// the container anonymous; the original name is restored from the
+/// encrypted payload on decryption.
+String _encFileName() {
+  final r = Random.secure();
+  final id = List.generate(
+    16,
+    (_) => r.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ).join();
+  return 'vct-$id.VCT';
 }
 
 /// Collapse an untrusted, ciphertext-supplied file name into a safe basename.
@@ -630,6 +682,13 @@ String sanitizeFileName(String raw) {
 
   // 1) Strip NUL and control characters (incl. DEL).
   var s = raw.replaceAll(RegExp(r'[\x00-\x1f\x7f]'), '');
+  if (s.isEmpty) return fallback;
+
+  // 1b) v2.6.0 (V-16): strip bidi overrides and zero-width characters.
+  //     They are invisible in file managers, so "photo\u202Egpj.exe"
+  //     renders as "photoexe.jpg" - a classic extension-spoofing trick.
+  s = s.replaceAll(
+      RegExp(r'[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]'), '');
   if (s.isEmpty) return fallback;
 
   // 2) Treat both separators as separators, then keep the last real segment.
@@ -883,6 +942,9 @@ Future<_Partition> _encryptPartitionV4(
   String progressCode,
   ProgressCallback? onProgress, {
   required int headerCtLen,
+  required int slot,
+  required List<int> duressSalt,
+  required List<int> duressHmac,
 }) async {
   onProgress?.call('DERIVING');
 
@@ -900,6 +962,11 @@ Future<_Partition> _encryptPartitionV4(
     n2: n2,
     n3: n3,
     ctLen: headerCtLen,
+    layoutVer: _v4LayoutVer,
+    flags: _v4Flags,
+    slot: slot,
+    duressSalt: duressSalt,
+    duressHmac: duressHmac,
   );
 
   final keys = await _deriveKeysV4(password, salt);
@@ -1202,7 +1269,7 @@ Future<EncryptResult> encryptFile(
   String? outputPath,
 }) async {
   try {
-    if (password.length < 4) {
+    if (_passwordTooShort(password)) {
       return EncryptResult(success: false, error: 'PASSWORD_TOO_SHORT');
     }
 
@@ -1213,7 +1280,7 @@ Future<EncryptResult> encryptFile(
 
     // ---- Validate options ----
     if (decoyPw != null && decoyPw.isNotEmpty) {
-      if (decoyPw.length < 4) {
+      if (_passwordTooShort(decoyPw)) {
         return EncryptResult(success: false, error: 'PASSWORD_TOO_SHORT');
       }
       if (decoyPw == password) {
@@ -1224,7 +1291,7 @@ Future<EncryptResult> encryptFile(
       }
     }
     if (duressPw != null && duressPw.isNotEmpty) {
-      if (duressPw.length < 4) {
+      if (_passwordTooShort(duressPw)) {
         return EncryptResult(success: false, error: 'PASSWORD_TOO_SHORT');
       }
       if (duressPw == password || duressPw == decoyPw) {
@@ -1250,6 +1317,21 @@ Future<EncryptResult> encryptFile(
 
     final realPayload = _buildPayload(filePath, fileData);
 
+    // ---- Duress section (random filler when disabled) ----
+    // v2.6.0 (V-02): built BEFORE the encrypted partitions because it is
+    // now part of their AAD - a duress slot grafted from another file
+    // invalidates the real/decoy ciphertext it is attached to.
+    final List<int> xsalt;
+    final List<int> xhmac;
+    if (duressPw != null && duressPw.isNotEmpty) {
+      xsalt = await _secureRandom(_saltSize);
+      final xvk = await _pbkdf2('$duressPw::V', xsalt, _pbkdf2VIters, 32);
+      xhmac = await _hmacSha256(xvk, xsalt);
+    } else {
+      xsalt = await _secureRandom(_saltSize);
+      xhmac = await _secureRandom(_hmacSize);
+    }
+
     // ---- Real partition (v2.5.0: V4 - authenticated header + HKDF) ----
     // The header stores the REAL partition's L3 ciphertext length, which is
     // the payload plus the two inner GCM tags (L1 and L2), and that exact
@@ -1263,6 +1345,9 @@ Future<EncryptResult> encryptFile(
       'ENCRYPTING',
       onProgress,
       headerCtLen: realCtLen,
+      slot: _v4SlotReal,
+      duressSalt: xsalt,
+      duressHmac: xhmac,
     );
 
     // ---- Decoy partition (random filler when disabled) ----
@@ -1282,23 +1367,14 @@ Future<EncryptResult> encryptFile(
         'ENCRYPTING_DECOY',
         onProgress,
         headerCtLen: realPart.ct.length,
+        slot: _v4SlotDecoy,
+        duressSalt: xsalt,
+        duressHmac: xhmac,
       );
     } else {
       // v2.4.0 (H2): size the filler like the real partition so its length
       // cannot be used to infer that no decoy was configured.
       decoyPart = await _randomPartition(targetLen: realPart.ct.length);
-    }
-
-    // ---- Duress section (random filler when disabled) ----
-    final List<int> xsalt;
-    final List<int> xhmac;
-    if (duressPw != null && duressPw.isNotEmpty) {
-      xsalt = await _secureRandom(_saltSize);
-      final xvk = await _pbkdf2('$duressPw::V', xsalt, _pbkdf2VIters, 32);
-      xhmac = await _hmacSha256(xvk, xsalt);
-    } else {
-      xsalt = await _secureRandom(_saltSize);
-      xhmac = await _secureRandom(_hmacSize);
     }
 
     // ---- Assemble V4 file ----
@@ -1325,7 +1401,7 @@ Future<EncryptResult> encryptFile(
     output.add(decoyPart.tag);
 
     final outPath =
-        outputPath ?? await _chooseOutputPath(_encFileName(filePath), filePath);
+        outputPath ?? await _chooseOutputPath(_encFileName(), filePath);
     _writeFile(outPath, output.toBytes());
 
     // ---- Optional: shred the original after verifying the output ----
@@ -1581,8 +1657,20 @@ Future<EncryptResult> encryptFileHybrid(
     if (!usePassword && !useKem) {
       return EncryptResult(success: false, error: 'NO_UNLOCK_CHANNEL');
     }
-    if (usePassword && password.length < 4) {
+    if (usePassword && _passwordTooShort(password)) {
       return EncryptResult(success: false, error: 'PASSWORD_TOO_SHORT');
+    }
+
+    // v2.6.0 (V-06): the KEM path used to skip the size ceiling that the
+    // password path enforces, so a 512 MB input could be loaded and
+    // triple-encrypted (~3 GB peak) on a mobile device. Same limit here.
+    try {
+      final srcLen = File(filePath).lengthSync();
+      if (srcLen > _maxFileBytes) {
+        return EncryptResult(success: false, error: 'FILE_TOO_LARGE');
+      }
+    } catch (_) {
+      // fall through - _readFile will surface the IO error
     }
 
     final fileData = _readFile(filePath);
@@ -1616,7 +1704,7 @@ Future<EncryptResult> encryptFileHybrid(
     }
 
     final outPath =
-        outputPath ?? await _chooseOutputPath(_encFileName(filePath), filePath);
+        outputPath ?? await _chooseOutputPath(_encFileName(), filePath);
     _writeFile(outPath, assembled);
 
     var shredded = false;
@@ -1768,6 +1856,15 @@ Future<DecryptResult> decryptFileWithKey(
   String? outputPath,
 }) async {
   try {
+    // v2.6.0 (V-06): same ceiling as the password decrypt path.
+    try {
+      final srcLen = File(filePath).lengthSync();
+      if (srcLen > _maxVctBytes) {
+        return DecryptResult(success: false, error: 'FILE_TOO_LARGE');
+      }
+    } catch (_) {
+      // fall through - _readFile will surface the IO error
+    }
     final fileData = _readFile(filePath);
     final format = detectFormat(fileData);
     if (format == fmtNone) {
@@ -1894,7 +1991,9 @@ Future<DecryptResult> _decryptV2(
 
   // ---- Duress password: permanently destroy the file ----
   if (duressOk) {
-    await _shredFile(filePath);
+    // V-13: bounded I/O so the trigger is not distinguishable by disk
+    // activity proportional to the container size.
+    await _shredFile(filePath, quick: true);
     // Return the same error as a wrong password on purpose:
     // observers must not be able to tell that duress was triggered.
     return DecryptResult(
@@ -1918,7 +2017,8 @@ Future<DecryptResult> _decryptV4(
   if (fileData.length < _v4HeaderLen + _tagSize + _tagSize) {
     return DecryptResult(success: false, error: 'FILE_TOO_SMALL');
   }
-  if (fileData[_v4VerOff] != _v4LayoutVer) {
+  final layoutVer = fileData[_v4VerOff];
+  if (layoutVer != _v4LayoutVer && layoutVer != _v4LayoutVerLegacy) {
     return DecryptResult(success: false, error: 'UNSUPPORTED_FORMAT');
   }
 
@@ -1967,10 +2067,34 @@ Future<DecryptResult> _decryptV4(
 
   // The header fields a parser trusts are authenticated as AAD, so a
   // forged realCtLen now fails GCM instead of steering decryption.
-  final realAad = _buildV4Aad(
-      salt: realSalt, n1: realN1, n2: realN2, n3: realN3, ctLen: realCtLen);
-  final decoyAad = _buildV4Aad(
-      salt: decoySalt, n1: decoyN1, n2: decoyN2, n3: decoyN3, ctLen: realCtLen);
+  // v2.6.0 (V-01/V-02/V-10): layout 0x02 also authenticates the slot id,
+  // the on-disk flags byte and the duress slot. Legacy 0x01 files keep
+  // their original AAD so they still open.
+  final diskFlags = fileData[_v4FlagsOff];
+  List<int> aadFor(int slot, List<int> salt, List<int> n1, List<int> n2,
+      List<int> n3) {
+    if (layoutVer >= _v4LayoutVer) {
+      return _buildV4Aad(
+        salt: salt,
+        n1: n1,
+        n2: n2,
+        n3: n3,
+        ctLen: realCtLen,
+        layoutVer: layoutVer,
+        flags: diskFlags,
+        slot: slot,
+        duressSalt: duressSalt,
+        duressHmac: duressHmac,
+      );
+    }
+    return _buildV4Aad(
+        salt: salt, n1: n1, n2: n2, n3: n3, ctLen: realCtLen);
+  }
+
+  final realAad =
+      aadFor(_v4SlotReal, realSalt, realN1, realN2, realN3);
+  final decoyAad =
+      aadFor(_v4SlotDecoy, decoySalt, decoyN1, decoyN2, decoyN3);
 
   onProgress?.call('VERIFYING');
 
@@ -2017,7 +2141,9 @@ Future<DecryptResult> _decryptV4(
 
   // ---- Duress password: permanently destroy the file ----
   if (duressOk) {
-    await _shredFile(filePath);
+    // V-13: bounded I/O so the trigger is not distinguishable by disk
+    // activity proportional to the container size.
+    await _shredFile(filePath, quick: true);
     // Same error as a wrong password on purpose: observers must not be
     // able to tell that duress was triggered.
     return DecryptResult(
@@ -2186,14 +2312,33 @@ Future<EncryptResult> encryptText(
   EncryptOptions? options,
   String? outputPath,
 }) async {
-  final ts = DateTime.now();
-  final stamp = '${ts.year}${_two(ts.month)}${_two(ts.day)}-'
-      '${_two(ts.hour)}${_two(ts.minute)}${_two(ts.second)}';
-  final tmp = File(p.join(
-    Directory.systemTemp.path,
-    '$noteNamePrefix$stamp.txt',
-  ));
+  // v2.6.0 (V-04): the plaintext hand-off file used to live in the shared
+  // temp directory under a predictable name (VCTCrypt-Note-YYYYMMDD-HHMMSS
+  // .txt), so any local process could poll that exact path during the
+  // ~1 s PBKDF2 window - or pre-plant a symlink. Now the note goes into a
+  // user-private 0700 subdirectory under a random 128-bit name, created
+  // with O_EXCL so an existing file/symlink cannot be reused.
+  final dir = Directory(p.join(Directory.systemTemp.path, 'vctcrypt_notes'));
+  if (!dir.existsSync()) {
+    dir.createSync(recursive: true);
+  }
+  if (!Platform.isWindows) {
+    try {
+      Process.runSync('chmod', ['700', dir.path]);
+    } catch (_) {}
+  }
+  final id = List.generate(
+    16,
+    (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ).join();
+  final tmp = File(p.join(dir.path, 'note-$id.txt'));
   try {
+    tmp.createSync(exclusive: true);
+    if (!Platform.isWindows) {
+      try {
+        Process.runSync('chmod', ['600', tmp.path]);
+      } catch (_) {}
+    }
     tmp.writeAsStringSync(text, flush: true);
     return await encryptFile(
       tmp.path,
@@ -2285,5 +2430,3 @@ Future<TextDecryptResult> decryptFileToText(
     }
   }
 }
-
-String _two(int n) => n.toString().padLeft(2, '0');

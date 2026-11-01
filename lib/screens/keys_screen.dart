@@ -152,9 +152,6 @@ class _KeysScreenState extends State<KeysScreen> {
                     ),
                     border: const OutlineInputBorder(),
                   ),
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(256),
-                  ],
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -165,9 +162,6 @@ class _KeysScreenState extends State<KeysScreen> {
                     prefixIcon: const Icon(Icons.lock),
                     border: const OutlineInputBorder(),
                   ),
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(256),
-                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -194,7 +188,7 @@ class _KeysScreenState extends State<KeysScreen> {
                         _snackIn(ctx, strings.keyNameLabel, error: true);
                         return;
                       }
-                      if (pw.length < 4) {
+                      if (pw.runes.length < 8) {
                         _snackIn(ctx, strings.errPwShort, error: true);
                         return;
                       }

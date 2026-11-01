@@ -8,7 +8,6 @@ import 'dart:io' show File, Platform;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
@@ -365,9 +364,6 @@ class _DecryptScreenState extends State<DecryptScreen> {
                     ),
                     border: const OutlineInputBorder(),
                   ),
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(256),
-                  ],
                 ),
 
                 // ---- Unlock with private key (v1.6.0) ----
@@ -446,9 +442,6 @@ class _DecryptScreenState extends State<DecryptScreen> {
                               ),
                               border: const OutlineInputBorder(),
                             ),
-                            inputFormatters: [
-                              LengthLimitingTextInputFormatter(256),
-                            ],
                           ),
                           const SizedBox(height: 12),
                           SizedBox(

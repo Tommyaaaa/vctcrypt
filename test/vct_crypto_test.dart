@@ -662,4 +662,162 @@ void main() {
       expect(dec.error, 'UNSUPPORTED_FORMAT');
     });
   });
+
+  // ============================================================
+  // 9. v2.6.0 security audit fixes (V-01/V-02/V-05/V-08/V-14/V-16)
+  // ============================================================
+  group('v2.6.0 audit fixes', () {
+    // V4 header geometry (see lib/crypto/vct_crypto.dart):
+    //   magic 12 | ver 1 | flags 1 | realCtLen 8  = 22
+    //   real slot  (salt 48 + nonces 36 + hmac 32) = 116  -> 22..138
+    //   decoy slot                                  = 116  -> 138..254
+    //   duress salt 48 + duress hmac 32             = 80   -> 254..334
+    const headerLen = 334;
+    const tagLen = 16;
+    const realCtLenOff = 14;
+    const realSlotStart = 22;
+    const realSlotEnd = 138;
+    const decoySlotStart = 138;
+    const decoySlotEnd = 254;
+    const duressSlotStart = 254;
+    const duressSlotEnd = 334;
+
+    int realCtLenOf(Uint8List blob) =>
+        ByteData.sublistView(blob, realCtLenOff, realCtLenOff + 8)
+            .getUint64(0, Endian.little);
+
+    test('V-01: a real partition grafted into the decoy slot is rejected',
+        () async {
+      // Same payload size on both sides so the two body halves line up.
+      final payload = List.generate(1024, (i) => i & 0xFF);
+      final real = _tmpFile('real.txt', payload);
+      final fake = _tmpFile('fake.txt', payload);
+
+      final enc = await crypto.encryptFile(real.path, 'real-pass', null,
+          options: crypto.EncryptOptions(
+            decoyPassword: 'decoy-pass',
+            decoyFilePath: fake.path,
+          ));
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final blob = File(enc.outputPath!).readAsBytesSync();
+      final realCtLen = realCtLenOf(blob);
+
+      // Move the real slot's header + body onto the decoy slot.
+      blob.setRange(decoySlotStart, decoySlotEnd,
+          blob.sublist(realSlotStart, realSlotEnd));
+      blob.setRange(headerLen + realCtLen + tagLen, blob.length,
+          blob.sublist(headerLen, headerLen + realCtLen + tagLen));
+      // Break the real slot's HMAC so only the grafted slot verifies.
+      blob[realSlotStart + 48 + 36] ^= 0x01;
+
+      final broken = _tmpFile('slot_swap.VCT', blob);
+      final dec = await crypto.decryptFile(broken.path, 'real-pass', null);
+      expect(dec.success, isFalse);
+      // Verified as the decoy slot -> the slot id in the AAD no longer
+      // matches the ciphertext, so GCM fails.
+      expect(dec.error, 'CORRUPT');
+    });
+
+    test('V-02: a duress slot grafted from another file is rejected', () async {
+      final a = _tmpFile('a.txt', utf8.encode('file A'));
+      final b = _tmpFile('b.txt', utf8.encode('file B'));
+
+      final encA = await crypto.encryptFile(a.path, 'same-pass', null,
+          options: const crypto.EncryptOptions(duressPassword: 'duress-one'));
+      final encB = await crypto.encryptFile(b.path, 'same-pass', null,
+          options: const crypto.EncryptOptions(duressPassword: 'duress-two'));
+      expect(encA.success, isTrue, reason: encA.error ?? '');
+      expect(encB.success, isTrue, reason: encB.error ?? '');
+
+      final blobA = File(encA.outputPath!).readAsBytesSync();
+      final blobB = File(encB.outputPath!).readAsBytesSync();
+      // Graft B's duress salt + HMAC onto A.
+      blobA.setRange(duressSlotStart, duressSlotEnd,
+          blobB.sublist(duressSlotStart, duressSlotEnd));
+
+      final broken = _tmpFile('duress_graft.VCT', blobA);
+      final dec = await crypto.decryptFile(broken.path, 'same-pass', null);
+      expect(dec.success, isFalse);
+      expect(dec.error, 'CORRUPT');
+    });
+
+    test('V-05: the encrypted output name does not echo the original', () async {
+      final src = _tmpFile('offshore-bank-credentials.docx',
+          utf8.encode('top secret'));
+      final enc = await crypto.encryptFile(src.path, 'pass1234', null);
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final name = enc.outputPath!.split(Platform.pathSeparator).last;
+      expect(name, matches(RegExp(r'^vct-[0-9a-f]{32}\.VCT$')));
+
+      // The real name still travels inside the encrypted payload.
+      final dec = await crypto.decryptFile(enc.outputPath!, 'pass1234', null);
+      expect(dec.success, isTrue, reason: dec.error ?? '');
+      expect(dec.originalName, 'offshore-bank-credentials.docx');
+    });
+
+    test('V-08: file passwords shorter than 8 runes are rejected', () async {
+      final src = _tmpFile('pw.bin', utf8.encode('payload'));
+
+      for (final short in ['abc', 'short12', '密码四个']) {
+        final enc = await crypto.encryptFile(src.path, short, null);
+        expect(enc.success, isFalse, reason: short);
+        expect(enc.error, 'PASSWORD_TOO_SHORT', reason: short);
+      }
+
+      // Runes, not UTF-16 code units: 8 emoji = 8 runes = accepted.
+      final emojiOk = await crypto.encryptFile(src.path, '😀' * 8, null);
+      expect(emojiOk.success, isTrue, reason: emojiOk.error ?? '');
+      final dec = await crypto.decryptFile(emojiOk.outputPath!, '😀' * 8, null);
+      expect(dec.success, isTrue, reason: dec.error ?? '');
+
+      // 7 emoji = 7 runes = rejected (16 UTF-16 units would have passed
+      // the old .length check).
+      final emojiShort = await crypto.encryptFile(src.path, '😀' * 7, null);
+      expect(emojiShort.success, isFalse);
+      expect(emojiShort.error, 'PASSWORD_TOO_SHORT');
+    });
+
+    test('V-14: a tampered private-key name fails the wrap password check',
+        () async {
+      final (_, priv) = keys.generateKeyPair('Tommy');
+      final wrapped = await priv.serializeWrapped('hunter22');
+
+      final tampered = Uint8List.fromList(wrapped);
+      tampered[12] ^= 0x01; // first byte of the embedded key name
+
+      expect(
+        () => keys.VctPrivateKey.parseWrapped(tampered, 'hunter22'),
+        throwsA(isA<keys.KeyFileException>()
+            .having((e) => e.code, 'code', keys.errWrongKeyPassword)),
+      );
+    });
+
+    test('V-14: wrapping a private key with a short password is refused',
+        () async {
+      final (_, priv) = keys.generateKeyPair('Tommy');
+      expect(
+        () => priv.serializeWrapped('short'),
+        throwsA(isA<keys.KeyFileException>()
+            .having((e) => e.code, 'code', keys.errWeakKeyPassword)),
+      );
+    });
+
+    test('V-16: bidi overrides and zero-width characters are stripped', () {
+      // The override itself is removed; the remaining characters keep
+      // their real order, so the spoofed extension can no longer render
+      // as "photoexe.jpg" in a file manager.
+      final spoof = crypto.sanitizeFileName('photo\u202Efdp.exe');
+      expect(spoof.contains('\u202E'), isFalse, reason: spoof);
+      expect(spoof, 'photofdp.exe');
+
+      final zw = crypto.sanitizeFileName('in\u200Bvoice\uFEFF.pdf');
+      expect(zw, 'invoice.pdf');
+
+      // Stripping everything still leaves a usable fallback.
+      final onlyBidi = crypto.sanitizeFileName('\u202E\u200B');
+      expect(onlyBidi, isNotEmpty);
+    });
+  });
 }

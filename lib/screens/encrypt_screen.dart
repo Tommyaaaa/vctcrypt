@@ -10,7 +10,6 @@ import 'dart:io' show File, Platform;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
@@ -268,7 +267,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
       // With a recipient the password is OPTIONAL: empty = key-only
       // file, non-empty = dual-channel (password OR key).
       if (mainPw.isNotEmpty) {
-        if (mainPw.length < 4) {
+        if (mainPw.runes.length < 8) {
           _showSnackBar(strings.errPwShort, isError: true);
           return;
         }
@@ -284,7 +283,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
         return;
       }
     } else {
-      if (mainPw.length < 4) {
+      if (mainPw.runes.length < 8) {
         _showSnackBar(strings.errPwShort, isError: true);
         return;
       }
@@ -302,7 +301,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
           _showSnackBar(strings.errDecoyBatch, isError: true);
           return;
         }
-        if (decoyPw.length < 4) {
+        if (decoyPw.runes.length < 8) {
           _showSnackBar(strings.errPwShort, isError: true);
           return;
         }
@@ -324,7 +323,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
       }
 
       if (duressPw.isNotEmpty) {
-        if (duressPw.length < 4) {
+        if (duressPw.runes.length < 8) {
           _showSnackBar(strings.errPwShort, isError: true);
           return;
         }
@@ -337,6 +336,31 @@ class _EncryptScreenState extends State<EncryptScreen> {
           return;
         }
       }
+    }
+
+    // V-03: a .vctpub carries no proof of origin, so show the recipient
+    // fingerprint and make the user confirm before encrypting to it.
+    if (useKem && _recipientPub != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(strings.recipientConfirmTitle),
+          content: Text(strings.recipientConfirmBody(
+              _recipientPub!.name, _recipientPub!.fingerprint)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(strings.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(strings.encryptBtn),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      if (!mounted) return;
     }
 
     setState(() {
@@ -712,9 +736,6 @@ class _EncryptScreenState extends State<EncryptScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   onChanged: (_) => setState(() {}),
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(256),
-                  ],
                 ),
                 if (pwStrength.isNotEmpty) ...[
                   const SizedBox(height: 8),
@@ -768,9 +789,6 @@ class _EncryptScreenState extends State<EncryptScreen> {
                     ),
                     border: const OutlineInputBorder(),
                   ),
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(256),
-                  ],
                 ),
                 if (_recipientOn) ...[
                   const SizedBox(height: 8),
@@ -1312,9 +1330,6 @@ class _DecoySection extends StatelessWidget {
                 border: const OutlineInputBorder(),
               ),
               onChanged: (_) => onChanged(),
-              inputFormatters: [
-                LengthLimitingTextInputFormatter(256),
-              ],
             ),
             if (decoyPwController.text.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -1333,9 +1348,6 @@ class _DecoySection extends StatelessWidget {
                   border: const OutlineInputBorder(),
                 ),
                 onChanged: (_) => onChanged(),
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(256),
-                ],
               ),
             ],
             const SizedBox(height: 8),
@@ -1460,9 +1472,6 @@ class _DuressSection extends StatelessWidget {
                 border: const OutlineInputBorder(),
               ),
               onChanged: (_) => onChanged(),
-              inputFormatters: [
-                LengthLimitingTextInputFormatter(256),
-              ],
             ),
             if (duressPwController.text.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -1481,9 +1490,6 @@ class _DuressSection extends StatelessWidget {
                   border: const OutlineInputBorder(),
                 ),
                 onChanged: (_) => onChanged(),
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(256),
-                ],
               ),
             ],
           ],

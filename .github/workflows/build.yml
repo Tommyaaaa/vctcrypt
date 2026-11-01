@@ -546,17 +546,13 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
-            ### What's New in v2.5.0
-            - 🧾 **V4 format - authenticated header (H5)**: every header field a parser trusts (magic, version, flags, real ciphertext length, salt, nonces) is bound into AES-GCM as AAD, so flipping a length/salt/flag byte is detected instead of silently re-routing decryption
-            - ⚡ **One PBKDF2 + HKDF (M3)**: keys are derived once per partition and split with HKDF-Expand instead of four full 600K-iteration PBKDF2 runs - encryption/decryption are ~3x faster, attacker cost unchanged
-            - 🕵️ **H3 - settings no longer expose coercion history**: decoy / duress / shred counters are no longer displayed (they are still local-only)
-            - 🔒 **H4 - no channel leak in the inspector**: `inspectVctFile` no longer reports whether a password or ML-KEM channel exists
-            - 🔑 **M6 - 64-bit key fingerprints**: public-key display id grew from 4 to 8 bytes
-            - 🗑️ **M1 / M5 - honest shredding**: Secure Note plaintext temp files are overwritten, not just unlinked; the shred wording now states its limits on SSDs and copy-on-write filesystems
-            - 📦 **M2 - 64 MB ceiling**: oversized inputs get a clear "file too large" message instead of an OOM kill
-            - 🧪 **M4 - decoy / duress / V1 acceptance tests** added
-            - 🐧 **L2 / L4 / L5 - Linux hardening**: Full RELRO + BIND_NOW, AppImage zsync update info + optional GPG signing + SHA-256 checksum, and a readable message when no display is available
-            - ⚠️ **Format note**: V4 files are *not* readable by older releases; all older files (V1/V2/V3) still open unchanged
+            ### What's New in v2.6.0
+            - 🛡️ **V-01 / V-02 / V-10 - authenticated slot binding**: the V4 header (layout 0x02) now also authenticates the partition slot id, the on-disk version/flags bytes and the duress slot, so swapping real/decoy slots or grafting a duress slot from another file is rejected
+            - 👁️ **V-03 - recipient fingerprint confirmation**: before encrypting to a `.vctpub`, the recipient name and fingerprint are shown and must be confirmed, closing the silent key-substitution MITM
+            - 📁 **V-04 / V-05 - leak reductions**: Secure Note plaintext temp files live in a private 0700 directory with random `O_EXCL` names, and encrypted outputs are named `vct-<32 hex>.VCT` so the original file name no longer leaks from a folder listing
+            - 🧱 **V-06 / V-08 / V-13 / V-16 - hardening**: ML-KEM paths enforce the same size ceilings, passwords are counted in Unicode code points with an 8-character minimum, duress shred I/O no longer scales with file size, and bidi/zero-width characters are stripped from decrypted names
+            - 🔑 **V-14 - private-key container**: the embedded key name is authenticated as AAD and wrap passwords must be at least 8 characters (old kpar 0x03 containers still open)
+            - ♻️ **Backward compatible**: files written by v2.5.0 (V4 layout 0x01) and all older formats open unchanged; new files use layout 0x02
 
             ### What's New in v2.4.0
             - 🛡️ **H1 - output path sanitization**: the file name carried inside the ciphertext is now reduced to a safe basename (last segment only, `..` and separators stripped, Windows reserved names avoided) plus a directory guard, so a crafted `.VCT` can no longer write outside the target folder (Zip Slip / CWE-73)

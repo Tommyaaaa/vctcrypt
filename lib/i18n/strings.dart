@@ -68,7 +68,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v2.5.0';
+  String get appVersion => 'v2.6.0';
   String get guiVersion =>
       tr('[GUI Version]', '[图形界面版]', '[Version GUI]', '[GUI-Version]', '[界面版]');
   String get author => 'Tommy';
@@ -79,11 +79,11 @@ class AppStrings {
       'Algorithmus: VCT-Crypt (AES-256 x3 + ML-KEM-768)',
       '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)');
   String get whatsNew => tr(
-      'New in v2.5.0: the file format moves to V4. Header fields are now authenticated as AES-GCM AAD, so any tampering with length, flags or salt is detected; keys are split with HKDF from a single PBKDF2, making encryption and decryption about 3x faster. (H3) decoy/duress/shred counters are no longer displayed; (H4) the inspector no longer reveals which unlock channels exist; (M6) key fingerprints are 64-bit. Older files still open unchanged; new V4 files cannot be opened by older releases.',
-      'v2.5.0 正式版新特性：文件格式升级为 V4。头部字段现在纳入 AES-GCM 认证（AAD），对长度、标志位或盐的任何篡改都会被检出；密钥改为「一次 PBKDF2 + HKDF 拆分」，加解密速度约提升 3 倍。(H3) 不再显示诱饵/胁迫/擦除计数；(H4) 检查器不再透露有哪些解锁通道；(M6) 指纹扩至 64 位。旧文件照常打开；新的 V4 文件无法被旧版本打开。',
-      'Nouveautés de la v2.5.0 : le format passe en V4. Les champs d\'en-tête sont désormais authentifiés comme AAD AES-GCM : toute modification de la longueur, des drapeaux ou du sel est détectée ; les clés sont dérivées par HKDF à partir d\'un seul PBKDF2, ce qui rend le chiffrement et le déchiffrement environ 3 fois plus rapides. (H3) les compteurs leurre/contrainte/effacement ne sont plus affichés ; (H4) l\'inspecteur ne révèle plus les canaux de déverrouillage ; (M6) les empreintes de clé font 64 bits. Les anciens fichiers s\'ouvrent toujours ; les nouveaux fichiers V4 ne s\'ouvrent pas avec les anciennes versions.',
-      'Neues in v2.5.0: Das Dateiformat wechselt auf V4. Header-Felder werden jetzt als AES-GCM-AAD authentifiziert – jede Manipulation an Länge, Flags oder Salt wird erkannt; Schlüssel werden per HKDF aus einem einzigen PBKDF2 abgeleitet, was Ver- und Entschlüsselung etwa 3-mal schneller macht. (H3) Täuschungs-/Zwangs-/Shred-Zähler werden nicht mehr angezeigt; (H4) der Inspektor verrät keine Entsperrkanäle mehr; (M6) Schlüsselfingerabdrücke sind 64 Bit. Ältere Dateien öffnen sich unverändert; neue V4-Dateien lassen sich mit älteren Versionen nicht öffnen.',
-      'v2.5.0 版本新：格式集信陞爲 V4。場頭今得認證如 AAD AES-GCM，每改長度、標誌或鹽皆得檢出；鎖用 HKDF 分拆自沛次 PBKDF2，朱碼化吧解碼快約三倍。(H3) 空仍顯計數偽/脅/碎；(H4) 機檢查空仍露通道解鎖固；(M6) 指紋鎖延至 64 位。集信舊開如常；集信 V4 新空得開於版本舊。');
+      'New in v2.6.0 (security): the V4 header also authenticates the partition slot, the on-disk version/flags bytes and the duress slot, so swapping real/decoy slots or grafting a duress slot is rejected; the recipient fingerprint is shown and must be confirmed before encrypting to a .vctpub; note temp files use a private 0700 directory with random names, and encrypted output names are randomized; ML-KEM paths enforce size ceilings; passwords count Unicode code points and need at least 8; duress shred I/O no longer scales with file size; decrypted names drop bidi and zero-width characters. Files from v2.5.0 and older still open.',
+      'v2.6.0 安全更新：V4 头部同时认证分区槽位、磁盘上的版本/标志位与胁迫槽，交换真实/诱饵槽或移植胁迫槽都会被拒绝；加密给 .vctpub 前显示收件人指纹并要求确认；笔记临时明文改用 0700 私有目录 + 随机名，加密输出名也随之随机化；ML-KEM 路径补上大小上限；密码按 Unicode 码点计数且至少 8 位；胁迫销毁的 I/O 不再随文件大小增长；解密文件名剔除双向覆写与零宽字符。v2.5.0 及更早的文件照常打开。',
+      'Nouveautés de la v2.6.0 (sécurité) : l\'en-tête V4 authentifie aussi l\'emplacement de la partition, les octets version/drapeaux du disque et l\'emplacement de contrainte, donc échanger les emplacements réel/leurre ou greffer un emplacement de contrainte est rejeté ; l\'empreinte du destinataire est affichée et doit être confirmée avant de chiffrer vers une .vctpub ; les fichiers temporaires des notes utilisent un dossier privé 0700 avec des noms aléatoires, et le nom des sorties chiffrées est randomisé ; les chemins ML-KEM appliquent des plafonds de taille ; les mots de passe comptent les points de code Unicode et exigent 8 caractères ; l\'E/S de destruction sous contrainte ne dépend plus de la taille du fichier ; les noms décryptés perdent les caractères bidirectionnels et à largeur nulle. Les fichiers v2.5.0 et antérieurs s\'ouvrent toujours.',
+      'Neues in v2.6.0 (Sicherheit): Der V4-Header authentifiziert jetzt auch den Partitions-Slot, die Version/Flags-Bytes auf der Platte und den Zwangs-Slot – das Tauschen von Echt-/Köder-Slots oder das Anhängen eines Zwangs-Slots wird abgelehnt; der Empfänger-Fingerabdruck wird angezeigt und muss vor dem Verschlüsseln an eine .vctpub bestätigt werden; Notiz-Temporärdateien nutzen ein privates 0700-Verzeichnis mit Zufallsnamen, verschlüsselte Ausgaben werden zufällig benannt; ML-KEM-Pfade erzwingen Größenlimits; Passwörter zählen Unicode-Codepunkte und brauchen mindestens 8; die Zwangs-Lösch-I/O skaliert nicht mehr mit der Dateigröße; entschlüsselte Namen verlieren Bidi- und Zero-Width-Zeichen. Dateien aus v2.5.0 und älter öffnen weiterhin.',
+      'v2.6.0 版本新（修保密）：場頭 V4 今又認證槽位分區、字節版本／標誌於碟吧槽脅，換槽真偽或移槽脅皆得拒；碼化朱 .vctpub 前顯指紋鎖須確認；暫文記註居目私 0700 名隨機，名集信碼化亦隨機；通道 ML-KEM 今固界大小；密口計碼點 Unicode 吧須 ≥8；IO 碎脅空仍隨大小集信；名解碼得除符雙向吧零寬。集信 v2.5.0 吧舊開如常。');
 
   /// v1.4.0: share / save button label (mobile result cards).
   String get shareBtn => tr('Share / Save', '分享 / 存储', 'Partager / Enregistrer',
@@ -259,11 +259,11 @@ class AppStrings {
   String get confirmPasswordLabel => tr('Confirm Password', '确认密码',
       'Confirmer le mot de passe', 'Passwort bestätigen', '確認密口');
   String get passwordHint => tr(
-      'Enter password (min 4 chars)',
-      '输入密码（至少4个字符）',
-      'Saisissez le mot de passe (4 caractères min.)',
-      'Passwort eingeben (mind. 4 Zeichen)',
-      '入密口（最少4字符）');
+      'Enter password (min 8 chars)',
+      '输入密码（至少8个字符）',
+      'Saisissez le mot de passe (8 caractères min.)',
+      'Passwort eingeben (mind. 8 Zeichen)',
+      '入密口（最少8字符）');
   String get browse => tr('Browse', '浏览', 'Parcourir', 'Durchsuchen', '閱');
   String get encryptBtn =>
       tr('Encrypt', '加密', 'Chiffrer', 'Verschlüsseln', '碼化');
@@ -336,6 +336,20 @@ class AppStrings {
       'Le mode destinataire (V3) n\'a ni partition leurre ni mot de passe de contrainte. Pour la déniabilité, chiffrez uniquement par mot de passe.',
       'Der Empfängermodus (V3) hat weder Täuschungspartition noch Zwangspasswort. Für Abstreitbarkeit nur mit Passwort verschlüsseln.',
       '格認（V3）空固分區偽吧密口脅。如需可認，請只碼化沛密口。');
+
+  // ---- v2.6.0 (V-03): explicit recipient fingerprint confirmation ----
+  String get recipientConfirmTitle => tr(
+      'Confirm recipient key',
+      '确认收件人公钥',
+      'Confirmer la clé du destinataire',
+      'Empfängerschlüssel bestätigen',
+      '確認𠊛認鎖');
+  String recipientConfirmBody(String name, String fp) => tr(
+      'You are about to encrypt to "$name" (fingerprint $fp).\n\nA .vctpub file carries no built-in authenticity. If it was replaced in transit, the attacker can read your file and the real recipient cannot. Compare this fingerprint with the recipient out-of-band before continuing.',
+      '即将加密给「$name」（指纹 $fp）。\n\n.vctpub 文件本身没有防伪能力：若在传输中被替换，攻击者能解开你的文件、真正的收件人反而解不开。继续前请通过其他可信渠道核对该指纹。',
+      'Vous allez chiffrer pour « $name » (empreinte $fp).\n\nUn fichier .vctpub n\'est pas authentifié. S\'il a été remplacé en transit, l\'attaquant peut lire votre fichier et le vrai destinataire non. Vérifiez cette empreinte par un autre canal avant de continuer.',
+      'Sie verschlüsseln für „$name“ (Fingerabdruck $fp).\n\nEine .vctpub-Datei ist nicht authentifiziert. Wurde sie unterwegs ersetzt, kann der Angreifer Ihre Datei lesen und der echte Empfänger nicht. Prüfen Sie den Fingerabdruck über einen anderen Kanal.',
+      '將碼化朱「$name」（指紋 $fp）。\n\n.vctpub 集信空固防偽之能：若在傳中被換，賊能解沛集信，真𠊛認反解不開。繼續前請通過別信道核對該指紋。');
 
   // ---- Recipient public key / hybrid mode (v1.6.0) ----
   String get recipientSection => tr(
@@ -596,11 +610,11 @@ class AppStrings {
       'Verzeichnisse werden nicht unterstützt.',
       '空扶助書目。');
   String get errPwShort => tr(
-      'Password too short (min 4 characters).',
-      '密码太短（至少4个字符）。',
-      'Mot de passe trop court (4 caractères min.).',
-      'Passwort zu kurz (mind. 4 Zeichen).',
-      '密口過短（最少4字符）。');
+      'Password too short (min 8 characters).',
+      '密码太短（至少8个字符）。',
+      'Mot de passe trop court (8 caractères min.).',
+      'Passwort zu kurz (mind. 8 Zeichen).',
+      '密口過短（最少8字符）。');
   String get errPwMismatch => tr(
       'Passwords do not match.',
       '两次密码不一致。',
@@ -1096,6 +1110,8 @@ class AppStrings {
         return errWrongKeyPassword;
       case 'UNSUPPORTED_KEY_PARAMS':
         return errUnsupportedKeyParams;
+      case 'WEAK_KEY_PASSWORD':
+        return errPwShort;
       case 'KEY_REQUIRED':
         return errKeyRequired;
       case 'WRONG_KEY':

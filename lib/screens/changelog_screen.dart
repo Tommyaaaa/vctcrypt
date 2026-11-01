@@ -107,6 +107,16 @@ List<_Entry> _entries(AppStrings s) {
   if (s.lang == AppLanguage.hannom) {
     return [
       const _Entry(
+          '2.6.0',
+          [
+            '修正保密自審計 v2.5.0：場頭 V4 今又認證槽位分區、字節版本／標誌於碟吧槽脅——換槽真／偽或移槽脅自集信別皆得拒',
+            '[V-03] 碼化朱 .vctpub 前今顯指紋鎖吧須確認；集信鎖私今認證名內吧拒密口包短於 8 字符',
+            '[V-04/V-05] 暫文記註保密今居目 0700 私、名隨機 128 位（O_EXCL）；名集信碼化隨機（vct-<32 hex>.VCT），名原空仍露自目錄',
+            '[V-06/V-08/V-13/V-16] 通道 ML-KEM 今同界大小；密口計碼點 Unicode 吧須 ≥8；IO 碎脅空仍隨大小集信；符雙向／零寬得除自名解碼',
+            '集信造自 v2.5.0（V4 layout 0x01）吧舊開如常；集信新用 layout 0x02',
+          ],
+          major: true),
+      const _Entry(
           '2.5.0',
           [
             '格式集信陞爲 V4：場頭（magic、版本、標誌、長度、鹽、nonce）得入認證 AES-GCM 如 AAD——每改一字節皆得檢出，空仍轉解碼朱支差',
@@ -223,6 +233,16 @@ List<_Entry> _entries(AppStrings s) {
   if (!en) {
     return [
       const _Entry(
+          '2.6.0',
+          [
+            '根据 v2.5.0 审计修复安全问题：V4 头部同时认证分区槽位、磁盘上的版本/标志位与胁迫槽，交换真实/诱饵槽或从其他文件移植胁迫槽都会被拒绝',
+            '[V-03] 加密给 .vctpub 前显示收件人指纹并要求确认；私钥容器认证内嵌密钥名，包装密码不足 8 字符会被拒绝',
+            '[V-04/V-05] 安全笔记的明文临时文件改用 0700 私有目录 + 随机 128 位 O_EXCL 名；加密输出文件名随机化（vct-<32 位十六进制>.VCT），原文件名不再从目录列表泄漏',
+            '[V-06/V-08/V-13/V-16] ML-KEM 路径补齐大小上限；密码按 Unicode 码点计数且至少 8 个；胁迫销毁的 I/O 不再随文件大小增长；解密文件名剔除双向覆写与零宽字符',
+            'v2.5.0 写入的 V4（layout 0x01）及更早文件照常打开；新文件使用 layout 0x02',
+          ],
+          major: true),
+      const _Entry(
           '2.5.0',
           [
             '文件格式升级为 V4：头部字段（magic、版本、标志位、长度、盐、nonce）纳入 AES-GCM 认证（AAD），改动任一字节都会被检出，不再被悄悄导入错误分支',
@@ -336,6 +356,16 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry(
+        '2.6.0',
+        [
+          'Security fixes from the v2.5.0 audit: the V4 header now also authenticates the partition slot, the on-disk version/flags bytes and the duress slot, so swapping real/decoy slots or grafting a duress slot from another file is rejected',
+          '[V-03] Before encrypting to a .vctpub the recipient fingerprint is shown and must be confirmed; the private-key container authenticates the embedded key name and refuses wrap passwords shorter than 8 characters',
+          '[V-04/V-05] Secure Notes plaintext temp files use a private 0700 directory with a random 128-bit O_EXCL name; encrypted output names are randomized (vct-<32 hex>.VCT), so the original name no longer leaks from a folder listing',
+          '[V-06/V-08/V-13/V-16] ML-KEM paths enforce the same size ceilings; passwords count Unicode code points and need at least 8; duress shred I/O no longer scales with file size; bidi and zero-width characters are stripped from decrypted names',
+          'Files written by v2.5.0 (V4 layout 0x01) and older still open; new files use layout 0x02',
+        ],
+        major: true),
     const _Entry(
         '2.5.0',
         [

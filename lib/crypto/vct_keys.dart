@@ -15,9 +15,10 @@
 ///   public:  [magic 8 "VCTKEY1\0"] [type 0x01] [kpar 0x03]
 ///            [name_len 2 LE] [name UTF-8] [ek 1184]
 ///
-///   private: [magic 8] [type 0x02] [kpar 0x03] [name_len 2] [name]
+///   private: [magic 8] [type 0x02] [kpar 0x04] [name_len 2] [name]
 ///            [salt 48] [nonce 12] [ct 2400] [tag 16]
 ///            wrap = AES-256-GCM(PBKDF2("pw::VCTKEY", salt, 600000, 32))
+///            AAD = the whole header above (v2.6.0; kpar 0x03 = old layout)
 ///
 /// All parsing is strict: bad magic, wrong type byte, unknown parameter
 /// set or truncated key material is rejected.
@@ -39,6 +40,11 @@ const _magicLen = 8;
 const keyTypePublic = 0x01;
 const keyTypePrivate = 0x02;
 const kparMlKem768 = 0x03;
+/// v2.6.0 (V-14): private containers written by this version use kpar=0x04
+/// and authenticate the whole plaintext header (including the display
+/// name) as AES-GCM AAD. kpar=0x03 private containers from older releases
+/// are still accepted (unauthenticated name, legacy layout).
+const kparMlKem768Authed = 0x04;
 
 const _ekLen = 1184; // ML-KEM-768 public key
 const _dkLen = 2400; // ML-KEM-768 private key
@@ -47,6 +53,10 @@ const _nonceLen = 12;
 const _tagLen = 16;
 const _wrapIters = 600000;
 const _maxName = 200;
+/// v2.6.0 (V-14): the wrap password protects a long-term ML-KEM-768
+/// private key, so it gets the same 8-character (rune-counted) floor as
+/// file passwords instead of accepting "" or "1".
+const _minWrapPasswordChars = 8;
 
 final _kem = PqcKem.kyber768;
 final _rng = Random.secure();
@@ -56,6 +66,7 @@ final _rng = Random.secure();
 const errBadKeyFile = 'BAD_KEY_FILE';
 const errWrongKeyPassword = 'WRONG_KEY_PASSWORD';
 const errUnsupportedKeyParams = 'UNSUPPORTED_KEY_PARAMS';
+const errWeakKeyPassword = 'WEAK_KEY_PASSWORD';
 
 /// Thrown by parsers with one of the err* codes above.
 class KeyFileException implements Exception {
@@ -102,7 +113,12 @@ class VctPublicKey {
 
   /// Strict parse of a .vctpub container.
   static VctPublicKey parse(Uint8List data) {
-    _checkContainerHeader(data, keyTypePublic);
+    final kpar = _checkContainerHeader(data, keyTypePublic);
+    // Public containers never carry the authenticated-header kpar; if one
+    // shows up it is not a public key this version understands.
+    if (kpar != kparMlKem768) {
+      throw const KeyFileException(errUnsupportedKeyParams);
+    }
     final nameLen = data[_magicLen + 2] | (data[_magicLen + 3] << 8);
     final nameEnd = _magicLen + 4 + nameLen;
     if (nameEnd + _ekLen != data.length) {
@@ -137,28 +153,42 @@ class VctPrivateKey {
       );
 
   /// Wrap [dk] with [password] and serialize the container.
+  ///
+  /// v2.6.0 (V-14): the container header - including the display name -
+  /// is authenticated as GCM AAD, so flipping "Bob" to "Eve" now fails to
+  /// decrypt instead of relabelling somebody else's key. A wrapping
+  /// password shorter than [_minWrapPasswordChars] is rejected: this file
+  /// holds the long-term private key, losing it loses every file
+  /// encrypted to the matching public key.
   Future<Uint8List> serializeWrapped(String password) async {
+    if (password.runes.length < _minWrapPasswordChars) {
+      throw const KeyFileException(errWeakKeyPassword);
+    }
     final nameBytes = utf8.encode(name);
     if (nameBytes.isEmpty || nameBytes.length > _maxName) {
       throw const KeyFileException(errBadKeyFile);
     }
+    final header = BytesBuilder()
+      ..add(utf8.encode(keyMagic))
+      ..addByte(keyTypePrivate)
+      ..addByte(kparMlKem768Authed)
+      ..addByte(nameBytes.length & 0xFF)
+      ..addByte((nameBytes.length >> 8) & 0xFF)
+      ..add(nameBytes);
+    final headerBytes = header.toBytes();
+
     final salt = _secureBytes(_saltLen);
     final nonce = _secureBytes(_nonceLen);
 
     final wrap = await _pbkdf2('${password}::VCTKEY', salt, 32);
-    final box = await _gcmEncrypt(wrap, nonce, dk);
+    final box = await _gcmEncrypt(wrap, nonce, dk, aad: headerBytes);
 
-    final out = BytesBuilder();
-    out.add(utf8.encode(keyMagic));
-    out.addByte(keyTypePrivate);
-    out.addByte(kparMlKem768);
-    out.addByte(nameBytes.length & 0xFF);
-    out.addByte((nameBytes.length >> 8) & 0xFF);
-    out.add(nameBytes);
-    out.add(salt);
-    out.add(nonce);
-    out.add(box.cipherText);
-    out.add(box.mac);
+    final out = BytesBuilder()
+      ..add(headerBytes)
+      ..add(salt)
+      ..add(nonce)
+      ..add(box.cipherText)
+      ..add(box.mac);
     return out.toBytes();
   }
 
@@ -166,7 +196,7 @@ class VctPrivateKey {
   /// errWrongKeyPassword when the password does not match.
   static Future<VctPrivateKey> parseWrapped(
       Uint8List data, String password) async {
-    _checkContainerHeader(data, keyTypePrivate);
+    final kpar = _checkContainerHeader(data, keyTypePrivate);
     final nameLen = data[_magicLen + 2] | (data[_magicLen + 3] << 8);
     final bodyStart = _magicLen + 4 + nameLen;
     if (bodyStart + _saltLen + _nonceLen + _dkLen + _tagLen != data.length) {
@@ -188,10 +218,15 @@ class VctPrivateKey {
     pos += _dkLen;
     final tag = Uint8List.sublistView(data, pos, pos + _tagLen);
 
+    // kpar 0x04 containers authenticate their header (name included);
+    // 0x03 containers from older releases have no AAD.
+    final aad =
+        kpar == kparMlKem768Authed ? data.sublist(0, bodyStart) : null;
+
     final wrap = await _pbkdf2('${password}::VCTKEY', salt, 32);
     Uint8List dk;
     try {
-      dk = await _gcmDecrypt(wrap, nonce, ct, tag);
+      dk = await _gcmDecrypt(wrap, nonce, ct, tag, aad: aad);
     } on SecretBoxAuthenticationError {
       throw const KeyFileException(errWrongKeyPassword);
     }
@@ -262,7 +297,7 @@ void writeKeyFile(String path, List<int> bytes) {
 
 // ---- internals ----
 
-void _checkContainerHeader(Uint8List data, int expectedType) {
+int _checkContainerHeader(Uint8List data, int expectedType) {
   final magic = utf8.encode(keyMagic);
   if (data.length < _magicLen + 4) {
     throw const KeyFileException(errBadKeyFile);
@@ -273,9 +308,11 @@ void _checkContainerHeader(Uint8List data, int expectedType) {
   if (data[_magicLen] != expectedType) {
     throw const KeyFileException(errBadKeyFile);
   }
-  if (data[_magicLen + 1] != kparMlKem768) {
+  final kpar = data[_magicLen + 1];
+  if (kpar != kparMlKem768 && kpar != kparMlKem768Authed) {
     throw const KeyFileException(errUnsupportedKeyParams);
   }
+  return kpar;
 }
 
 Uint8List _secureBytes(int len) {
@@ -300,11 +337,13 @@ Future<List<int>> _pbkdf2(String password, List<int> salt, int outLen) async {
 }
 
 Future<({Uint8List cipherText, Uint8List mac})> _gcmEncrypt(
-    List<int> key, List<int> nonce, List<int> plain) async {
+    List<int> key, List<int> nonce, List<int> plain,
+    {List<int>? aad}) async {
   final box = await AesGcm.with256bits().encrypt(
     plain,
     secretKey: SecretKey(key),
     nonce: nonce,
+    aad: aad ?? const <int>[],
   );
   return (
     cipherText: Uint8List.fromList(box.cipherText),
@@ -313,10 +352,12 @@ Future<({Uint8List cipherText, Uint8List mac})> _gcmEncrypt(
 }
 
 Future<Uint8List> _gcmDecrypt(
-    List<int> key, List<int> nonce, List<int> ct, List<int> tag) async {
+    List<int> key, List<int> nonce, List<int> ct, List<int> tag,
+    {List<int>? aad}) async {
   final clear = await AesGcm.with256bits().decrypt(
     SecretBox(ct, nonce: nonce, mac: Mac(tag)),
     secretKey: SecretKey(key),
+    aad: aad ?? const <int>[],
   );
   return Uint8List.fromList(clear);
 }

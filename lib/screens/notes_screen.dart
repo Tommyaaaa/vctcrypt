@@ -101,7 +101,7 @@ class _NotesScreenState extends State<NotesScreen> {
       _showSnackBar(_strings.noteEmpty, isError: true);
       return;
     }
-    if (pw.length < 4) {
+    if (pw.runes.length < 8) {
       _showSnackBar(_strings.errPwShort, isError: true);
       return;
     }
