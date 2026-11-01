@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VCTCrypt Web v2.6.0 —— 在浏览器里完成 AES-256-GCM 文件加密与解密，文件不会离开你的设备。">
+  <title>VCTCrypt Web — 浏览器加密工具</title>
+  <link rel="icon" href="assets/vctcrypt-logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="https://vctcrypt.pages.dev" target="_blank" rel="noopener noreferrer">
+      <img src="assets/vctcrypt-logo.png" alt="">
+      <span>VCTCrypt</span>
+      <span class="chip">Web</span>
+    </a>
+    <div class="nav-right">
+      <select id="langSelect" class="lang" aria-label="Language">
+        <option value="zh">简体中文</option>
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="de">Deutsch</option>
+      </select>
+      <button id="themeBtn" class="icon-btn" type="button" aria-label="Theme">☼</button>
+      <a class="icon-btn gh" href="https://github.com/Tommyaaaa/vctcrypt" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow">VCTCrypt Web <i></i> <span id="versionLabel">v2.6.0</span></div>
+      <h1 data-i18n="heroTitle"></h1>
+      <p data-i18n="heroDesc"></p>
+      <div class="badges">
+        <span>AES-256-GCM</span>
+        <span>PBKDF2 · 600,000</span>
+        <span data-i18n="badgeLocal">本地处理</span>
+        <span data-i18n="badgeCompat">兼容桌面版 V4</span>
+      </div>
+    </section>
+
+    <section class="tool" aria-live="polite">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-mode="encrypt" type="button" data-i18n="tabEncrypt"></button>
+        <button class="tab" data-mode="decrypt" type="button" data-i18n="tabDecrypt"></button>
+      </div>
+
+      <div id="dropzone" class="dropzone" tabindex="0" role="button">
+        <svg class="drop-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M24 33V15m0 0-8 8m8-8 8 8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 31v5a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <strong data-i18n="dropTitle"></strong>
+        <span class="drop-hint" data-i18n="dropHint"></span>
+        <button id="chooseBtn" class="btn ghost" type="button" data-i18n="chooseFiles"></button>
+        <input id="fileInput" type="file" multiple hidden>
+      </div>
+
+      <div id="fileList" class="file-list"></div>
+
+      <label class="field" for="password">
+        <span data-i18n="password"></span>
+        <div class="pw-row">
+          <input id="password" type="password" autocomplete="new-password" spellcheck="false" data-i18n-placeholder="passwordPh">
+          <button id="pwToggle" class="link" type="button" data-i18n="show"></button>
+        </div>
+      </label>
+      <p class="hint" data-i18n="pwNote"></p>
+
+      <div class="actions">
+        <button id="runBtn" class="btn primary" type="button" data-i18n="encryptAction"></button>
+        <button id="clearBtn" class="btn ghost" type="button" data-i18n="clear"></button>
+        <span id="spinner" class="spinner" hidden></span>
+      </div>
+
+      <div id="status" class="status" hidden></div>
+      <div id="results" class="results"></div>
+    </section>
+
+    <section class="notes">
+      <article class="note-card">
+        <h3 data-i18n="privacyTitle"></h3>
+        <p data-i18n="privacyDesc"></p>
+      </article>
+      <article class="note-card">
+        <h3 data-i18n="compatTitle"></h3>
+        <p data-i18n="compatDesc"></p>
+      </article>
+      <article class="note-card">
+        <h3 data-i18n="limitTitle"></h3>
+        <p data-i18n="limitDesc"></p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="foot-left">
+      <img src="assets/vctcrypt-logo.png" alt="">
+      <span>VCTCrypt Web <b id="footVersion">v2.6.0</b></span>
+    </div>
+    <nav class="foot-links">
+      <a href="https://vctcrypt.pages.dev" target="_blank" rel="noopener noreferrer" data-i18n="footerSite"></a>
+      <a href="https://github.com/Tommyaaaa/vctcrypt" target="_blank" rel="noopener noreferrer" data-i18n="footerGitHub"></a>
+      <a href="https://github.com/Tommyaaaa/vctcrypt/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="footerDownload"></a>
+    </nav>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
