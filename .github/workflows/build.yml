@@ -546,6 +546,13 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
+            ### What's New in v2.7.0
+            - 🌐 **Web edition rebuilt on Flutter**: the browser build is now the same Flutter app (Material Design 3), not a separate hand-written page, so desktop, mobile and web share one codebase and one .VCT format
+            - 🛡️ **Advanced security restored on web**: decoy partition and duress password are available in the browser again; a duress password behaves exactly like a wrong password (same error, no download, no hint that a duress slot exists)
+            - 🔑 **Recipient keys on web**: generate ML-KEM-768 key pairs, download `.vctpub` / `.vctkey`, encrypt to a public key (with fingerprint confirmation) and unlock with the private key; keys persist in browser storage with the private key still password-wrapped
+            - 🔒 **Hardened web delivery**: CSP and security headers, locally served CanvasKit, no Service Worker, browser-safe file I/O
+            - ♻️ **Backward compatible**: V1–V4 files open unchanged; desktop and mobile keep the v2.6.0 security hardening
+
             ### What's New in v2.6.0
             - 🛡️ **V-01 / V-02 / V-10 - authenticated slot binding**: the V4 header (layout 0x02) now also authenticates the partition slot id, the on-disk version/flags bytes and the duress slot, so swapping real/decoy slots or grafting a duress slot from another file is rejected
             - 👁️ **V-03 - recipient fingerprint confirmation**: before encrypting to a `.vctpub`, the recipient name and fingerprint are shown and must be confirmed, closing the silent key-substitution MITM
