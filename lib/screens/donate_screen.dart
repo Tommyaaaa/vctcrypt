@@ -8,36 +8,36 @@
 /// forwarded. Money never touches VCTCrypt - the payment itself
 /// happens entirely inside Alipay.
 
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../platform/vfs.dart';
 
 class DonateScreen extends StatelessWidget {
   const DonateScreen({super.key});
 
   static const _asset = 'assets/donate_alipay.png';
 
-  /// Copy the bundled QR image to a temp file and open the system
-  /// share/save sheet (the guaranteed way to get it out on mobile).
+  /// Export the bundled QR image. Browser builds download it directly;
+  /// mobile builds open the system share/save sheet.
   Future<void> _shareQr(AppStrings strings) async {
     try {
       final data = await rootBundle.load(_asset);
       final bytes = Uint8List.view(data.buffer);
-      final dir = await getTemporaryDirectory();
-      final tmp = File(p.join(
-        dir.path,
+      if (isWebPlatform) {
+        await saveBytes('VCTCrypt-Donate-QR.png', bytes);
+        return;
+      }
+      final tmp = tempPath(
         'vctcrypt_donate_${DateTime.now().millisecondsSinceEpoch}.png',
-      ));
-      await tmp.writeAsBytes(bytes, flush: true);
-      await Share.shareXFiles([XFile(tmp.path)], text: strings.appName);
+      );
+      writeBytes(tmp, bytes);
+      await Share.shareXFiles([XFile(tmp)], text: strings.appName);
     } catch (_) {
       // Share sheet unavailable (desktop edge cases) - silently ignore;
       // the QR is still visible on screen for direct scanning.
@@ -48,9 +48,7 @@ class DonateScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final strings = VCTCryptApp.of(context).strings;
-    final isMobile =
-        Theme.of(context).platform == TargetPlatform.iOS ||
-        Theme.of(context).platform == TargetPlatform.android;
+    final isMobile = isMobileApp;
 
     return Scaffold(
       appBar: AppBar(title: Text(strings.donateTitle)),
@@ -139,14 +137,18 @@ class DonateScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // ---- Share / save the QR image ----
-                if (isMobile)
+                // ---- Share / download the QR image ----
+                if (isMobile || isWebPlatform)
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.tonalIcon(
                       onPressed: () => _shareQr(strings),
-                      icon: const Icon(Icons.share_outlined),
-                      label: Text(strings.donateShareQr),
+                      icon: Icon(isWebPlatform
+                          ? Icons.download_outlined
+                          : Icons.share_outlined),
+                      label: Text(isWebPlatform
+                          ? strings.downloadBtn
+                          : strings.donateShareQr),
                     ),
                   ),
                 const SizedBox(height: 24),

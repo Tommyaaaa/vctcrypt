@@ -24,14 +24,13 @@
 /// set or truncated key material is rejected.
 
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math' show Random;
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
+import '../platform/vfs.dart' as vfs;
 import 'vendor/mlkem/mlkem.dart';
 
 // ---- Constants ----
@@ -263,11 +262,8 @@ int sniffKeyType(Uint8List data) {
 }
 
 /// Where key files live (the same user-visible location encrypted
-/// outputs go: Documents on every platform).
-Future<String> keysDirectory() async {
-  final dir = await getApplicationDocumentsDirectory();
-  return dir.path;
-}
+/// outputs go: Documents on native, the browser key store on web).
+Future<String> keysDirectory() => vfs.keysDirectory();
 
 /// Unique path for a new key file: name.vctpub, name (1).vctpub, ...
 Future<String> uniqueKeyPath(String dir, String name, String ext) async {
@@ -276,24 +272,16 @@ Future<String> uniqueKeyPath(String dir, String name, String ext) async {
   if (safe.length > 60) safe = safe.substring(0, 60);
   var candidate = p.join(dir, '$safe$ext');
   var i = 1;
-  while (File(candidate).existsSync()) {
+  while (vfs.existsAt(candidate)) {
     candidate = p.join(dir, '$safe ($i)$ext');
     i++;
   }
   return candidate;
 }
 
-/// Atomic write (same pattern as the .VCT writer: temp + rename).
-void writeKeyFile(String path, List<int> bytes) {
-  final tmp = File('$path.vctpart');
-  try {
-    tmp.writeAsBytesSync(bytes, flush: true);
-    tmp.renameSync(path);
-  } on FileSystemException {
-    if (tmp.existsSync()) tmp.deleteSync();
-    File(path).writeAsBytesSync(bytes);
-  }
-}
+/// Atomic write on native builds; in-memory (plus localStorage
+/// persistence) in the browser.
+void writeKeyFile(String path, List<int> bytes) => vfs.writeBytes(path, bytes);
 
 // ---- internals ----
 

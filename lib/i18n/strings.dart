@@ -68,7 +68,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v2.6.0';
+  String get appVersion => 'v2.7.0';
   String get guiVersion =>
       tr('[GUI Version]', '[图形界面版]', '[Version GUI]', '[GUI-Version]', '[界面版]');
   String get author => 'Tommy';
@@ -79,15 +79,26 @@ class AppStrings {
       'Algorithmus: VCT-Crypt (AES-256 x3 + ML-KEM-768)',
       '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)');
   String get whatsNew => tr(
-      'New in v2.6.0 (security): the V4 header also authenticates the partition slot, the on-disk version/flags bytes and the duress slot, so swapping real/decoy slots or grafting a duress slot is rejected; the recipient fingerprint is shown and must be confirmed before encrypting to a .vctpub; note temp files use a private 0700 directory with random names, and encrypted output names are randomized; ML-KEM paths enforce size ceilings; passwords count Unicode code points and need at least 8; duress shred I/O no longer scales with file size; decrypted names drop bidi and zero-width characters. Files from v2.5.0 and older still open.',
-      'v2.6.0 安全更新：V4 头部同时认证分区槽位、磁盘上的版本/标志位与胁迫槽，交换真实/诱饵槽或移植胁迫槽都会被拒绝；加密给 .vctpub 前显示收件人指纹并要求确认；笔记临时明文改用 0700 私有目录 + 随机名，加密输出名也随之随机化；ML-KEM 路径补上大小上限；密码按 Unicode 码点计数且至少 8 位；胁迫销毁的 I/O 不再随文件大小增长；解密文件名剔除双向覆写与零宽字符。v2.5.0 及更早的文件照常打开。',
-      'Nouveautés de la v2.6.0 (sécurité) : l\'en-tête V4 authentifie aussi l\'emplacement de la partition, les octets version/drapeaux du disque et l\'emplacement de contrainte, donc échanger les emplacements réel/leurre ou greffer un emplacement de contrainte est rejeté ; l\'empreinte du destinataire est affichée et doit être confirmée avant de chiffrer vers une .vctpub ; les fichiers temporaires des notes utilisent un dossier privé 0700 avec des noms aléatoires, et le nom des sorties chiffrées est randomisé ; les chemins ML-KEM appliquent des plafonds de taille ; les mots de passe comptent les points de code Unicode et exigent 8 caractères ; l\'E/S de destruction sous contrainte ne dépend plus de la taille du fichier ; les noms décryptés perdent les caractères bidirectionnels et à largeur nulle. Les fichiers v2.5.0 et antérieurs s\'ouvrent toujours.',
-      'Neues in v2.6.0 (Sicherheit): Der V4-Header authentifiziert jetzt auch den Partitions-Slot, die Version/Flags-Bytes auf der Platte und den Zwangs-Slot – das Tauschen von Echt-/Köder-Slots oder das Anhängen eines Zwangs-Slots wird abgelehnt; der Empfänger-Fingerabdruck wird angezeigt und muss vor dem Verschlüsseln an eine .vctpub bestätigt werden; Notiz-Temporärdateien nutzen ein privates 0700-Verzeichnis mit Zufallsnamen, verschlüsselte Ausgaben werden zufällig benannt; ML-KEM-Pfade erzwingen Größenlimits; Passwörter zählen Unicode-Codepunkte und brauchen mindestens 8; die Zwangs-Lösch-I/O skaliert nicht mehr mit der Dateigröße; entschlüsselte Namen verlieren Bidi- und Zero-Width-Zeichen. Dateien aus v2.5.0 und älter öffnen weiterhin.',
-      'v2.6.0 版本新（修保密）：場頭 V4 今又認證槽位分區、字節版本／標誌於碟吧槽脅，換槽真偽或移槽脅皆得拒；碼化朱 .vctpub 前顯指紋鎖須確認；暫文記註居目私 0700 名隨機，名集信碼化亦隨機；通道 ML-KEM 今固界大小；密口計碼點 Unicode 吧須 ≥8；IO 碎脅空仍隨大小集信；名解碼得除符雙向吧零寬。集信 v2.5.0 吧舊開如常。');
+      'v2.7.0 web edition: a full browser port with the same Material 3 interface - decoy partition, duress password (a duress hit is rejected exactly like a wrong password) and ML-KEM-768 recipient keys all work on the web; the private key stays password-wrapped inside this browser and can be downloaded as a backup. New in v2.6.0 (security): the V4 header also authenticates the partition slot, the on-disk version/flags bytes and the duress slot, so swapping real/decoy slots or grafting a duress slot is rejected; the recipient fingerprint is shown and must be confirmed before encrypting to a .vctpub; note temp files use a private 0700 directory with random names, and encrypted output names are randomized; ML-KEM paths enforce size ceilings; passwords count Unicode code points and need at least 8; duress shred I/O no longer scales with file size; decrypted names drop bidi and zero-width characters. Files from v2.5.0 and older still open.',
+      'v2.7.0 网页版：完整浏览器移植，沿用同一套 Material Design 3 界面——伪装分区、胁迫密码（命中时与错误密码表现完全一致）与 ML-KEM-768 收件人密钥均可在网页端使用；私钥以密码包裹保存在当前浏览器内，并支持下载备份。v2.6.0 安全更新：V4 头部同时认证分区槽位、磁盘上的版本/标志位与胁迫槽，交换真实/诱饵槽或移植胁迫槽都会被拒绝；加密给 .vctpub 前显示收件人指纹并要求确认；笔记临时明文改用 0700 私有目录 + 随机名，加密输出名也随之随机化；ML-KEM 路径补上大小上限；密码按 Unicode 码点计数且至少 8 位；胁迫销毁的 I/O 不再随文件大小增长；解密文件名剔除双向覆写与零宽字符。v2.5.0 及更早的文件照常打开。',
+      'Édition web v2.7.0 : portage complet du navigateur avec la même interface Material 3 - partition leurre, mot de passe de contrainte (rejeté exactement comme un mot de passe erroné) et clés destinataires ML-KEM-768 fonctionnent sur le web ; la clé privée reste protégée par mot de passe dans ce navigateur et peut être téléchargée. Nouveautés de la v2.6.0 (sécurité) : l\'en-tête V4 authentifie aussi l\'emplacement de la partition, les octets version/drapeaux du disque et l\'emplacement de contrainte, donc échanger les emplacements réel/leurre ou greffer un emplacement de contrainte est rejeté ; l\'empreinte du destinataire est affichée et doit être confirmée avant de chiffrer vers une .vctpub ; les fichiers temporaires des notes utilisent un dossier privé 0700 avec des noms aléatoires, et le nom des sorties chiffrées est randomisé ; les chemins ML-KEM appliquent des plafonds de taille ; les mots de passe comptent les points de code Unicode et exigent 8 caractères ; l\'E/S de destruction sous contrainte ne dépend plus de la taille du fichier ; les noms décryptés perdent les caractères bidirectionnels et à largeur nulle. Les fichiers v2.5.0 et antérieurs s\'ouvrent toujours.',
+      'Web-Edition v2.7.0: vollständige Browser-Portierung mit derselben Material-3-Oberfläche – Köder-Partition, Zwangspasswort (wird genau wie ein falsches Passwort abgelehnt) und ML-KEM-768-Empfängerschlüssel funktionieren im Web; der private Schlüssel bleibt passwortgeschützt in diesem Browser und kann heruntergeladen werden. Neues in v2.6.0 (Sicherheit): Der V4-Header authentifiziert jetzt auch den Partitions-Slot, die Version/Flags-Bytes auf der Platte und den Zwangs-Slot – das Tauschen von Echt-/Köder-Slots oder das Anhängen eines Zwangs-Slots wird abgelehnt; der Empfänger-Fingerabdruck wird angezeigt und muss vor dem Verschlüsseln an eine .vctpub bestätigt werden; Notiz-Temporärdateien nutzen ein privates 0700-Verzeichnis mit Zufallsnamen, verschlüsselte Ausgaben werden zufällig benannt; ML-KEM-Pfade erzwingen Größenlimits; Passwörter zählen Unicode-Codepunkte und brauchen mindestens 8; die Zwangs-Lösch-I/O skaliert nicht mehr mit der Dateigröße; entschlüsselte Namen verlieren Bidi- und Zero-Width-Zeichen. Dateien aus v2.5.0 und älter öffnen weiterhin.',
+      'v2.7.0 網頁版：全瀏覽器移植，同用 Material Design 3 界面——分區偽裝、脅迫密口（中時與錯密口全同）吧鎖認收 ML-KEM-768 皆得用於網頁；私鎖以密口包裹留於此瀏覽器，可下載備份。v2.6.0 版本新（修保密）：場頭 V4 今又認證槽位分區、字節版本／標誌於碟吧槽脅，換槽真偽或移槽脅皆得拒；碼化朱 .vctpub 前顯指紋鎖須確認；暫文記註居目私 0700 名隨機，名集信碼化亦隨機；通道 ML-KEM 今固界大小；密口計碼點 Unicode 吧須 ≥8；IO 碎脅空仍隨大小集信；名解碼得除符雙向吧零寬。集信 v2.5.0 吧舊開如常。');
 
   /// v1.4.0: share / save button label (mobile result cards).
   String get shareBtn => tr('Share / Save', '分享 / 存储', 'Partager / Enregistrer',
       'Teilen / Speichern', '分 / 留');
+
+  /// v2.6.0 web port: browser builds cannot write silently, so results
+  /// need an explicit download action.
+  String get downloadBtn =>
+      tr('Download', '下载', 'Télécharger', 'Herunterladen', '下載');
+  String get webDownloadHint => tr(
+      'The file stays inside this browser tab - download it to keep it.',
+      '文件只保留在当前浏览器标签页内，请下载保存。',
+      'Le fichier reste dans cet onglet du navigateur - téléchargez-le pour le conserver.',
+      'Die Datei bleibt in diesem Browser-Tab – laden Sie sie herunter, um sie zu behalten.',
+      '集信只留於此瀏覽頁，下載乃存。');
 
   // ---- Secure Notes (v1.5.0) ----
   String get notesTitle =>
@@ -231,6 +242,14 @@ class AppStrings {
       'Key imported', '密钥已导入', 'Clé importée', 'Schlüssel importiert', '㐌入鎖');
   String get keyDeleted =>
       tr('Key deleted', '密钥已删除', 'Clé supprimée', 'Schlüssel gelöscht', '㐌除鎖');
+
+  /// Shown instead of the folder path in the browser build.
+  String get keysWebNote => tr(
+      'Keys are kept in this browser, and the private key stays password-wrapped. Download a copy to back it up.',
+      '密钥保存在当前浏览器中，私钥始终受密码保护。可下载文件做备份。',
+      'Les clés restent dans ce navigateur et la clé privée demeure protégée par mot de passe. Téléchargez une copie pour la sauvegarder.',
+      'Schlüssel bleiben in diesem Browser, der private Schlüssel bleibt passwortgeschützt. Laden Sie eine Kopie als Backup herunter.',
+      '鎖得留固 Browser 尼，鎖私仍得密口保護。下載一份朱備份。');
   String get mlkemLabel => 'ML-KEM-768';
 
   // ---- Encrypt screen ----

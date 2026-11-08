@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="VCTCrypt - offline file encryption in your browser. Triple AES-256-GCM, PBKDF2 key derivation. Everything runs locally; nothing is uploaded.">
+  <meta name="theme-color" content="#6750A4">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="VCTCrypt">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>VCTCrypt</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body style="margin:0;background:#141218">
+  <!-- Shown until Flutter paints its first frame. -->
+  <div id="splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#141218;color:#E6E1E5;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;z-index:1">
+    <div style="width:44px;height:44px;border:4px solid rgba(208,188,255,0.25);border-top-color:#D0BCFF;border-radius:50%;animation:vct-spin 900ms linear infinite"></div>
+    <div style="font-size:15px;letter-spacing:0.4px;opacity:0.85">VCTCrypt</div>
+  </div>
+  <style>
+    @keyframes vct-spin { to { transform: rotate(360deg); } }
+  </style>
+
+  <script src="boot.js"></script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

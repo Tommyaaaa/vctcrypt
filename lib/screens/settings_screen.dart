@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../platform/vfs.dart';
 import '../utils/usage_stats.dart';
 import '../widgets/onboarding.dart';
 import 'about_screen.dart';
@@ -51,22 +52,25 @@ class SettingsScreen extends StatelessWidget {
                   clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
-                      for (final lang in AppLanguage.values) ...[
-                        if (lang != AppLanguage.values.first)
-                          const Divider(height: 1, indent: 56),
-                        RadioListTile<AppLanguage>(
-                          value: lang,
-                          groupValue: appState.lang,
-                          onChanged: (value) => appState.changeLanguage(value!),
-                          secondary: Text(
-                            lang.code.toUpperCase(),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                      for (final lang in AppLanguage.values)
+                        // The web build ships without the Han-Nom locale.
+                        if (!isWebPlatform || lang != AppLanguage.hannom) ...[
+                          if (lang != AppLanguage.values.first)
+                            const Divider(height: 1, indent: 56),
+                          RadioListTile<AppLanguage>(
+                            value: lang,
+                            groupValue: appState.lang,
+                            onChanged: (value) =>
+                                appState.changeLanguage(value!),
+                            secondary: Text(
+                              lang.code.toUpperCase(),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
+                            title: Text(lang.displayName),
                           ),
-                          title: Text(lang.displayName),
-                        ),
-                      ],
+                        ],
                     ],
                   ),
                 ),
@@ -253,19 +257,16 @@ class SettingsScreen extends StatelessWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            // v1.6.0: five tabs - Encrypt / Decrypt /
-                            // Keys / Notes / Settings.
-                            for (var i = 0; i < 5; i++)
+                            // v1.6.0: five tabs, including Keys.
+                            for (final (i, label) in <(int, String)>[
+                              (0, strings.navEncrypt),
+                              (1, strings.navDecrypt),
+                              (2, strings.navKeys),
+                              (3, strings.navNotes),
+                              (4, strings.navSettings),
+                            ])
                               ChoiceChip(
-                                label: Text(i == 0
-                                    ? strings.navEncrypt
-                                    : i == 1
-                                        ? strings.navDecrypt
-                                        : i == 2
-                                            ? strings.navKeys
-                                            : i == 3
-                                                ? strings.navNotes
-                                                : strings.navSettings),
+                                label: Text(label),
                                 selected: appState.startTab == i,
                                 onSelected: (_) => appState.setStartTab(i),
                               ),

@@ -51,14 +51,13 @@
 ///      password four times under the same salt.
 ///
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math' show Random;
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
+import '../platform/vfs.dart' as vfs;
 import 'vct_keys.dart';
 import 'vendor/mlkem/mlkem.dart';
 
@@ -363,35 +362,10 @@ List<int> _buildV4Aad({
 
 // ---- File helpers ----
 
-Uint8List _readFile(String path) {
-  final f = File(path);
-  final bytes = f.readAsBytesSync();
-  return bytes;
-}
+Uint8List _readFile(String path) => vfs.readBytes(path);
 
-/// Atomic file write (v1.4.0): write to a sibling temp file, then
-/// rename over the destination.
-///
-/// Why: on iOS the Files app (fileproviderd) learns about changes in
-/// the app's Documents folder through file coordination. Writing in
-/// place with writeAsBytesSync leaves the Files app showing an EMPTY
-/// folder even though the file exists (visible in Filza). An atomic
-/// rename is the documented, reliably-observed pattern. It also
-/// prevents half-written outputs if the process dies mid-write.
-void _writeFile(String path, List<int> data) {
-  final f = File(path);
-  final tmp = File('$path.vctpart');
-  try {
-    tmp.writeAsBytesSync(data, flush: true);
-    // RenameSync atomically replaces the destination on iOS/Android/
-    // desktop; falls back to delete+rename on exotic filesystems.
-    tmp.renameSync(path);
-  } on FileSystemException {
-    // Fallback: direct write (temp may be on another volume, etc.)
-    if (tmp.existsSync()) tmp.deleteSync();
-    f.writeAsBytesSync(data);
-  }
-}
+/// Atomic file write on native; in-memory store on the web.
+void _writeFile(String path, List<int> data) => vfs.writeBytes(path, data);
 
 /// Best-effort secure delete: one pass of random data, then unlink.
 ///
@@ -406,35 +380,8 @@ void _writeFile(String path, List<int> data) {
 /// time and disk activity made a duress trigger observable (a wrong
 /// password never costs I/O that scales with the file). The data is
 /// destroyed by truncation either way; only the overwrite pass is bounded.
-Future<void> _shredFile(String path, {bool quick = false}) async {
-  final f = File(path);
-  if (!f.existsSync()) return;
-  final size = f.lengthSync();
-  final rng = Random.secure();
-  final raf = f.openSync(mode: FileMode.write); // truncates
-  try {
-    final cap = quick ? 4 * 1024 : size;
-    const chunkSize = 64 * 1024;
-    var remaining = cap;
-    while (remaining > 0) {
-      final n = remaining > chunkSize ? chunkSize : remaining;
-      final buf = Uint8List(n);
-      for (int i = 0; i < n; i++) {
-        buf[i] = rng.nextInt(256);
-      }
-      raf.writeFromSync(buf);
-      remaining -= n;
-    }
-    raf.flushSync();
-  } finally {
-    raf.closeSync();
-  }
-  // v2.5.0 (M5): remove the directory entry too, so the file is gone
-  // rather than left behind as an unreadable random blob.
-  try {
-    f.deleteSync();
-  } catch (_) {}
-}
+Future<void> _shredFile(String path, {bool quick = false}) =>
+    vfs.shredAt(path, quick: quick);
 
 // ---- Format detection ----
 
@@ -560,18 +507,11 @@ class VctFileInfo {
 /// Read only the header of [path] and return its public metadata.
 /// Throws FileSystemException on IO errors.
 VctFileInfo inspectVctFile(String path) {
-  final f = File(path);
-  final size = f.lengthSync();
-  final modified = f.lastModifiedSync();
+  final size = vfs.lengthOf(path);
+  final modified = vfs.modifiedOf(path);
 
-  final raf = f.openSync(mode: FileMode.read);
-  Uint8List head;
-  try {
-    final n = size < _v3HeaderLen ? size : _v3HeaderLen;
-    head = raf.readSync(n);
-  } finally {
-    raf.closeSync();
-  }
+  final n = size < _v3HeaderLen ? size : _v3HeaderLen;
+  final head = vfs.readPrefix(path, n);
 
   final format = detectFormat(head);
   if (format == fmtNone) {
@@ -741,73 +681,7 @@ Future<String> _chooseOutputPath(String fileName, String inputPath) async {
   // The name comes from the ciphertext and is fully attacker controlled.
   // Never join it into a path un-sanitized.
   final safeName = sanitizeFileName(fileName);
-
-  if (!Platform.isIOS && !Platform.isAndroid) {
-    final baseDir = p.dirname(inputPath);
-    var out = p.join(baseDir, safeName);
-    // Re-encrypting a .VCT must not clobber the source file.
-    if (p.equals(out, inputPath)) {
-      final dot = safeName.lastIndexOf('.');
-      final stem = dot > 0 ? safeName.substring(0, dot) : safeName;
-      final ext = dot > 0 ? safeName.substring(dot) : '';
-      out = p.join(baseDir, '${stem}_enc$ext');
-    }
-    out = _uniquePath(out);
-    // Defence in depth: even if sanitization is ever bypassed, never
-    // leave the target directory.
-    if (!p.isWithin(baseDir, out)) {
-      out = p.join(baseDir, 'decrypted_file');
-    }
-    return out;
-  }
-
-  String baseDir;
-  try {
-    if (Platform.isIOS) {
-      baseDir = (await getApplicationDocumentsDirectory()).path;
-    } else {
-      final extDirs = await getExternalStorageDirectories();
-      baseDir = (extDirs != null && extDirs.isNotEmpty)
-          ? extDirs.first.path
-          : (await getApplicationDocumentsDirectory()).path;
-    }
-  } catch (_) {
-    // Path provider unavailable - fall back to old behaviour.
-    final dir = p.dirname(inputPath);
-    final out = p.join(dir, safeName);
-    return p.isWithin(dir, out) ? out : p.join(dir, 'decrypted_file');
-  }
-
-  var out = p.join(baseDir, safeName);
-  if (p.equals(out, inputPath)) {
-    final dot = safeName.lastIndexOf('.');
-    final stem = dot > 0 ? safeName.substring(0, dot) : safeName;
-    final ext = dot > 0 ? safeName.substring(dot) : '';
-    out = p.join(baseDir, '${stem}_enc$ext');
-  }
-  out = _uniquePath(out);
-  if (!p.isWithin(baseDir, out)) {
-    out = p.join(baseDir, 'decrypted_file');
-  }
-  return out;
-}
-
-/// Append " (n)" before the extension until the path is free.
-/// Shared by desktop and mobile so neither silently overwrites a file.
-String _uniquePath(String path) {
-  if (!File(path).existsSync()) return path;
-  final dir = p.dirname(path);
-  final base = p.basename(path);
-  final dot = base.lastIndexOf('.');
-  final stem = dot > 0 ? base.substring(0, dot) : base;
-  final ext = dot > 0 ? base.substring(dot) : '';
-  var i = 1;
-  var candidate = path;
-  while (File(candidate).existsSync()) {
-    candidate = p.join(dir, '$stem ($i)$ext');
-    i++;
-  }
-  return candidate;
+  return vfs.outputPathFor(safeName, inputPath);
 }
 
 // ---- Partition encrypt/decrypt ----
@@ -1302,7 +1176,7 @@ Future<EncryptResult> encryptFile(
     // v2.5.0 (M2): refuse oversized inputs BEFORE loading them, so the
     // user gets a clear message instead of an OOM kill.
     try {
-      final srcLen = File(filePath).lengthSync();
+      final srcLen = vfs.lengthOf(filePath);
       if (srcLen > _maxFileBytes) {
         return EncryptResult(success: false, error: 'FILE_TOO_LARGE');
       }
@@ -1665,7 +1539,7 @@ Future<EncryptResult> encryptFileHybrid(
     // password path enforces, so a 512 MB input could be loaded and
     // triple-encrypted (~3 GB peak) on a mobile device. Same limit here.
     try {
-      final srcLen = File(filePath).lengthSync();
+      final srcLen = vfs.lengthOf(filePath);
       if (srcLen > _maxFileBytes) {
         return EncryptResult(success: false, error: 'FILE_TOO_LARGE');
       }
@@ -1858,7 +1732,7 @@ Future<DecryptResult> decryptFileWithKey(
   try {
     // v2.6.0 (V-06): same ceiling as the password decrypt path.
     try {
-      final srcLen = File(filePath).lengthSync();
+      final srcLen = vfs.lengthOf(filePath);
       if (srcLen > _maxVctBytes) {
         return DecryptResult(success: false, error: 'FILE_TOO_LARGE');
       }
@@ -2233,7 +2107,7 @@ Future<DecryptResult> decryptFile(
   try {
     // v2.5.0 (M2): refuse a container that cannot fit comfortably in memory.
     try {
-      if (File(filePath).lengthSync() > _maxVctBytes) {
+      if (vfs.lengthOf(filePath) > _maxVctBytes) {
         return DecryptResult(success: false, error: 'FILE_TOO_LARGE');
       }
     } catch (_) {
@@ -2318,30 +2192,11 @@ Future<EncryptResult> encryptText(
   // ~1 s PBKDF2 window - or pre-plant a symlink. Now the note goes into a
   // user-private 0700 subdirectory under a random 128-bit name, created
   // with O_EXCL so an existing file/symlink cannot be reused.
-  final dir = Directory(p.join(Directory.systemTemp.path, 'vctcrypt_notes'));
-  if (!dir.existsSync()) {
-    dir.createSync(recursive: true);
-  }
-  if (!Platform.isWindows) {
-    try {
-      Process.runSync('chmod', ['700', dir.path]);
-    } catch (_) {}
-  }
-  final id = List.generate(
-    16,
-    (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
-  ).join();
-  final tmp = File(p.join(dir.path, 'note-$id.txt'));
+  // The web build keeps the same logical flow entirely in memory.
+  final tempPath = await vfs.createTempText(text);
   try {
-    tmp.createSync(exclusive: true);
-    if (!Platform.isWindows) {
-      try {
-        Process.runSync('chmod', ['600', tmp.path]);
-      } catch (_) {}
-    }
-    tmp.writeAsStringSync(text, flush: true);
     return await encryptFile(
-      tmp.path,
+      tempPath,
       password,
       onProgress,
       options: options,
@@ -2349,14 +2204,10 @@ Future<EncryptResult> encryptText(
     );
   } finally {
     // v2.5.0 (M1): the plaintext note is shredded, not merely unlinked.
-    if (tmp.existsSync()) {
+    if (vfs.existsAt(tempPath)) {
       try {
-        await _shredFile(tmp.path);
-      } catch (_) {
-        try {
-          tmp.deleteSync();
-        } catch (_) {}
-      }
+        await _shredFile(tempPath);
+      } catch (_) {}
     }
   }
 }
@@ -2388,16 +2239,15 @@ Future<TextDecryptResult> decryptFileToText(
   String password,
   ProgressCallback? onProgress,
 ) async {
-  final tmp = File(p.join(
-    Directory.systemTemp.path,
+  final tempPath = vfs.tempPath(
     'vctcrypt_textout_${DateTime.now().microsecondsSinceEpoch}.tmp',
-  ));
+  );
   try {
     final result = await decryptFile(
       vctPath,
       password,
       onProgress,
-      outputPath: tmp.path,
+      outputPath: tempPath,
     );
     if (!result.success) {
       return TextDecryptResult(
@@ -2406,7 +2256,7 @@ Future<TextDecryptResult> decryptFileToText(
         duressTriggered: result.duressTriggered,
       );
     }
-    final text = utf8.decode(tmp.readAsBytesSync(), allowMalformed: true);
+    final text = utf8.decode(vfs.readBytes(tempPath), allowMalformed: true);
     return TextDecryptResult(
       success: true,
       text: text,
@@ -2419,14 +2269,10 @@ Future<TextDecryptResult> decryptFileToText(
   } catch (e) {
     return TextDecryptResult(success: false, error: e.toString());
   } finally {
-    if (tmp.existsSync()) {
+    if (vfs.existsAt(tempPath)) {
       try {
-        await _shredFile(tmp.path);
-      } catch (_) {
-        try {
-          tmp.deleteSync();
-        } catch (_) {}
-      }
+        await _shredFile(tempPath);
+      } catch (_) {}
     }
   }
 }

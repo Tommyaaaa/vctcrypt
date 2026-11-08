@@ -5,12 +5,11 @@
 /// keyboard shortcuts Ctrl+1..4 (switch tab) and Ctrl+L (panic lock).
 /// v1.6.0: fifth tab (Keys) inserted at index 2; shortcuts Ctrl+1..5.
 
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../main.dart';
+import '../platform/vfs.dart';
 import '../widgets/onboarding.dart';
 import 'encrypt_screen.dart';
 import 'decrypt_screen.dart';
@@ -65,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // macOS automatically. Bare digits are NOT bound so typing in
     // password fields can never switch tabs.
     Widget withShortcuts(Widget child) {
-      if (Platform.isIOS || Platform.isAndroid) return child;
+      if (isMobileApp) return child;
       return CallbackShortcuts(
         bindings: {
           const SingleActivator(LogicalKeyboardKey.digit1, control: true):

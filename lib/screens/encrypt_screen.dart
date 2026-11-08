@@ -6,9 +6,7 @@
 /// the password becomes optional (dual-channel or key-only files).
 
 import 'dart:async' show unawaited;
-import 'dart:io' show File, Platform;
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
@@ -17,6 +15,8 @@ import '../crypto/vct_crypto.dart' as crypto;
 import '../crypto/vct_keys.dart' as keys;
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../platform/pick_files.dart';
+import '../platform/vfs.dart';
 import '../utils/password_generator.dart';
 import '../widgets/password_strength.dart';
 import '../utils/usage_stats.dart';
@@ -151,6 +151,12 @@ class _EncryptScreenState extends State<EncryptScreen> {
   /// Drive included - no need to hunt for the Documents folder.
   Future<void> _shareOutputs() async {
     if (_okPaths.isEmpty) return;
+    if (isWebPlatform) {
+      for (final path in _okPaths) {
+        await downloadFile(path);
+      }
+      return;
+    }
     await Share.shareXFiles(
       [for (final path in _okPaths) XFile(path)],
       text: _strings.appName,
@@ -159,9 +165,9 @@ class _EncryptScreenState extends State<EncryptScreen> {
 
   Future<void> _pickFile() async {
     // v1.3.0: multi-select for batch encryption.
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
-    if (result != null) {
-      final paths = result.paths.whereType<String>().toList();
+    final picked = await pickFilesForApp(allowMultiple: true);
+    if (picked != null) {
+      final paths = [for (final e in picked) e.path];
       if (paths.isNotEmpty) {
         setState(() {
           _files
@@ -181,10 +187,10 @@ class _EncryptScreenState extends State<EncryptScreen> {
   }
 
   Future<void> _pickDecoyFile() async {
-    final result = await FilePicker.platform.pickFiles();
-    if (result != null && result.files.isNotEmpty) {
+    final picked = await pickFilesForApp();
+    if (picked != null && picked.isNotEmpty) {
       setState(() {
-        _decoyFilePath = result.files.first.path;
+        _decoyFilePath = picked.first.path;
         _resultText = null;
       });
     }
@@ -195,16 +201,13 @@ class _EncryptScreenState extends State<EncryptScreen> {
   /// file is allowed there and validated against the container magic.
   Future<void> _pickRecipient() async {
     final strings = _strings;
-    final isMobile = Platform.isIOS || Platform.isAndroid;
-    final result = await FilePicker.platform.pickFiles(
-      type: isMobile ? FileType.any : FileType.custom,
-      allowedExtensions: isMobile ? null : ['vctpub', 'VCTPUB'],
+    final picked = await pickFilesForApp(
+      allowedExtensions: isMobileApp ? null : ['vctpub', 'VCTPUB'],
     );
-    if (result == null || result.files.isEmpty) return;
-    final path = result.files.first.path;
-    if (path == null) return;
+    if (picked == null || picked.isEmpty) return;
+    final path = picked.first.path;
     try {
-      final bytes = File(path).readAsBytesSync();
+      final bytes = readBytes(path);
       final pub = keys.VctPublicKey.parse(bytes);
       setState(() {
         _recipientPub = pub;
@@ -802,6 +805,9 @@ class _EncryptScreenState extends State<EncryptScreen> {
                 const SizedBox(height: 24),
 
                 // ---- Advanced security options (v1.1.0) ----
+                // Decoy / duress work in the browser too; secure shred is
+                // native-only because a browser cannot overwrite disk
+                // blocks (it only drops its in-memory copy).
                 Card(
                   margin: EdgeInsets.zero,
                   clipBehavior: Clip.antiAlias,
@@ -911,7 +917,8 @@ class _EncryptScreenState extends State<EncryptScreen> {
                         ],
                         const SizedBox(height: 16),
 
-                        // ---- Secure shred ----
+                        // ---- Secure shred (native only) ----
+                        if (!isWebPlatform)
                         Card(
                           margin: EdgeInsets.zero,
                           color: theme.colorScheme.secondaryContainer,
@@ -1059,7 +1066,8 @@ class _EncryptScreenState extends State<EncryptScreen> {
                               ),
                             ] else if (_outputPath != null) ...[
                               Text(
-                                '${strings.outputFile}: $_outputPath',
+                                '${strings.outputFile}: '
+                                '${isWebPlatform ? p.basename(_outputPath!) : _outputPath}',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onPrimaryContainer,
                                 ),
@@ -1072,13 +1080,32 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                   ),
                                 ),
                             ],
-                            if (Platform.isIOS || Platform.isAndroid) ...[
+                            if (isMobileApp) ...[
                               const SizedBox(height: 8),
                               Text(
                                 strings.mobileEncHint,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onPrimaryContainer,
                                   fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                            if (isWebPlatform && _okPaths.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                strings.webDownloadHint,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.tonalIcon(
+                                  onPressed: _shareOutputs,
+                                  icon: const Icon(Icons.download_outlined),
+                                  label: Text(strings.downloadBtn),
                                 ),
                               ),
                             ],
@@ -1144,7 +1171,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
                                 ),
                             ],
                             // v1.4.0: share / save outputs (mobile)
-                            if ((Platform.isIOS || Platform.isAndroid) &&
+                            if ((isMobileApp) &&
                                 _okPaths.isNotEmpty) ...[
                               const SizedBox(height: 12),
                               // v1.5.0: primary full-width action on

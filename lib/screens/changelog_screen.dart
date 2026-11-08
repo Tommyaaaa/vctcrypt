@@ -107,6 +107,15 @@ List<_Entry> _entries(AppStrings s) {
   if (s.lang == AppLanguage.hannom) {
     return [
       const _Entry(
+          '2.7.0',
+          [
+            '網頁版：全瀏覽器移植（Flutter Web），同用 Material Design 3 界面；碼化、解碼、記註、鎖、設置五頁皆備',
+            '高級保復：分區偽裝與脅迫密口復於網頁——脅迫命中與錯密口全同（只報 Wrong password），空露下載吧空露脅迫',
+            '鎖認收 ML-KEM-768 適於網頁：造對、下載 .vctpub／.vctkey、碼化朱公鎖、以私鎖解碼；私鎖以密口包裹留於 localStorage，可下載備份',
+            '網頁安全頭：CSP、X-Frame-Options、Referrer-Policy、Permissions-Policy；CanvasKit 本地分發、空註冊 Service Worker；脅迫碎空仍只於端原生',
+          ],
+          major: true),
+      const _Entry(
           '2.6.0',
           [
             '修正保密自審計 v2.5.0：場頭 V4 今又認證槽位分區、字節版本／標誌於碟吧槽脅——換槽真／偽或移槽脅自集信別皆得拒',
@@ -233,6 +242,15 @@ List<_Entry> _entries(AppStrings s) {
   if (!en) {
     return [
       const _Entry(
+          '2.7.0',
+          [
+            '网页版：完整 Flutter Web 移植，沿用同一套 Material Design 3 界面；加密、解密、笔记、密钥、设置五页齐全',
+            '高级安全选项回归：伪装分区与胁迫密码已恢复到网页端——胁迫命中与错误密码表现完全一致（只报 Wrong password），不出现下载、也不暴露胁迫',
+            '密钥体系适配网页：ML-KEM-768 生成密钥对、下载 .vctpub／.vctkey、按公钥加密、用私钥解锁；私钥以密码包裹保存在 localStorage，可下载备份',
+            '网页安全头：CSP、X-Frame-Options、Referrer-Policy、Permissions-Policy；CanvasKit 本地分发、不注册 Service Worker；胁迫擦除仍仅限原生端',
+          ],
+          major: true),
+      const _Entry(
           '2.6.0',
           [
             '根据 v2.5.0 审计修复安全问题：V4 头部同时认证分区槽位、磁盘上的版本/标志位与胁迫槽，交换真实/诱饵槽或从其他文件移植胁迫槽都会被拒绝',
@@ -356,6 +374,15 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry(
+        '2.7.0',
+        [
+          'Web edition: a full Flutter Web port that keeps the same Material Design 3 interface, with Encrypt, Decrypt, Notes, Keys and Settings pages',
+          'Advanced security is back on the web: decoy partition and duress password are available again - a duress hit behaves exactly like a wrong password (only "Wrong password" is shown), with no download and no duress hint',
+          'Recipient keys on the web: generate ML-KEM-768 key pairs, download .vctpub / .vctkey, encrypt to a public key and unlock with a private key; the private key stays password-wrapped in localStorage and can be downloaded as a backup',
+          'Web security headers: CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy; CanvasKit is self-hosted and no Service Worker is registered; duress shredding stays native-only',
+        ],
+        major: true),
     const _Entry(
         '2.6.0',
         [

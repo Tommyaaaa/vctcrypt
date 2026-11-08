@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:cryptography_flutter/cryptography_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,8 +21,11 @@ void main() async {
   // Android, native AES-GCM on iOS/macOS, background isolates on
   // desktop. Same algorithms, same outputs (the test suite proves it),
   // but key derivation and bulk encryption no longer run on the UI
-  // thread.
-  Cryptography.instance = FlutterCryptography.defaultInstance;
+  // thread. The browser build has no such plugin, so it keeps the
+  // pure-Dart implementations.
+  if (!kIsWeb) {
+    Cryptography.instance = FlutterCryptography.defaultInstance;
+  }
 
   final prefs = await SharedPreferences.getInstance();
 
@@ -74,7 +78,8 @@ AppLanguage _langFromCode(String code) {
     case 'de':
       return AppLanguage.german;
     case 'vi-Hani':
-      return AppLanguage.hannom;
+      // Han-Nom is not shipped in the browser build.
+      return kIsWeb ? AppLanguage.english : AppLanguage.hannom;
     default:
       return AppLanguage.english;
   }
@@ -276,7 +281,9 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
       useMaterial3: true,
       colorScheme: lightScheme,
       fontFamily: 'Noto Sans SC',
-      fontFamilyFallback: const ['TH-Feon'],
+      // TH-Feon only ships in the native bundles (Han-Nom UI is not
+      // offered on the web build), so skip it as a web fallback.
+      fontFamilyFallback: kIsWeb ? null : const ['TH-Feon'],
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: lightScheme.surface,
@@ -303,7 +310,7 @@ class _VCTCryptAppState extends State<VCTCryptApp> {
       useMaterial3: true,
       colorScheme: darkScheme,
       fontFamily: 'Noto Sans SC',
-      fontFamilyFallback: const ['TH-Feon'],
+      fontFamilyFallback: kIsWeb ? null : const ['TH-Feon'],
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: darkScheme.surface,

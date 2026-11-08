@@ -1,0 +1,35 @@
+{
+    "name": "VCTCrypt",
+    "short_name": "VCTCrypt",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#141218",
+    "theme_color": "#6750A4",
+    "description": "Offline file encryption in your browser. Triple AES-256-GCM, PBKDF2 key derivation. Nothing is ever uploaded.",
+    "orientation": "any",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

@@ -7,9 +7,6 @@
 /// they can be backed up and shared with any file manager. This screen
 /// only lists/generates/moves them - no hidden key store, no network.
 
-import 'dart:io' show Directory, File, Platform;
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 import 'package:path/path.dart' as p;
@@ -18,6 +15,8 @@ import 'package:share_plus/share_plus.dart';
 import '../crypto/vct_keys.dart' as keys;
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../platform/pick_files.dart';
+import '../platform/vfs.dart';
 import 'help_screen.dart';
 
 class KeysScreen extends StatefulWidget {
@@ -52,11 +51,10 @@ class _KeysScreenState extends State<KeysScreen> {
     }
     final entries = <_KeyEntry>[];
     try {
-      final files = Directory(dir).listSync(followLinks: false);
-      for (final f in files.whereType<File>()) {
-        final ext = p.extension(f.path).toLowerCase();
+      for (final path in listKeyFiles(dir)) {
+        final ext = p.extension(path).toLowerCase();
         if (ext != '.vctpub' && ext != '.vctkey') continue;
-        entries.add(_entryFor(f.path, ext == '.vctpub'));
+        entries.add(_entryFor(path, ext == '.vctpub'));
       }
     } catch (_) {/* unreadable dir - show empty */}
     entries.sort((a, b) => a.displayName.compareTo(b.displayName));
@@ -70,7 +68,7 @@ class _KeysScreenState extends State<KeysScreen> {
 
   _KeyEntry _entryFor(String path, bool isPublic) {
     try {
-      final bytes = File(path).readAsBytesSync();
+      final bytes = readBytes(path);
       keys.sniffKeyType(bytes); // throws on bad magic/type
       if (isPublic) {
         final pub = keys.VctPublicKey.parse(bytes);
@@ -254,27 +252,27 @@ class _KeysScreenState extends State<KeysScreen> {
 
   Future<void> _import() async {
     final strings = _strings;
-    // Same picker constraint as .VCT/.vctkey: unknown extensions have
-    // no UTI on iOS / MIME on Android, so allow any file there and
-    // validate the container magic ourselves.
-    final isMobile = Platform.isIOS || Platform.isAndroid;
-    final result = await FilePicker.platform.pickFiles(
-      type: isMobile ? FileType.any : FileType.custom,
-      allowedExtensions: isMobile ? null : ['vctpub', 'vctkey', 'VCTPUB', 'VCTKEY'],
+    // Unknown extensions have no UTI on iOS / MIME on Android, so allow
+    // any file there and validate the container magic ourselves. The
+    // browser build reads the picked bytes from memory.
+    final picked = await pickFilesForApp(
+      allowedExtensions: isMobileApp
+          ? null
+          : ['vctpub', 'vctkey', 'VCTPUB', 'VCTKEY'],
     );
-    if (result == null || result.files.isEmpty) return;
-    final srcPath = result.files.first.path;
-    if (srcPath == null) return;
+    if (picked == null || picked.isEmpty) return;
+    final srcPath = picked.first.path;
+    final srcName = picked.first.name;
 
     try {
-      final bytes = File(srcPath).readAsBytesSync();
+      final bytes = readBytes(srcPath);
       keys.sniffKeyType(bytes);
       final dir = await keys.keysDirectory();
-      final ext = p.extension(srcPath).toLowerCase();
+      final ext = p.extension(srcName).toLowerCase();
       final extOk = ext == '.vctpub' || ext == '.vctkey';
       final useExt = extOk ? ext : '.vctkey';
       final dest = await keys.uniqueKeyPath(
-        dir, p.basenameWithoutExtension(srcPath), useExt);
+          dir, p.basenameWithoutExtension(srcName), useExt);
       keys.writeKeyFile(dest, bytes);
       await _reload();
       if (!mounted) return;
@@ -303,6 +301,10 @@ class _KeysScreenState extends State<KeysScreen> {
   // ---- Share / delete ----
 
   Future<void> _share(_KeyEntry e) async {
+    if (isWebPlatform) {
+      await downloadFile(e.path, name: p.basename(e.path));
+      return;
+    }
     await Share.shareXFiles([XFile(e.path)], text: _strings.appName);
   }
 
@@ -330,9 +332,7 @@ class _KeysScreenState extends State<KeysScreen> {
       ),
     );
     if (confirmed != true) return;
-    try {
-      File(e.path).deleteSync();
-    } catch (_) {/* already gone */}
+    deleteAt(e.path);
     await _reload();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -437,7 +437,7 @@ class _KeysScreenState extends State<KeysScreen> {
                 if (_dir != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    _dir!,
+                    isWebPlatform ? strings.keysWebNote : _dir!,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,

@@ -4,16 +4,19 @@
 /// text IN MEMORY - the plaintext never persists on disk (the transient
 /// temp file is shredded). 100% offline.
 
-import 'dart:io' show File, Platform;
+import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
 import '../crypto/vct_crypto.dart' as crypto;
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../platform/pick_files.dart';
+import '../platform/vfs.dart';
 import '../utils/password_generator.dart';
 import '../utils/usage_stats.dart';
 import '../widgets/password_strength.dart';
@@ -111,9 +114,9 @@ class _NotesScreenState extends State<NotesScreen> {
     }
 
     // Desktop: ask where to save the .VCT. Mobile: Documents (same as
-    // regular encryption) + share button afterwards.
+    // regular encryption) + share button afterwards. Browser: download.
     String? outputPath;
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    if (!isWebPlatform && !isMobileApp) {
       final ts = DateTime.now();
       final suggested =
           'VCTCrypt-Note-${ts.year}${_two(ts.month)}${_two(ts.day)}-'
@@ -164,14 +167,12 @@ class _NotesScreenState extends State<NotesScreen> {
   Future<void> _pickFile() async {
     // Same rationale as the decrypt screen: iOS/Android pickers cannot
     // filter by the unregistered .vct extension.
-    final isMobile = Platform.isIOS || Platform.isAndroid;
-    final result = await FilePicker.platform.pickFiles(
-      type: isMobile ? FileType.any : FileType.custom,
-      allowedExtensions: isMobile ? null : ['VCT', 'vct'],
+    final picked = await pickFilesForApp(
+      allowedExtensions: isMobileApp ? null : ['VCT', 'vct'],
     );
-    if (result != null && result.files.isNotEmpty) {
+    if (picked != null && picked.isNotEmpty) {
       setState(() {
-        _filePath = result.files.first.path;
+        _filePath = picked.first.path;
         _resetResult();
       });
     }
@@ -225,6 +226,10 @@ class _NotesScreenState extends State<NotesScreen> {
 
   Future<void> _shareEncrypted() async {
     if (_outputPath == null) return;
+    if (isWebPlatform) {
+      await downloadFile(_outputPath!);
+      return;
+    }
     await Share.shareXFiles([XFile(_outputPath!)], text: _strings.appName);
   }
 
@@ -243,13 +248,16 @@ class _NotesScreenState extends State<NotesScreen> {
 
   Future<void> _saveNoteAsFile() async {
     if (_noteText == null) return;
-    final target = await FilePicker.platform.saveFile(
-      fileName: _noteName?.replaceAll('.txt', '') ?? 'note.txt',
-    );
+    final name = _noteName?.replaceAll('.txt', '') ?? 'note.txt';
+    if (isWebPlatform) {
+      await saveBytes(name, utf8.encode(_noteText!));
+      if (mounted) _showSnackBar(_strings.noteSavedAs);
+      return;
+    }
+    final target = await FilePicker.platform.saveFile(fileName: name);
     if (target == null) return;
     try {
-      final f = File(target);
-      f.writeAsStringSync(_noteText!, flush: true);
+      writeBytes(target, utf8.encode(_noteText!));
       if (mounted) _showSnackBar(_strings.noteSavedAs);
     } catch (_) {
       if (mounted) _showSnackBar(_strings.errWrite, isError: true);
@@ -478,12 +486,25 @@ class _NotesScreenState extends State<NotesScreen> {
             if (_outputPath != null) ...[
               const SizedBox(height: 8),
               Text(
-                Platform.isIOS || Platform.isAndroid
+                isMobileApp
                     ? strings.noteEncryptedMobile
-                    : _outputPath!,
+                    : isWebPlatform
+                        ? '${strings.webDownloadHint}\n${p.basename(_outputPath!)}'
+                        : _outputPath!,
                 style: theme.textTheme.bodySmall?.copyWith(color: fg),
               ),
-              if (Platform.isIOS || Platform.isAndroid) ...[
+              if (isWebPlatform) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    onPressed: _shareEncrypted,
+                    icon: const Icon(Icons.download_outlined),
+                    label: Text(strings.downloadBtn),
+                  ),
+                ),
+              ],
+              if (isMobileApp) ...[
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -535,7 +556,7 @@ class _NotesScreenState extends State<NotesScreen> {
                     icon: const Icon(Icons.share_outlined),
                     label: Text(strings.shareBtn),
                   ),
-                  if (!Platform.isIOS && !Platform.isAndroid)
+                  if (!isMobileApp)
                     OutlinedButton.icon(
                       onPressed: _saveNoteAsFile,
                       icon: const Icon(Icons.save_outlined),

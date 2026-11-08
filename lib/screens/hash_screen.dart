@@ -3,16 +3,16 @@
 /// works on large files without loading them into memory), then compare
 /// against an expected checksum to verify integrity.
 
-import 'dart:io';
-
 import 'package:cryptography/cryptography.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:path/path.dart' as p;
 
 import '../crypto/vendor/mlkem/common/keccak.dart' show Sha3256Sink;
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../platform/pick_files.dart';
+import '../platform/vfs.dart';
 
 class HashScreen extends StatefulWidget {
   const HashScreen({super.key});
@@ -45,9 +45,9 @@ class _HashScreenState extends State<HashScreen> {
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles();
-    final path = result?.files.single.path;
-    if (path == null) return;
+    final picked = await pickFilesForApp();
+    if (picked == null || picked.isEmpty) return;
+    final path = picked.first.path;
     setState(() {
       _path = path;
       _hash = null;
@@ -64,15 +64,14 @@ class _HashScreenState extends State<HashScreen> {
       _hash = null;
     });
     try {
-      final file = File(path);
-      final total = await file.length();
+      final total = lengthOf(path);
       var processed = 0;
       final String hex;
       final algorithm = _algorithm();
       if (algorithm == null) {
         // SHA-3-256: streamed through the bundled FIPS 202 Keccak sponge.
         final sink = Sha3256Sink();
-        await for (final chunk in file.openRead()) {
+        await for (final chunk in readChunks(path)) {
           sink.add(chunk);
           processed += chunk.length;
           if (total > 0) {
@@ -82,7 +81,7 @@ class _HashScreenState extends State<HashScreen> {
         hex = sink.digest().map(_toHex).join();
       } else {
         final sink = algorithm.newHashSink();
-        await for (final chunk in file.openRead()) {
+        await for (final chunk in readChunks(path)) {
           sink.add(chunk);
           processed += chunk.length;
           if (total > 0) {
@@ -167,7 +166,7 @@ class _HashScreenState extends State<HashScreen> {
   Widget build(BuildContext context) {
     final strings = VCTCryptApp.of(context).strings;
     final theme = Theme.of(context);
-    final fileName = _path == null ? null : _path!.split(Platform.pathSeparator).last;
+    final fileName = _path == null ? null : p.basename(_path!);
 
     return Scaffold(
       appBar: AppBar(title: Text(strings.hashTitle)),
@@ -368,7 +367,7 @@ class _HashScreenState extends State<HashScreen> {
 
   String _formatBytes(String path) {
     try {
-      final len = File(path).lengthSync();
+      final len = lengthOf(path);
       if (len < 1024) return '$len B';
       if (len < 1024 * 1024) return '${(len / 1024).toStringAsFixed(1)} KB';
       if (len < 1024 * 1024 * 1024) {

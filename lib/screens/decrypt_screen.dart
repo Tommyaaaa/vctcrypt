@@ -4,9 +4,7 @@
 /// here with the matching .vctkey private key instead of a password.
 
 import 'dart:async' show unawaited;
-import 'dart:io' show File, Platform;
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
@@ -15,6 +13,8 @@ import '../crypto/vct_crypto.dart' as crypto;
 import '../crypto/vct_keys.dart' as keys;
 import '../i18n/strings.dart';
 import '../main.dart';
+import '../platform/pick_files.dart';
+import '../platform/vfs.dart';
 import '../utils/usage_stats.dart';
 import '../widgets/file_drop_zone.dart';
 import '../widgets/file_info_dialog.dart';
@@ -81,14 +81,12 @@ class _DecryptScreenState extends State<DecryptScreen> {
     // (Android's MIME mapping has the same gap for unknown extensions).
     // There we allow any file; the decrypt engine validates the VCT
     // magic bytes and reports a clear error for non-VCT picks.
-    final isMobile = Platform.isIOS || Platform.isAndroid;
-    final result = await FilePicker.platform.pickFiles(
-      type: isMobile ? FileType.any : FileType.custom,
-      allowedExtensions: isMobile ? null : ['VCT', 'vct'],
+    final picked = await pickFilesForApp(
+      allowedExtensions: isMobileApp ? null : ['VCT', 'vct'],
     );
-    if (result != null && result.files.isNotEmpty) {
+    if (picked != null && picked.isNotEmpty) {
       setState(() {
-        _filePath = result.files.first.path;
+        _filePath = picked.first.path;
         _resultText = null;
       });
     }
@@ -99,16 +97,13 @@ class _DecryptScreenState extends State<DecryptScreen> {
   /// there and validated against the container magic + type byte.
   Future<void> _pickKeyFile() async {
     final strings = _strings;
-    final isMobile = Platform.isIOS || Platform.isAndroid;
-    final result = await FilePicker.platform.pickFiles(
-      type: isMobile ? FileType.any : FileType.custom,
-      allowedExtensions: isMobile ? null : ['vctkey', 'VCTKEY'],
+    final picked = await pickFilesForApp(
+      allowedExtensions: isMobileApp ? null : ['vctkey', 'VCTKEY'],
     );
-    if (result == null || result.files.isEmpty) return;
-    final path = result.files.first.path;
-    if (path == null) return;
+    if (picked == null || picked.isEmpty) return;
+    final path = picked.first.path;
     try {
-      final bytes = File(path).readAsBytesSync();
+      final bytes = readBytes(path);
       if (keys.sniffKeyType(bytes) != keys.keyTypePrivate) {
         _showSnackBar(strings.errBadKeyFile, isError: true);
         return;
@@ -156,7 +151,7 @@ class _DecryptScreenState extends State<DecryptScreen> {
     // ---- Unwrap the private key (PBKDF2 600K + AES-256-GCM) ----
     keys.VctPrivateKey privateKey;
     try {
-      final keyBytes = File(_keyPath!).readAsBytesSync();
+      final keyBytes = readBytes(_keyPath!);
       privateKey = await keys.VctPrivateKey.parseWrapped(
           keyBytes, _keyPwController.text);
     } on keys.KeyFileException catch (e) {
@@ -540,7 +535,8 @@ class _DecryptScreenState extends State<DecryptScreen> {
                                 ),
                               ),
                             Text(
-                              '${strings.outputFile}: $_outputPath',
+                              '${strings.outputFile}: '
+                              '${isWebPlatform ? p.basename(_outputPath!) : _outputPath}',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onPrimaryContainer,
                               ),
@@ -552,7 +548,27 @@ class _DecryptScreenState extends State<DecryptScreen> {
                                   color: theme.colorScheme.onPrimaryContainer,
                                 ),
                               ),
-                            if (Platform.isIOS || Platform.isAndroid) ...[
+                            if (isWebPlatform) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                strings.webDownloadHint,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.tonalIcon(
+                                  onPressed: () =>
+                                      downloadFile(_outputPath!, name: _originalName),
+                                  icon: const Icon(Icons.download_outlined),
+                                  label: Text(strings.downloadBtn),
+                                ),
+                              ),
+                            ],
+                            if (isMobileApp) ...[
                               const SizedBox(height: 8),
                               Text(
                                 strings.mobileOutputHint,

@@ -1,10 +1,11 @@
 /// VCTCrypt - File Selection Card
 /// Displays file state, handles tap + drag-and-drop on desktop
 
-import 'dart:io';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+
+import '../platform/vfs.dart';
 
 class FileSelectionCard extends StatefulWidget {
   final String? filePath;
@@ -56,10 +57,10 @@ class _FileSelectionCardState extends State<FileSelectionCard> {
       onDragExited: (_) => setState(() => _isDragging = false),
       onDragDone: (details) {
         if (details.files.isNotEmpty) {
-          final path = details.files.first.path;
-          if (File(path).existsSync()) {
-            widget.onFileDropped(path);
-          }
+          final file = details.files.first;
+          importDroppedFile(file.path, file.name).then((path) {
+            if (path != null && mounted) widget.onFileDropped(path);
+          });
         }
         setState(() => _isDragging = false);
       },
