@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'i18n/strings.dart';
 import 'screens/home_screen.dart';
+import 'utils/usage_stats.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +29,9 @@ void main() async {
   }
 
   final prefs = await SharedPreferences.getInstance();
+  // The web build stores prefs in plaintext localStorage; drop the decoy /
+  // duress counters older builds may have left behind (native keeps them).
+  await UsageStats.scrubWebDeniability(prefs);
 
   final langCode = prefs.getString('lang') ?? 'en';
   final themeIndex = prefs.getInt('theme') ?? 2; // 0=light, 1=dark, 2=system

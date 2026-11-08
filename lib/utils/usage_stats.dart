@@ -5,9 +5,22 @@
 /// Note: counters never record file names, passwords or paths - only
 /// aggregate numbers, so statistics themselves leak no secrets.
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UsageStats {
+  /// Counters that reveal whether a decoy partition or duress password
+  /// exists. On native builds SharedPreferences lives in the app sandbox,
+  /// but on the web it is plaintext `localStorage` that any same-origin
+  /// script (or anyone with the browser profile) can read. Persisting
+  /// these there would hand an observer exactly the fact deniability is
+  /// supposed to hide, so web builds never write them.
+  static const _deniabilityKeys = [
+    'stat.decoy',
+    'stat.duressArmed',
+    'stat.duressFired',
+  ];
+
   final int filesEncrypted;
   final int filesDecrypted;
   final int bytesEncrypted;
@@ -47,9 +60,21 @@ class UsageStats {
         filesShredded: prefs.getInt('stat.shredded') ?? 0,
       );
 
+  /// Remove deniability counters from the web build's plaintext storage.
+  /// Native builds keep them (private app sandbox); the web scrubs values
+  /// written by older builds, right after startup and on every read.
+  static Future<void> scrubWebDeniability([SharedPreferences? prefs]) async {
+    if (!kIsWeb) return;
+    final p = prefs ?? await SharedPreferences.getInstance();
+    for (final k in _deniabilityKeys) {
+      if (p.containsKey(k)) await p.remove(k);
+    }
+  }
+
   /// Load current statistics.
   static Future<UsageStats> load() async {
     final prefs = await SharedPreferences.getInstance();
+    await scrubWebDeniability(prefs);
     return _read(prefs);
   }
 
@@ -65,9 +90,9 @@ class UsageStats {
       prefs.setInt('stat.enc', (prefs.getInt('stat.enc') ?? 0) + 1),
       prefs.setInt(
           'stat.encBytes', (prefs.getInt('stat.encBytes') ?? 0) + bytes),
-      if (decoy)
+      if (decoy && !kIsWeb)
         prefs.setInt('stat.decoy', (prefs.getInt('stat.decoy') ?? 0) + 1),
-      if (duress)
+      if (duress && !kIsWeb)
         prefs.setInt(
             'stat.duressArmed', (prefs.getInt('stat.duressArmed') ?? 0) + 1),
       if (shredded)
@@ -87,7 +112,9 @@ class UsageStats {
   }
 
   /// Record a duress wipe being triggered (the file was destroyed).
+  /// Never persisted on the web - see [_deniabilityKeys].
   static Future<void> recordDuressTrigger() async {
+    if (kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
         'stat.duressFired', (prefs.getInt('stat.duressFired') ?? 0) + 1);
