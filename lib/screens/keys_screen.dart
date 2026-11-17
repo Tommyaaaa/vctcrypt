@@ -27,12 +27,16 @@ class KeysScreen extends StatefulWidget {
 }
 
 /// v2.7.1 (audit N-02): true when every character belongs to the same
-/// class (all digits / all lowercase / all uppercase / all other), which
-/// is what makes "12345678" so much cheaper to brute-force than a mixed
-/// password of the same length.
+/// ASCII class (all digits / all lowercase / all uppercase / all symbols),
+/// which is what makes "12345678" so much cheaper to brute-force than a
+/// mixed password of the same length. Non-ASCII text is never flagged.
 bool _singleCharacterClass(String pw) {
   int? only;
   for (final r in pw.runes) {
+    // Non-ASCII text (CJK, accented scripts, emoji) carries far more
+    // entropy per character than the ASCII classes below, so it is never
+    // flagged - otherwise a good Chinese passphrase would get a warning.
+    if (r > 0x7E) return false;
     final int cls;
     if (r >= 0x30 && r <= 0x39) {
       cls = 0; // digits
@@ -41,7 +45,7 @@ bool _singleCharacterClass(String pw) {
     } else if (r >= 0x41 && r <= 0x5A) {
       cls = 2; // uppercase
     } else {
-      cls = 3; // symbols / other scripts
+      cls = 3; // ASCII symbols
     }
     if (only == null) {
       only = cls;
