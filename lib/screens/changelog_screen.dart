@@ -107,6 +107,13 @@ List<_Entry> _entries(AppStrings s) {
   if (s.lang == AppLanguage.hannom) {
     return [
       const _Entry(
+          '2.7.1',
+          [
+            '修保密（審計 N-01）：數計偽裝／脅迫／碎信空只藏，今盡除——於網頁乃明文 localStorage，「duressFired」即告觀者脅迫密口曾存吧曾用；各端起時自清舊數計',
+            '造鎖今察包裹密口：若只用一類字（純數字／純字母／純符號）則顯警，純八位數月內可破',
+            '網頁 CSP 之 connect-src 補 blob:，容拖放集信；其餘安全頭與離線分發不變',
+          ]),
+      const _Entry(
           '2.7.0',
           [
             '網頁版：全瀏覽器移植（Flutter Web），同用 Material Design 3 界面；碼化、解碼、記註、鎖、設置五頁皆備',
@@ -242,6 +249,13 @@ List<_Entry> _entries(AppStrings s) {
   if (!en) {
     return [
       const _Entry(
+          '2.7.1',
+          [
+            '安全修复（审计 N-01）：伪装/胁迫/粉碎计数器不再只是隐藏显示，而是彻底删除——网页端它们存于明文 localStorage，"duressFired" 等于告诉查看者存在并触发过胁迫密码；各平台启动时自动清除旧计数',
+            '生成密钥时检查包裹密码：若只用单一字符类（纯数字／纯字母／纯符号）则给出醒目警告，纯 8 位数字数月内可暴力破解',
+            '网页 CSP 的 connect-src 增加 blob:，支持拖放文件；其余安全头与离线分发策略不变',
+          ]),
+      const _Entry(
           '2.7.0',
           [
             '网页版：完整 Flutter Web 移植，沿用同一套 Material Design 3 界面；加密、解密、笔记、密钥、设置五页齐全',
@@ -374,6 +388,13 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry(
+        '2.7.1',
+        [
+          'Security (audit N-01): the decoy / duress / shred counters are now deleted outright instead of merely hidden - on the web they lived in plaintext localStorage, so "duressFired" told an observer that a duress password existed and had been used; older counters are wiped at startup on every platform',
+          'Key generation checks the wrap password: a single character class (all digits, all letters or all symbols) now shows a clear warning, since eight digits fall in months',
+          'The web CSP now allows blob: in connect-src for drag-and-drop; the other security headers and the offline delivery strategy are unchanged',
+        ]),
     const _Entry(
         '2.7.0',
         [

@@ -29,9 +29,8 @@ void main() async {
   }
 
   final prefs = await SharedPreferences.getInstance();
-  // The web build stores prefs in plaintext localStorage; drop the decoy /
-  // duress counters older builds may have left behind (native keeps them).
-  await UsageStats.scrubWebDeniability(prefs);
+  // Drop deniability counters written by 2.5.0 - 2.7.0 (see UsageStats).
+  await UsageStats.scrubLegacyDeniability(prefs);
 
   final langCode = prefs.getString('lang') ?? 'en';
   final themeIndex = prefs.getInt('theme') ?? 2; // 0=light, 1=dark, 2=system

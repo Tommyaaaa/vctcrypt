@@ -233,11 +233,11 @@ class _DecryptScreenState extends State<DecryptScreen> {
     if (!mounted) return;
 
     // v1.2.0: local usage statistics (aggregate numbers only).
+    // v2.7.1 (audit N-01): a duress hit is deliberately NOT recorded
+    // anywhere - a persisted counter would re-create the trace that the
+    // identical error message exists to avoid.
     if (result.success) {
       unawaited(UsageStats.recordDecrypt(bytes: result.outputSize ?? 0));
-    } else if (result.duressTriggered) {
-      // Silent by design (deniability) - only the local counter knows.
-      unawaited(UsageStats.recordDuressTrigger());
     }
 
     setState(() {

@@ -4,69 +4,52 @@
 ///
 /// Note: counters never record file names, passwords or paths - only
 /// aggregate numbers, so statistics themselves leak no secrets.
+///
+/// v2.7.1 (audit N-01): the decoy / duress / shred counters are gone
+/// entirely. They were write-only since v2.5.0 (never displayed), and on
+/// the web SharedPreferences is plaintext localStorage that any
+/// same-origin script can read - a "duressFired" key there hands an
+/// observer exactly the fact deniability is supposed to hide.
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UsageStats {
-  /// Counters that reveal whether a decoy partition or duress password
-  /// exists. On native builds SharedPreferences lives in the app sandbox,
-  /// but on the web it is plaintext `localStorage` that any same-origin
-  /// script (or anyone with the browser profile) can read. Persisting
-  /// these there would hand an observer exactly the fact deniability is
-  /// supposed to hide, so web builds never write them.
-  static const _deniabilityKeys = [
+  /// Legacy keys written by 2.5.0 - 2.7.0. Scrubbed on every platform at
+  /// startup so an upgrade erases the trace instead of keeping it forever.
+  static const _legacyDeniabilityKeys = [
     'stat.decoy',
     'stat.duressArmed',
     'stat.duressFired',
+    'stat.shredded',
   ];
 
   final int filesEncrypted;
   final int filesDecrypted;
   final int bytesEncrypted;
   final int bytesDecrypted;
-  final int decoyPartitions;
-  final int duressArmed;
-  final int duressTriggered;
-  final int filesShredded;
 
   const UsageStats({
     this.filesEncrypted = 0,
     this.filesDecrypted = 0,
     this.bytesEncrypted = 0,
     this.bytesDecrypted = 0,
-    this.decoyPartitions = 0,
-    this.duressArmed = 0,
-    this.duressTriggered = 0,
-    this.filesShredded = 0,
   });
 
   bool get isEmpty =>
-      filesEncrypted == 0 &&
-      filesDecrypted == 0 &&
-      decoyPartitions == 0 &&
-      duressArmed == 0 &&
-      duressTriggered == 0 &&
-      filesShredded == 0;
+      filesEncrypted == 0 && filesDecrypted == 0 && bytesEncrypted == 0;
 
   static UsageStats _read(SharedPreferences prefs) => UsageStats(
         filesEncrypted: prefs.getInt('stat.enc') ?? 0,
         filesDecrypted: prefs.getInt('stat.dec') ?? 0,
         bytesEncrypted: prefs.getInt('stat.encBytes') ?? 0,
         bytesDecrypted: prefs.getInt('stat.decBytes') ?? 0,
-        decoyPartitions: prefs.getInt('stat.decoy') ?? 0,
-        duressArmed: prefs.getInt('stat.duressArmed') ?? 0,
-        duressTriggered: prefs.getInt('stat.duressFired') ?? 0,
-        filesShredded: prefs.getInt('stat.shredded') ?? 0,
       );
 
-  /// Remove deniability counters from the web build's plaintext storage.
-  /// Native builds keep them (private app sandbox); the web scrubs values
-  /// written by older builds, right after startup and on every read.
-  static Future<void> scrubWebDeniability([SharedPreferences? prefs]) async {
-    if (!kIsWeb) return;
+  /// Delete deniability counters left behind by older releases. Called
+  /// once at startup and again on every read.
+  static Future<void> scrubLegacyDeniability([SharedPreferences? prefs]) async {
     final p = prefs ?? await SharedPreferences.getInstance();
-    for (final k in _deniabilityKeys) {
+    for (final k in _legacyDeniabilityKeys) {
       if (p.containsKey(k)) await p.remove(k);
     }
   }
@@ -74,30 +57,17 @@ class UsageStats {
   /// Load current statistics.
   static Future<UsageStats> load() async {
     final prefs = await SharedPreferences.getInstance();
-    await scrubWebDeniability(prefs);
+    await scrubLegacyDeniability(prefs);
     return _read(prefs);
   }
 
   /// Record one successful encryption.
-  static Future<void> recordEncrypt({
-    required int bytes,
-    bool decoy = false,
-    bool duress = false,
-    bool shredded = false,
-  }) async {
+  static Future<void> recordEncrypt({required int bytes}) async {
     final prefs = await SharedPreferences.getInstance();
     await Future.wait([
       prefs.setInt('stat.enc', (prefs.getInt('stat.enc') ?? 0) + 1),
       prefs.setInt(
           'stat.encBytes', (prefs.getInt('stat.encBytes') ?? 0) + bytes),
-      if (decoy && !kIsWeb)
-        prefs.setInt('stat.decoy', (prefs.getInt('stat.decoy') ?? 0) + 1),
-      if (duress && !kIsWeb)
-        prefs.setInt(
-            'stat.duressArmed', (prefs.getInt('stat.duressArmed') ?? 0) + 1),
-      if (shredded)
-        prefs.setInt(
-            'stat.shredded', (prefs.getInt('stat.shredded') ?? 0) + 1),
     ]);
   }
 
@@ -111,15 +81,6 @@ class UsageStats {
     ]);
   }
 
-  /// Record a duress wipe being triggered (the file was destroyed).
-  /// Never persisted on the web - see [_deniabilityKeys].
-  static Future<void> recordDuressTrigger() async {
-    if (kIsWeb) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(
-        'stat.duressFired', (prefs.getInt('stat.duressFired') ?? 0) + 1);
-  }
-
   /// Reset all counters to zero.
   static Future<void> reset() async {
     final prefs = await SharedPreferences.getInstance();
@@ -129,10 +90,7 @@ class UsageStats {
         'stat.dec',
         'stat.encBytes',
         'stat.decBytes',
-        'stat.decoy',
-        'stat.duressArmed',
-        'stat.duressFired',
-        'stat.shredded',
+        ..._legacyDeniabilityKeys,
       ])
         prefs.remove(k),
     ]);

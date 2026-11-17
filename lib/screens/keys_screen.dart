@@ -26,6 +26,32 @@ class KeysScreen extends StatefulWidget {
   State<KeysScreen> createState() => _KeysScreenState();
 }
 
+/// v2.7.1 (audit N-02): true when every character belongs to the same
+/// class (all digits / all lowercase / all uppercase / all other), which
+/// is what makes "12345678" so much cheaper to brute-force than a mixed
+/// password of the same length.
+bool _singleCharacterClass(String pw) {
+  int? only;
+  for (final r in pw.runes) {
+    final int cls;
+    if (r >= 0x30 && r <= 0x39) {
+      cls = 0; // digits
+    } else if (r >= 0x61 && r <= 0x7A) {
+      cls = 1; // lowercase
+    } else if (r >= 0x41 && r <= 0x5A) {
+      cls = 2; // uppercase
+    } else {
+      cls = 3; // symbols / other scripts
+    }
+    if (only == null) {
+      only = cls;
+    } else if (only != cls) {
+      return false;
+    }
+  }
+  return true;
+}
+
 class _KeysScreenState extends State<KeysScreen> {
   List<_KeyEntry> _entries = [];
   bool _loading = true;
@@ -139,6 +165,7 @@ class _KeysScreenState extends State<KeysScreen> {
                 TextField(
                   controller: pwCtl,
                   obscureText: obscure,
+                  onChanged: (_) => setDialog(() {}),
                   decoration: InputDecoration(
                     labelText: strings.keyPwLabel,
                     prefixIcon: const Icon(Icons.lock),
@@ -168,6 +195,27 @@ class _KeysScreenState extends State<KeysScreen> {
                         color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                       ),
                 ),
+                if (pwCtl.text.runes.length >= 8 &&
+                    _singleCharacterClass(pwCtl.text)) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          size: 18,
+                          color: Theme.of(ctx).colorScheme.error),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          strings.keyPwWeak,
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(ctx).colorScheme.error,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

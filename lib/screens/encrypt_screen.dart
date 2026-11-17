@@ -433,12 +433,7 @@ class _EncryptScreenState extends State<EncryptScreen> {
         anyShredded = anyShredded || result.shreddedOriginal;
         anyKem = anyKem || result.usedKem;
         // v1.2.0: local usage statistics (no names/paths recorded).
-        unawaited(UsageStats.recordEncrypt(
-          bytes: result.outputSize ?? 0,
-          decoy: result.usedDecoy,
-          duress: result.usedDuress,
-          shredded: result.shreddedOriginal,
-        ));
+        unawaited(UsageStats.recordEncrypt(bytes: result.outputSize ?? 0));
       } else {
         failCount++;
         firstError ??= result.error;

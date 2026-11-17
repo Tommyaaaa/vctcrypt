@@ -635,10 +635,11 @@ class _StatsCardState extends State<_StatsCard> {
                 value:
                     UsageStats.formatBytes(stats.bytesDecrypted, strings.bytes),
               ),
-              // v2.5.0 (H3): decoy / duress / shred counters are no longer
-              // displayed. Showing them handed an observer exactly the fact
-              // deniability is supposed to hide. The counters are still
-              // recorded locally (no network) for potential diagnostics.
+              // v2.5.0 (H3) hid the decoy / duress / shred counters because
+              // showing them handed an observer exactly the fact deniability
+              // is supposed to hide. v2.7.1 (audit N-01) removed the counters
+              // themselves - they were write-only, and on the web they lived
+              // in readable localStorage.
               const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerRight,
