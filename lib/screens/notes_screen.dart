@@ -73,11 +73,18 @@ class _NotesScreenState extends State<NotesScreen> {
     super.dispose();
   }
 
+  /// Auto-lock fired: drop every secret on this screen, including the
+  /// plaintext being typed and any decrypted note (audit A-S-1). Before
+  /// v2.7.2 only the password fields were cleared, so a locked screen
+  /// left the last decrypted note readable in state.
   void _onAutoLock() {
     if (!mounted) return;
     _pwController.clear();
     _pw2Controller.clear();
     _dPwController.clear();
+    _textController.clear();
+    _statusText = '';
+    _resetResult();
     setState(() {});
   }
 
@@ -246,8 +253,31 @@ class _NotesScreenState extends State<NotesScreen> {
     await Share.share(_noteText!, subject: _noteName);
   }
 
+  /// v2.7.2 (audit A-S-2): "Save as file" writes the decrypted note as a
+  /// PLAINTEXT file. The old label implied the note stayed protected, so
+  /// the user now has to confirm that the saved copy is unencrypted.
   Future<void> _saveNoteAsFile() async {
     if (_noteText == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded),
+        title: Text(_strings.noteSaveAsWarnTitle),
+        content: Text(_strings.noteSaveAsWarnBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(_strings.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(_strings.noteSaveAsFile),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     final name = _noteName?.replaceAll('.txt', '') ?? 'note.txt';
     if (isWebPlatform) {
       await saveBytes(name, utf8.encode(_noteText!));

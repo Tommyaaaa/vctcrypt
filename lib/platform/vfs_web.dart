@@ -19,15 +19,31 @@ const String _lsPrefix = 'vctcrypt.key.';
 final Map<String, Uint8List> _store = _hydrateKeys();
 final Random _rng = Random.secure();
 
+/// v2.7.2 (audit A-S-12): a failed localStorage write is no longer
+/// swallowed. The UI checks this after generating a key so it can offer a
+/// backup download instead of silently losing the key on reload.
+String? _lastKeyPersistError;
+
+String? takeKeyPersistError() {
+  final e = _lastKeyPersistError;
+  _lastKeyPersistError = null;
+  return e;
+}
+
 Map<String, Uint8List> _hydrateKeys() {
   final out = <String, Uint8List>{};
   try {
     final ls = html.window.localStorage;
     for (final key in ls.keys) {
       if (!key.startsWith(_lsPrefix)) continue;
-      final b64 = ls[key];
-      if (b64 == null) continue;
-      out['$_keysDir/${key.substring(_lsPrefix.length)}'] = base64Decode(b64);
+      // A single corrupt entry must not drop the remaining keys.
+      try {
+        final b64 = ls[key];
+        if (b64 == null) continue;
+        out['$_keysDir/${key.substring(_lsPrefix.length)}'] = base64Decode(b64);
+      } catch (_) {
+        continue;
+      }
     }
   } catch (_) {}
   return out;
@@ -75,7 +91,12 @@ void writeBytes(String path, List<int> data) {
     try {
       html.window.localStorage['$_lsPrefix${p.basename(path)}'] =
           base64Encode(bytes);
-    } catch (_) {}
+    } catch (e) {
+      // Quota exceeded / storage disabled (private mode, site data
+      // blocked). Remember it so the Keys screen can warn and offer a
+      // download before the tab is closed (audit A-S-12).
+      _lastKeyPersistError = e.toString();
+    }
   }
 }
 

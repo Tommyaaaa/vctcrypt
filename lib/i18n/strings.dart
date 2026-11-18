@@ -68,7 +68,7 @@ class AppStrings {
 
   // ---- App ----
   String get appName => 'VCTCrypt';
-  String get appVersion => 'v2.7.1';
+  String get appVersion => 'v2.7.2';
   String get guiVersion =>
       tr('[GUI Version]', '[图形界面版]', '[Version GUI]', '[GUI-Version]', '[界面版]');
   String get author => 'Tommy';
@@ -79,11 +79,11 @@ class AppStrings {
       'Algorithmus: VCT-Crypt (AES-256 x3 + ML-KEM-768)',
       '算法: VCT-Crypt (AES-256 x3 + ML-KEM-768)');
   String get whatsNew => tr(
-      'v2.7.1 (security): the decoy / duress / shred counters are removed entirely instead of only hidden - on the web they were plaintext localStorage, so "duressFired" told an observer that a duress password existed and had been used; old counters are wiped at startup on every platform. Key generation now warns when the .vctkey wrap password uses a single character class (eight digits fall in months), and the web CSP allows blob: for drag-and-drop. v2.7.0 web edition: a full browser port with the same Material 3 interface - decoy partition, duress password (a duress hit is rejected exactly like a wrong password) and ML-KEM-768 recipient keys all work on the web; the private key stays password-wrapped inside this browser and can be downloaded as a backup. New in v2.6.0 (security): the V4 header also authenticates the partition slot, the on-disk version/flags bytes and the duress slot, so swapping real/decoy slots or grafting a duress slot is rejected; the recipient fingerprint is shown and must be confirmed before encrypting to a .vctpub; note temp files use a private 0700 directory with random names, and encrypted output names are randomized; ML-KEM paths enforce size ceilings; passwords count Unicode code points and need at least 8; duress shred I/O no longer scales with file size; decrypted names drop bidi and zero-width characters. Files from v2.5.0 and older still open.',
-      'v2.7.1 安全更新：伪装/胁迫/粉碎计数器不再仅隐藏显示，而是彻底删除——网页端它们存于明文 localStorage，"duressFired" 等于告诉查看者存在并触发过胁迫密码；升级后各平台启动时自动清除旧计数。生成密钥时，若 .vctkey 包裹密码只用单一字符类（纯 8 位数字数月可破），界面会给出醒目警告；网页 CSP 的 connect-src 补上 blob: 以支持拖放。v2.7.0 网页版：完整浏览器移植，沿用同一套 Material Design 3 界面——伪装分区、胁迫密码（命中时与错误密码表现完全一致）与 ML-KEM-768 收件人密钥均可在网页端使用；私钥以密码包裹保存在当前浏览器内，并支持下载备份。v2.6.0 安全更新：V4 头部同时认证分区槽位、磁盘上的版本/标志位与胁迫槽，交换真实/诱饵槽或移植胁迫槽都会被拒绝；加密给 .vctpub 前显示收件人指纹并要求确认；笔记临时明文改用 0700 私有目录 + 随机名，加密输出名也随之随机化；ML-KEM 路径补上大小上限；密码按 Unicode 码点计数且至少 8 位；胁迫销毁的 I/O 不再随文件大小增长；解密文件名剔除双向覆写与零宽字符。v2.5.0 及更早的文件照常打开。',
-      'v2.7.1 (sécurité) : les compteurs leurre / contrainte / destruction sont supprimés au lieu d\'être seulement masqués - sur le web ils étaient en localStorage en clair, donc « duressFired » révélait qu\'un mot de passe de contrainte existait et avait servi ; les anciens compteurs sont effacés au démarrage sur toutes les plateformes. La génération de clé avertit désormais si le mot de passe de la .vctkey n\'utilise qu\'une classe de caractères (huit chiffres tombent en quelques mois), et la CSP web autorise blob: pour le glisser-déposer. Édition web v2.7.0 : portage complet du navigateur avec la même interface Material 3 - partition leurre, mot de passe de contrainte (rejeté exactement comme un mot de passe erroné) et clés destinataires ML-KEM-768 fonctionnent sur le web ; la clé privée reste protégée par mot de passe dans ce navigateur et peut être téléchargée. Nouveautés de la v2.6.0 (sécurité) : l\'en-tête V4 authentifie aussi l\'emplacement de la partition, les octets version/drapeaux du disque et l\'emplacement de contrainte, donc échanger les emplacements réel/leurre ou greffer un emplacement de contrainte est rejeté ; l\'empreinte du destinataire est affichée et doit être confirmée avant de chiffrer vers une .vctpub ; les fichiers temporaires des notes utilisent un dossier privé 0700 avec des noms aléatoires, et le nom des sorties chiffrées est randomisé ; les chemins ML-KEM appliquent des plafonds de taille ; les mots de passe comptent les points de code Unicode et exigent 8 caractères ; l\'E/S de destruction sous contrainte ne dépend plus de la taille du fichier ; les noms décryptés perdent les caractères bidirectionnels et à largeur nulle. Les fichiers v2.5.0 et antérieurs s\'ouvrent toujours.',
-      'v2.7.1 (Sicherheit): Die Köder-/Zwangs-/Vernichtungs-Zähler werden entfernt statt nur ausgeblendet – im Web lagen sie im Klartext-localStorage, sodass "duressFired" verriet, dass ein Zwangspasswort existierte und benutzt wurde; alte Zähler werden beim Start auf allen Plattformen gelöscht. Die Schlüsselerzeugung warnt jetzt, wenn das .vctkey-Passwort nur eine Zeichenklasse nutzt (acht Ziffern fallen in Monaten), und die Web-CSP erlaubt blob: für Drag-and-drop. Web-Edition v2.7.0: vollständige Browser-Portierung mit derselben Material-3-Oberfläche – Köder-Partition, Zwangspasswort (wird genau wie ein falsches Passwort abgelehnt) und ML-KEM-768-Empfängerschlüssel funktionieren im Web; der private Schlüssel bleibt passwortgeschützt in diesem Browser und kann heruntergeladen werden. Neues in v2.6.0 (Sicherheit): Der V4-Header authentifiziert jetzt auch den Partitions-Slot, die Version/Flags-Bytes auf der Platte und den Zwangs-Slot – das Tauschen von Echt-/Köder-Slots oder das Anhängen eines Zwangs-Slots wird abgelehnt; der Empfänger-Fingerabdruck wird angezeigt und muss vor dem Verschlüsseln an eine .vctpub bestätigt werden; Notiz-Temporärdateien nutzen ein privates 0700-Verzeichnis mit Zufallsnamen, verschlüsselte Ausgaben werden zufällig benannt; ML-KEM-Pfade erzwingen Größenlimits; Passwörter zählen Unicode-Codepunkte und brauchen mindestens 8; die Zwangs-Lösch-I/O skaliert nicht mehr mit der Dateigröße; entschlüsselte Namen verlieren Bidi- und Zero-Width-Zeichen. Dateien aus v2.5.0 und älter öffnen weiterhin.',
-      'v2.7.1（修保密）：數計偽裝／脅迫／碎信空只藏，今盡除——於網頁乃明文 localStorage，「duressFired」即告觀者脅迫密口曾存吧曾用；舊數計各端起時自清。造鎖若 .vctkey 包裹密口只用一類字（純八位數月內可破），界面顯警；網頁 CSP 之 connect-src 補 blob: 以容拖放。v2.7.0 網頁版：全瀏覽器移植，同用 Material Design 3 界面——分區偽裝、脅迫密口（中時與錯密口全同）吧鎖認收 ML-KEM-768 皆得用於網頁；私鎖以密口包裹留於此瀏覽器，可下載備份。v2.6.0 版本新（修保密）：場頭 V4 今又認證槽位分區、字節版本／標誌於碟吧槽脅，換槽真偽或移槽脅皆得拒；碼化朱 .vctpub 前顯指紋鎖須確認；暫文記註居目私 0700 名隨機，名集信碼化亦隨機；通道 ML-KEM 今固界大小；密口計碼點 Unicode 吧須 ≥8；IO 碎脅空仍隨大小集信；名解碼得除符雙向吧零寬。集信 v2.5.0 吧舊開如常。');
+      'v2.7.2 (security): the original is shredded only after the freshly written container is fully re-decrypted layer by layer (audit C-S-2); auto-lock also clears the note text and any decrypted note; Save as file confirms that the copy is plaintext; one strength estimator is shared by every field and weak key wrap passwords need a second confirmation; cracking-time text uses the honest 10k guesses/s. v2.7.1 (security): the decoy / duress / shred counters are removed entirely instead of only hidden - on the web they were plaintext localStorage, so "duressFired" told an observer that a duress password existed and had been used; old counters are wiped at startup on every platform. Key generation now warns when the .vctkey wrap password uses a single character class (eight digits fall in months), and the web CSP allows blob: for drag-and-drop. v2.7.0 web edition: a full browser port with the same Material 3 interface - decoy partition, duress password (a duress hit is rejected exactly like a wrong password) and ML-KEM-768 recipient keys all work on the web; the private key stays password-wrapped inside this browser and can be downloaded as a backup. New in v2.6.0 (security): the V4 header also authenticates the partition slot, the on-disk version/flags bytes and the duress slot, so swapping real/decoy slots or grafting a duress slot is rejected; the recipient fingerprint is shown and must be confirmed before encrypting to a .vctpub; note temp files use a private 0700 directory with random names, and encrypted output names are randomized; ML-KEM paths enforce size ceilings; passwords count Unicode code points and need at least 8; duress shred I/O no longer scales with file size; decrypted names drop bidi and zero-width characters. Files from v2.5.0 and older still open.',
+      'v2.7.2 安全更新：只有新写入的容器被逐层完整试解密通过后才粉碎原件（审计 C-S-2）；自动锁同时清空笔记文本与已解密内容；“另存为”会确认该副本为明文；全应用统一密码强度估算，弱密钥包裹密码需二次确认；破解时间按诚实的每秒一万次计算。v2.7.1 安全更新：伪装/胁迫/粉碎计数器不再仅隐藏显示，而是彻底删除——网页端它们存于明文 localStorage，"duressFired" 等于告诉查看者存在并触发过胁迫密码；升级后各平台启动时自动清除旧计数。生成密钥时，若 .vctkey 包裹密码只用单一字符类（纯 8 位数字数月可破），界面会给出醒目警告；网页 CSP 的 connect-src 补上 blob: 以支持拖放。v2.7.0 网页版：完整浏览器移植，沿用同一套 Material Design 3 界面——伪装分区、胁迫密码（命中时与错误密码表现完全一致）与 ML-KEM-768 收件人密钥均可在网页端使用；私钥以密码包裹保存在当前浏览器内，并支持下载备份。v2.6.0 安全更新：V4 头部同时认证分区槽位、磁盘上的版本/标志位与胁迫槽，交换真实/诱饵槽或移植胁迫槽都会被拒绝；加密给 .vctpub 前显示收件人指纹并要求确认；笔记临时明文改用 0700 私有目录 + 随机名，加密输出名也随之随机化；ML-KEM 路径补上大小上限；密码按 Unicode 码点计数且至少 8 位；胁迫销毁的 I/O 不再随文件大小增长；解密文件名剔除双向覆写与零宽字符。v2.5.0 及更早的文件照常打开。',
+      'v2.7.2 (sécurité) : l\'original n\'est détruit qu\'après un déchiffrement complet du conteneur fraîchement écrit (audit C-S-2) ; le verrouillage auto efface aussi les notes et le texte déchiffré ; « Enregistrer en tant que fichier » confirme que la copie est en clair ; un estimateur de robustesse unique sert à tous les champs et un mot de passe de clé faible exige une seconde confirmation ; le temps de cassage utilise 10 000 essais/s. v2.7.1 (sécurité) : les compteurs leurre / contrainte / destruction sont supprimés au lieu d\'être seulement masqués - sur le web ils étaient en localStorage en clair, donc « duressFired » révélait qu\'un mot de passe de contrainte existait et avait servi ; les anciens compteurs sont effacés au démarrage sur toutes les plateformes. La génération de clé avertit désormais si le mot de passe de la .vctkey n\'utilise qu\'une classe de caractères (huit chiffres tombent en quelques mois), et la CSP web autorise blob: pour le glisser-déposer. Édition web v2.7.0 : portage complet du navigateur avec la même interface Material 3 - partition leurre, mot de passe de contrainte (rejeté exactement comme un mot de passe erroné) et clés destinataires ML-KEM-768 fonctionnent sur le web ; la clé privée reste protégée par mot de passe dans ce navigateur et peut être téléchargée. Nouveautés de la v2.6.0 (sécurité) : l\'en-tête V4 authentifie aussi l\'emplacement de la partition, les octets version/drapeaux du disque et l\'emplacement de contrainte, donc échanger les emplacements réel/leurre ou greffer un emplacement de contrainte est rejeté ; l\'empreinte du destinataire est affichée et doit être confirmée avant de chiffrer vers une .vctpub ; les fichiers temporaires des notes utilisent un dossier privé 0700 avec des noms aléatoires, et le nom des sorties chiffrées est randomisé ; les chemins ML-KEM appliquent des plafonds de taille ; les mots de passe comptent les points de code Unicode et exigent 8 caractères ; l\'E/S de destruction sous contrainte ne dépend plus de la taille du fichier ; les noms décryptés perdent les caractères bidirectionnels et à largeur nulle. Les fichiers v2.5.0 et antérieurs s\'ouvrent toujours.',
+      'v2.7.2 (Sicherheit): Das Original wird erst gelöscht, nachdem der neu geschriebene Container vollständig testentschlüsselt wurde (Audit C-S-2); die automatische Sperre leert auch Notizen und entschlüsselten Text; „Als Datei speichern" bestätigt, dass die Kopie Klartext ist; ein gemeinsamer Stärke-Schätzer gilt für alle Felder und schwache Schlüssel-Passwörter brauchen eine zweite Bestätigung; die Knackzeit nutzt ehrliche 10.000 Versuche/s. v2.7.1 (Sicherheit): Die Köder-/Zwangs-/Vernichtungs-Zähler werden entfernt statt nur ausgeblendet – im Web lagen sie im Klartext-localStorage, sodass "duressFired" verriet, dass ein Zwangspasswort existierte und benutzt wurde; alte Zähler werden beim Start auf allen Plattformen gelöscht. Die Schlüsselerzeugung warnt jetzt, wenn das .vctkey-Passwort nur eine Zeichenklasse nutzt (acht Ziffern fallen in Monaten), und die Web-CSP erlaubt blob: für Drag-and-drop. Web-Edition v2.7.0: vollständige Browser-Portierung mit derselben Material-3-Oberfläche – Köder-Partition, Zwangspasswort (wird genau wie ein falsches Passwort abgelehnt) und ML-KEM-768-Empfängerschlüssel funktionieren im Web; der private Schlüssel bleibt passwortgeschützt in diesem Browser und kann heruntergeladen werden. Neues in v2.6.0 (Sicherheit): Der V4-Header authentifiziert jetzt auch den Partitions-Slot, die Version/Flags-Bytes auf der Platte und den Zwangs-Slot – das Tauschen von Echt-/Köder-Slots oder das Anhängen eines Zwangs-Slots wird abgelehnt; der Empfänger-Fingerabdruck wird angezeigt und muss vor dem Verschlüsseln an eine .vctpub bestätigt werden; Notiz-Temporärdateien nutzen ein privates 0700-Verzeichnis mit Zufallsnamen, verschlüsselte Ausgaben werden zufällig benannt; ML-KEM-Pfade erzwingen Größenlimits; Passwörter zählen Unicode-Codepunkte und brauchen mindestens 8; die Zwangs-Lösch-I/O skaliert nicht mehr mit der Dateigröße; entschlüsselte Namen verlieren Bidi- und Zero-Width-Zeichen. Dateien aus v2.5.0 und älter öffnen weiterhin.',
+      'v2.7.2（修保密）：唯新集得層層全試解乃碎原信（審計 C-S-2）；自鎖今又清記註吧㐌解之文，「留成集信」須確認其為明文；全應用一密口強度估法吧弱包裹密口須再確認；破解時按每秒萬猜實算。v2.7.1（修保密）：數計偽裝／脅迫／碎信空只藏，今盡除——於網頁乃明文 localStorage，「duressFired」即告觀者脅迫密口曾存吧曾用；舊數計各端起時自清。造鎖若 .vctkey 包裹密口只用一類字（純八位數月內可破），界面顯警；網頁 CSP 之 connect-src 補 blob: 以容拖放。v2.7.0 網頁版：全瀏覽器移植，同用 Material Design 3 界面——分區偽裝、脅迫密口（中時與錯密口全同）吧鎖認收 ML-KEM-768 皆得用於網頁；私鎖以密口包裹留於此瀏覽器，可下載備份。v2.6.0 版本新（修保密）：場頭 V4 今又認證槽位分區、字節版本／標誌於碟吧槽脅，換槽真偽或移槽脅皆得拒；碼化朱 .vctpub 前顯指紋鎖須確認；暫文記註居目私 0700 名隨機，名集信碼化亦隨機；通道 ML-KEM 今固界大小；密口計碼點 Unicode 吧須 ≥8；IO 碎脅空仍隨大小集信；名解碼得除符雙向吧零寬。集信 v2.5.0 吧舊開如常。');
 
   /// v1.4.0: share / save button label (mobile result cards).
   String get shareBtn => tr('Share / Save', '分享 / 存储', 'Partager / Enregistrer',
@@ -108,11 +108,11 @@ class AppStrings {
   String get noteDecrypt => tr('Decrypt Note', '解密笔记', 'Déchiffrer une note',
       'Notiz entschlüsseln', '解碼記註');
   String get noteHint => tr(
-      'The text becomes a normal .VCT file. Decrypted text stays in memory only - it is never written to disk.',
-      '文本将加密为标准 .VCT 文件。解密后的文本只保留在内存中，绝不写入磁盘。',
-      'Le texte devient un fichier .VCT normal. Le texte déchiffré reste en mémoire uniquement — il n\'est jamais écrit sur le disque.',
-      'Der Text wird zu einer normalen .VCT-Datei. Entschlüsselter Text bleibt nur im Speicher – er wird nie auf die Festplatte geschrieben.',
-      '文本㑹得碼化為平常 .VCT 集信。㐌解碼之文本只於記憶中，空寫出碟。');
+      'The text becomes a normal .VCT file. Decrypted text is only held in memory; it is written to disk solely when you explicitly choose Save as file, copy or share.',
+      '文本将加密为标准 .VCT 文件。解密后的文本只驻留内存；仅当你主动选择“另存为文件”、复制或分享时才会写出磁盘。',
+      'Le texte devient un fichier .VCT normal. Le texte déchiffré reste en mémoire ; il n\'est écrit sur le disque que si vous choisissez explicitement « Enregistrer en tant que fichier », copiez ou partagez.',
+      'Der Text wird zu einer normalen .VCT-Datei. Entschlüsselter Text bleibt nur im Speicher; er wird nur dann auf die Festplatte geschrieben, wenn Sie ausdrücklich „Als Datei speichern" wählen, kopieren oder teilen.',
+      '文本㑹得碼化為平常 .VCT 集信。㐌解碼之文本只居記憶；唯當汝自擇「留成集信」、抄或分時，方寫出碟。');
   String get noteContentLabel =>
       tr('Note content', '笔记内容', 'Contenu de la note', 'Notizinhalt', '內容記註');
   String get noteEmpty => tr('The note is empty', '笔记内容为空', 'La note est vide',
@@ -131,6 +131,15 @@ class AppStrings {
       tr('Saved', '已保存', 'Enregistré', 'Gespeichert', '㐌留');
   String get noteSaveAsFile => tr('Save as file', '另存为文件',
       'Enregistrer en tant que fichier', 'Als Datei speichern', '留成集信');
+  String get noteSaveAsWarnTitle => tr('Save unencrypted copy?',
+      '保存未加密副本？', 'Enregistrer une copie non chiffrée ?',
+      'Unverschlüsselte Kopie speichern?', '留未碼化之本？');
+  String get noteSaveAsWarnBody => tr(
+      'The decrypted note will be written to disk as PLAINTEXT. Anyone with access to that file can read it. Save it only where you accept that risk.',
+      '解密后的笔记将以明文写入磁盘，任何能访问该文件的人都能读取。请仅在可接受此风险的位置保存。',
+      'La note déchiffrée sera écrite sur le disque EN CLAIR. Quiconque a accès à ce fichier pourra la lire. Enregistrez-la uniquement là où ce risque est acceptable.',
+      'Die entschlüsselte Notiz wird als KLARTEXT auf die Festplatte geschrieben. Jeder mit Zugriff auf diese Datei kann sie lesen. Speichern Sie sie nur dort, wo dieses Risiko akzeptabel ist.',
+      '㐌解碼之記註㑹以明文寫出碟，凡得近此信者皆得讀。唯留於可受此險之處。');
   String get noteNotText => tr(
       'This file does not contain readable text. If it was encrypted on the Encrypt tab, decrypt it there instead.',
       '该文件不含可读文本。如果它是在“加密”页加密的普通文件，请回到“解密”页进行解密。',
@@ -198,12 +207,39 @@ class AppStrings {
   /// v2.7.1 (audit N-02): a .vctkey is a long-term private key, so a
   /// single-character-class password (e.g. 8 digits) is flagged even
   /// though it passes the length check.
-  String get keyPwWeak => tr(
-      'Weak: use at least two character types (letters, digits, symbols). Eight digits can be brute-forced in months.',
-      '偏弱：请混用至少两类字符（字母、数字、符号）。纯 8 位数字数月内即可暴力破解。',
-      'Faible : mélangez au moins deux types de caractères (lettres, chiffres, symboles). Huit chiffres se cassent en quelques mois.',
-      'Schwach: mindestens zwei Zeichentypen (Buchstaben, Ziffern, Sonderzeichen) mischen. Acht Ziffern sind in Monaten geknackt.',
-      '弱：請混用至少兩類字（字目、數目、符號）。純八位數月內可破。');
+  /// v2.7.2 (audit N-01): the old text claimed eight digits survive
+  /// "months"; at the generator's 10k guesses/s it is about 2.8 hours.
+  /// The caller now computes the real figure from the bit estimate.
+  String keyPwWeakAt(String bits, String time) => tr(
+      'Weak: only about $bits bits - roughly $time at 10,000 guesses per second. Mix at least two character types.',
+      '偏弱：仅约 $bits 位，按每秒 1 万次尝试约需 $time。请混用至少两类字符。',
+      'Faible : environ $bits bits seulement - environ $time à 10 000 essais/s. Mélangez au moins deux types de caractères.',
+      'Schwach: nur etwa $bits Bit - rund $time bei 10.000 Versuchen/s. Mindestens zwei Zeichentypen mischen.',
+      '弱：僅約 $bits 位，每秒一萬試約需 $time。請混用至少兩類字。');
+  String get timeMinutes =>
+      tr('minutes', '分钟', 'minutes', 'Minuten', '分');
+  String get timeHours => tr('hours', '小时', 'heures', 'Stunden', '時');
+  String get timeDays => tr('days', '天', 'jours', 'Tage', '日');
+  String get timeYears => tr('years', '年', 'ans', 'Jahre', '年');
+  String get weakPwTitle =>
+      tr('Weak password', '密码偏弱', 'Mot de passe faible',
+          'Schwaches Passwort', '密口弱');
+  String get useAnyway => tr('Use anyway', '仍然使用', 'Utiliser quand même',
+      'Trotzdem verwenden', '仍用');
+  String get keySaveFailedTitle => tr(
+      'Key not stored in this browser',
+      '密钥未能保存在浏览器中',
+      'Clé non enregistrée dans ce navigateur',
+      'Schlüssel nicht in diesem Browser gespeichert',
+      '鎖空得留於此瀏覽器');
+  String get keySaveFailedBody => tr(
+      'The key pair was generated, but this browser refused to persist it (private window, blocked site data or storage full). The .vctkey cannot be recovered after you close this tab - download a backup now.',
+      '密钥对已生成，但浏览器拒绝持久保存（无痕窗口、站点数据被阻止或存储已满）。关闭标签页后 .vctkey 将无法恢复——请立即下载备份。',
+      'La paire de clés a été générée, mais ce navigateur a refusé de la conserver (fenêtre privée, données de site bloquées ou stockage plein). La .vctkey sera irrécupérable après la fermeture de cet onglet - téléchargez une sauvegarde maintenant.',
+      'Das Schlüsselpaar wurde erzeugt, aber dieser Browser hat es nicht gespeichert (privates Fenster, blockierte Websitedaten oder Speicher voll). Die .vctkey ist nach dem Schließen dieses Tabs verloren – laden Sie jetzt eine Sicherung herunter.',
+      '對鎖㐌造，然此瀏覽器拒不存（無痕窗、站據被阻或存滿）。閉此頁後 .vctkey 空得復——今即下載備份。');
+  String get keyExportBackup => tr('Download backup', '下载备份',
+      'Télécharger la sauvegarde', 'Sicherung herunterladen', '下載備份');
   String get keyGenOk => tr('Key pair generated', '密钥对已生成',
       'Paire de clés générée', 'Schlüsselpaar erzeugt', '㐌造對鎖');
   String keyGenOkBody(String dir) => tr(

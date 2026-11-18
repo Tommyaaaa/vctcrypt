@@ -35,8 +35,13 @@ class UsageStats {
     this.bytesDecrypted = 0,
   });
 
+  /// v2.7.2 (audit N-04): `bytesDecrypted` used to be left out, so a
+  /// stats block that only held decrypted bytes still reported "empty".
   bool get isEmpty =>
-      filesEncrypted == 0 && filesDecrypted == 0 && bytesEncrypted == 0;
+      filesEncrypted == 0 &&
+      filesDecrypted == 0 &&
+      bytesEncrypted == 0 &&
+      bytesDecrypted == 0;
 
   static UsageStats _read(SharedPreferences prefs) => UsageStats(
         filesEncrypted: prefs.getInt('stat.enc') ?? 0,

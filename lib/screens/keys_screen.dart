@@ -7,6 +7,8 @@
 /// they can be backed up and shared with any file manager. This screen
 /// only lists/generates/moves them - no hidden key store, no network.
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 import 'package:path/path.dart' as p;
@@ -17,6 +19,7 @@ import '../i18n/strings.dart';
 import '../main.dart';
 import '../platform/pick_files.dart';
 import '../platform/vfs.dart';
+import '../widgets/password_strength.dart';
 import 'help_screen.dart';
 
 class KeysScreen extends StatefulWidget {
@@ -26,34 +29,24 @@ class KeysScreen extends StatefulWidget {
   State<KeysScreen> createState() => _KeysScreenState();
 }
 
-/// v2.7.1 (audit N-02): true when every character belongs to the same
-/// ASCII class (all digits / all lowercase / all uppercase / all symbols),
-/// which is what makes "12345678" so much cheaper to brute-force than a
-/// mixed password of the same length. Non-ASCII text is never flagged.
-bool _singleCharacterClass(String pw) {
-  int? only;
-  for (final r in pw.runes) {
-    // Non-ASCII text (CJK, accented scripts, emoji) carries far more
-    // entropy per character than the ASCII classes below, so it is never
-    // flagged - otherwise a good Chinese passphrase would get a warning.
-    if (r > 0x7E) return false;
-    final int cls;
-    if (r >= 0x30 && r <= 0x39) {
-      cls = 0; // digits
-    } else if (r >= 0x61 && r <= 0x7A) {
-      cls = 1; // lowercase
-    } else if (r >= 0x41 && r <= 0x5A) {
-      cls = 2; // uppercase
-    } else {
-      cls = 3; // ASCII symbols
-    }
-    if (only == null) {
-      only = cls;
-    } else if (only != cls) {
-      return false;
-    }
+/// v2.7.2 (audit N-02/N-03): the old single-class check was bypassed by
+/// "1234567é" (non-ASCII escape) and by "abcd1234" (two classes, zero
+/// real entropy). Strength now comes from the shared estimator, and a
+/// weak wrap password needs an explicit second confirmation.
+bool _weakWrapPassword(String pw) =>
+    pw.runes.length >= 8 && PasswordStrength.estimateBits(pw) < 40;
+
+/// Human-readable offline cracking time at the KDF's honest 10k
+/// guesses/s (audit N-01) - not the old, wrong "months".
+String _crackTime(AppStrings s, double bits) {
+  final hours = math.pow(2, bits) / 10000 / 3600;
+  if (hours < 1) {
+    return '${(hours * 60).toStringAsFixed(1)} ${s.timeMinutes}';
   }
-  return true;
+  if (hours < 48) return '${hours.toStringAsFixed(1)} ${s.timeHours}';
+  final days = hours / 24;
+  if (days < 365) return '${days.toStringAsFixed(1)} ${s.timeDays}';
+  return '${(days / 365).toStringAsFixed(1)} ${s.timeYears}';
 }
 
 class _KeysScreenState extends State<KeysScreen> {
@@ -199,8 +192,7 @@ class _KeysScreenState extends State<KeysScreen> {
                         color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                       ),
                 ),
-                if (pwCtl.text.runes.length >= 8 &&
-                    _singleCharacterClass(pwCtl.text)) ...[
+                if (_weakWrapPassword(pwCtl.text)) ...[
                   const SizedBox(height: 8),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,7 +203,13 @@ class _KeysScreenState extends State<KeysScreen> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          strings.keyPwWeak,
+                          strings.keyPwWeakAt(
+                            PasswordStrength.formatBits(
+                                PasswordStrength.estimateBits(pwCtl.text)),
+                            _crackTime(
+                                strings,
+                                PasswordStrength.estimateBits(pwCtl.text)),
+                          ),
                           style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                                 color: Theme.of(ctx).colorScheme.error,
                               ),
@@ -246,6 +244,33 @@ class _KeysScreenState extends State<KeysScreen> {
                         _snackIn(ctx, strings.errPwMismatch, error: true);
                         return;
                       }
+                      // v2.7.2 (audit N-02): a weak wrap password is
+                      // accepted only after an explicit second step.
+                      if (_weakWrapPassword(pw)) {
+                        final ok = await showDialog<bool>(
+                          context: ctx,
+                          builder: (c2) => AlertDialog(
+                            title: Text(strings.weakPwTitle),
+                            content: Text(strings.keyPwWeakAt(
+                              PasswordStrength.formatBits(
+                                  PasswordStrength.estimateBits(pw)),
+                              _crackTime(
+                                  strings, PasswordStrength.estimateBits(pw)),
+                            )),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(c2).pop(false),
+                                child: Text(strings.cancel),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.of(c2).pop(true),
+                                child: Text(strings.useAnyway),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (ok != true) return;
+                      }
                       setDialog(() => working = true);
                       try {
                         await _generate(name, pw);
@@ -271,6 +296,39 @@ class _KeysScreenState extends State<KeysScreen> {
     pw2Ctl.dispose();
   }
 
+  /// v2.7.2 (audit A-S-12): on the web a key can be generated but refused
+  /// by localStorage (private mode, blocked site data, quota). Tell the
+  /// user and offer an immediate backup download before the tab closes.
+  Future<void> _warnIfNotPersisted(List<String> paths) async {
+    final err = takeKeyPersistError();
+    if (err == null || !mounted) return;
+    final strings = _strings;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded),
+        title: Text(strings.keySaveFailedTitle),
+        content: Text(strings.keySaveFailedBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(strings.cancel),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              for (final path in paths) {
+                await downloadFile(path, name: p.basename(path));
+              }
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            },
+            icon: const Icon(Icons.download_outlined),
+            label: Text(strings.keyExportBackup),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _generate(String name, String password) async {
     final strings = _strings;
     try {
@@ -284,6 +342,7 @@ class _KeysScreenState extends State<KeysScreen> {
       final wrapped = await priv.serializeWrapped(password);
       keys.writeKeyFile(privPath, wrapped);
 
+      await _warnIfNotPersisted([pubPath, privPath]);
       await _reload();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -326,6 +385,7 @@ class _KeysScreenState extends State<KeysScreen> {
       final dest = await keys.uniqueKeyPath(
           dir, p.basenameWithoutExtension(srcName), useExt);
       keys.writeKeyFile(dest, bytes);
+      await _warnIfNotPersisted([dest]);
       await _reload();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

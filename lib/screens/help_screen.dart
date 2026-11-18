@@ -101,9 +101,9 @@ class HelpScreen extends StatelessWidget {
         en ? 'Secure Notes' : '安全笔记',
         en
             ? 'The Notes tab encrypts text directly into a .VCT file - no need to create a text file first. Notes are standard .VCT files, fully compatible with the Encrypt/Decrypt tabs, the desktop apps and all VCTCrypt versions.\n\n'
-                'When you decrypt a note, the text is shown in memory only: it is never written to disk, and the temporary buffer is securely shredded. Copy it, share it, or (on desktop) save it as a file.'
+                'When you decrypt a note, the text is held in memory while the screen is unlocked. It only reaches disk if you explicitly choose Save as file - that copy is plaintext, so confirm the dialog and store it somewhere you accept. Copy and share send it wherever you point them.'
             : '“笔记”页可将文本直接加密为 .VCT 文件，无需先创建文本文件。笔记是标准 .VCT 文件，与加密/解密页、桌面端及所有 VCTCrypt 版本完全兼容。\n\n'
-                '解密笔记时，文本只在内存中显示：不会写入磁盘，临时缓冲区也会被安全擦除。可复制、分享，或（桌面端）另存为文件。',
+                '解密笔记时，文本在屏幕解锁期间只保留在内存中。只有你主动选择“另存为文件”时才会写入磁盘——该副本是明文，请确认对话框并存放在你能接受的位置。复制与分享则会送往你指定的去处。',
       ),
       _HelpEntry(
         Icons.speed,

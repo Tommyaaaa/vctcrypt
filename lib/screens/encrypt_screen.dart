@@ -228,25 +228,16 @@ class _EncryptScreenState extends State<EncryptScreen> {
     });
   }
 
-  String _passwordStrength(String pw) {
-    if (pw.isEmpty) return '';
-    int score = 0;
-    if (pw.length >= 8) score++;
-    if (pw.length >= 12) score++;
-    if (pw.contains(RegExp(r'[A-Z]'))) score++;
-    if (pw.contains(RegExp(r'[a-z]'))) score++;
-    if (pw.contains(RegExp(r'[0-9]'))) score++;
-    if (pw.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]]'))) score++;
-    if (score <= 2) return _strings.passwordStrengthWeak;
-    if (score <= 4) return _strings.passwordStrengthMedium;
-    return _strings.passwordStrengthStrong;
-  }
+  /// v2.7.2: one strength implementation for the whole app (fix-03). The
+  /// old per-screen score could call "abcd1234" medium while the notes
+  /// screen called it weak, and it compared display STRINGS to pick a
+  /// colour - both are gone.
+  String _passwordStrength(String pw) =>
+      pw.isEmpty ? '' : PasswordStrength.label(_strings, PasswordStrength.quality(pw));
 
-  Color _strengthColor(String strength) {
-    if (strength.isEmpty) return Colors.transparent;
-    if (strength == _strings.passwordStrengthWeak) return Colors.red;
-    if (strength == _strings.passwordStrengthMedium) return Colors.orange;
-    return Colors.green;
+  Color _strengthColor(String pw) {
+    if (pw.isEmpty) return Colors.transparent;
+    return PasswordStrength.color(Theme.of(context), PasswordStrength.quality(pw));
   }
 
   Future<void> _encrypt() async {
@@ -743,14 +734,11 @@ class _EncryptScreenState extends State<EncryptScreen> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: pwStrength == strings.passwordStrengthWeak
-                                ? 0.33
-                                : pwStrength == strings.passwordStrengthMedium
-                                    ? 0.66
-                                    : 1.0,
+                            value: PasswordStrength.ratioFor(
+                                PasswordStrength.quality(_pwController.text)),
                             backgroundColor:
                                 theme.colorScheme.surfaceContainerHighest,
-                            color: _strengthColor(pwStrength),
+                            color: _strengthColor(_pwController.text),
                             minHeight: 6,
                           ),
                         ),
@@ -759,10 +747,10 @@ class _EncryptScreenState extends State<EncryptScreen> {
                       Text(
                         // v1.5.0: append the live entropy estimate.
                         '$pwStrength '
-                        '(${PasswordStrength.estimateBits(_pwController.text).round()}'
+                        '(${PasswordStrength.formatBits(PasswordStrength.estimateBits(_pwController.text))}'
                         '${strings.strengthBits})',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: _strengthColor(pwStrength),
+                          color: _strengthColor(_pwController.text),
                           fontWeight: FontWeight.bold,
                         ),
                       ),

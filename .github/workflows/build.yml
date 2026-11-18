@@ -69,7 +69,7 @@ jobs:
   # ============================================================
   android:
     name: Android APK
-    needs: analyze
+    needs: [analyze, test]
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -143,7 +143,7 @@ jobs:
   # ============================================================
   windows:
     name: Windows EXE
-    needs: analyze
+    needs: [analyze, test]
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: windows-2022
     steps:
@@ -184,7 +184,7 @@ jobs:
   # ============================================================
   macos:
     name: macOS DMG
-    needs: analyze
+    needs: [analyze, test]
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     steps:
@@ -228,7 +228,7 @@ jobs:
   # ============================================================
   ios:
     name: iOS IPA (unsigned)
-    needs: analyze
+    needs: [analyze, test]
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     steps:
@@ -343,7 +343,7 @@ jobs:
   # ============================================================
   linux:
     name: Linux AppImage
-    needs: analyze
+    needs: [analyze, test]
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-22.04
     steps:
@@ -545,6 +545,15 @@ jobs:
             | iOS (unsigned) | VCTCrypt-iOS-unsigned.ipa |
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
+
+            ### What's New in v2.7.2
+            - 🔒 **C-S-2 / fix-02 - verified before shredding**: the original file is shredded only after the freshly written container has been fully re-decrypted layer by layer (V3 and V4), not merely checked at the header HMAC; a damaged or truncated output keeps the original
+            - 🧹 **A-S-1 / A-S-2 - notes**: auto-lock now also clears the note being typed and any decrypted note; Save as file asks for confirmation because that copy is plaintext, and the false "never written to disk" wording was corrected
+            - 💪 **A-S-5 / fix-03 - one strength meter**: every field uses the same estimator (leaked-password blacklist, leet normalisation, repeated units, long keyboard/alphabet runs); a weak key wrap password needs a second confirmation
+            - ⏱️ **N-01 / E-S-1 / N-04**: cracking-time text uses the honest 10k guesses/s (40 bits ≈ 2.8 hours), CI builds are gated on analyze + tests, and the stats "empty" state includes decrypted bytes
+
+            ### What's New in v2.7.1
+            - 🕵️ **N-01 - deniability counters deleted**: decoy / duress / shred counters are removed entirely (on the web they were plaintext localStorage); old counters are wiped at startup
 
             ### What's New in v2.7.0
             - 🌐 **Web edition rebuilt on Flutter**: the browser build is now the same Flutter app (Material Design 3), not a separate hand-written page, so desktop, mobile and web share one codebase and one .VCT format

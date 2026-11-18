@@ -210,6 +210,10 @@ List<String> listKeyFiles(String dir) {
   }
 }
 
+/// Native builds always have a real file system, so a key write cannot
+/// silently fail the way browser localStorage can (audit A-S-12).
+String? takeKeyPersistError() => null;
+
 void deleteAt(String path) {
   try {
     File(path).deleteSync();

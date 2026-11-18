@@ -820,4 +820,107 @@ void main() {
       expect(onlyBidi, isNotEmpty);
     });
   });
+
+  // ============================================================
+  // 10. G-3 - truncation / bit-flip must fail closed
+  //
+  // The point of fix-02 is that the engine never accepts a damaged
+  // container and never shreds an original after a failed check. These
+  // tests mutate a real V4 and a real V3 file (last byte cut, body byte
+  // flipped) and assert: no success, an error code, and the input file
+  // left byte-for-byte intact.
+  // ============================================================
+  group('G-3 - truncated / flipped ciphertext fails closed', () {
+    test('V4 truncated tag is rejected and the input is untouched', () async {
+      final payload =
+          List.generate(1024, (i) => (i * 7 + 3) & 0xFF);
+      final src = _tmpFile('g3_v4_src.bin', payload);
+      final enc = await crypto.encryptFile(src.path, 'g3-pass-2026', null);
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final original = File(enc.outputPath!).readAsBytesSync();
+      // Cut the real partition's tag (and everything after it). A one-byte
+      // cut would only damage the unused decoy tail, which the real
+      // password cannot authenticate - that is not a real truncation.
+      final realCtLen = ByteData.sublistView(original, 14, 22)
+          .getUint64(0, Endian.little);
+      final broken = _tmpFile(
+        'g3_v4_trunc.VCT',
+        original.sublist(0, 334 + realCtLen.toInt()),
+      );
+      final before = File(broken.path).readAsBytesSync();
+
+      final dec = await crypto.decryptFile(broken.path, 'g3-pass-2026', null);
+      expect(dec.success, isFalse);
+      expect(dec.error, isNotNull);
+      // A failed decrypt must not damage or delete the container.
+      expect(File(broken.path).existsSync(), isTrue);
+      expect(File(broken.path).readAsBytesSync(), equals(before));
+    });
+
+    test('V4 flipped body byte is rejected', () async {
+      final src =
+          _tmpFile('g3_v4_body.bin', utf8.encode('g3 body integrity test'));
+      final enc = await crypto.encryptFile(src.path, 'g3-pass-2026', null);
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final blob = File(enc.outputPath!).readAsBytesSync();
+      // 334-byte header + first real ciphertext byte.
+      blob[400] ^= 0x80;
+      final broken = _tmpFile('g3_v4_flip.VCT', blob);
+      final before = File(broken.path).readAsBytesSync();
+
+      final dec = await crypto.decryptFile(broken.path, 'g3-pass-2026', null);
+      expect(dec.success, isFalse);
+      expect(File(broken.path).readAsBytesSync(), equals(before));
+    });
+
+    test('V3 truncated envelope is rejected', () async {
+      final src =
+          _tmpFile('g3_v3_src.bin', utf8.encode('post-quantum g3 payload'));
+      final (pub, priv) = keys.generateKeyPair('G3');
+      final enc = await crypto.encryptFileHybrid(
+        src.path,
+        crypto.HybridEncryptOptions(password: 'g3-pass-2026', recipient: pub),
+        null,
+      );
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final original = File(enc.outputPath!).readAsBytesSync();
+      final broken = _tmpFile(
+        'g3_v3_trunc.VCT',
+        original.sublist(0, original.length - 4),
+      );
+      final before = File(broken.path).readAsBytesSync();
+
+      final decPw = await crypto.decryptFile(broken.path, 'g3-pass-2026', null);
+      expect(decPw.success, isFalse);
+      final decKey =
+          await crypto.decryptFileWithKey(broken.path, priv, null);
+      expect(decKey.success, isFalse);
+      expect(File(broken.path).readAsBytesSync(), equals(before));
+    });
+
+    test('V3 flipped body byte is rejected', () async {
+      final src =
+          _tmpFile('g3_v3_body.bin', utf8.encode('g3 v3 body integrity'));
+      final (pub, _) = keys.generateKeyPair('G3b');
+      final enc = await crypto.encryptFileHybrid(
+        src.path,
+        crypto.HybridEncryptOptions(password: 'g3-pass-2026', recipient: pub),
+        null,
+      );
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final blob = File(enc.outputPath!).readAsBytesSync();
+      // V3 header is 1394 bytes; flip the last byte of the body tag.
+      blob[blob.length - 1] ^= 0x01;
+      final broken = _tmpFile('g3_v3_flip.VCT', blob);
+      final before = File(broken.path).readAsBytesSync();
+
+      final dec = await crypto.decryptFile(broken.path, 'g3-pass-2026', null);
+      expect(dec.success, isFalse);
+      expect(File(broken.path).readAsBytesSync(), equals(before));
+    });
+  });
 }

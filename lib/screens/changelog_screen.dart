@@ -107,6 +107,14 @@ List<_Entry> _entries(AppStrings s) {
   if (s.lang == AppLanguage.hannom) {
     return [
       const _Entry(
+          '2.7.2',
+          [
+            '修保密（審計 C-S-2／fix-02）：碎原信前，今全試解新集層層，空只驗場頭 HMAC——集損或截短則留原信空碎',
+            '記註（A-S-1／A-S-2）：自鎖今又清所書之文吧㐌解之記；「留成集信」前須確認，蓋其本為明文；「空寫出碟」之誤言今正',
+            '密口強度（A-S-5／fix-03）：全應用一估法——黑榜洩密口、leet 歸一、重複單元吧長序列皆計；弱包裹密口須再確認',
+            '破解時（N-01）今按每秒萬猜實算：40 位約 2.8 時，空復言「數月」；CI 構建須過分析與測試（E-S-1）；統計「空」今含解碼字節（N-04）',
+          ]),
+      const _Entry(
           '2.7.1',
           [
             '修保密（審計 N-01）：數計偽裝／脅迫／碎信空只藏，今盡除——於網頁乃明文 localStorage，「duressFired」即告觀者脅迫密口曾存吧曾用；各端起時自清舊數計',
@@ -249,6 +257,14 @@ List<_Entry> _entries(AppStrings s) {
   if (!en) {
     return [
       const _Entry(
+          '2.7.2',
+          [
+            '安全修复（审计 C-S-2／fix-02）：粉碎原件前，新容器现在会逐层完整试解密，而不再只校验头部 HMAC——输出损坏或被截断时保留原件、绝不销毁',
+            '笔记（A-S-1／A-S-2）：自动锁现在同时清空正在输入的笔记文本与已解密内容；“另存为文件”前需确认，因为该副本是明文；并修正“绝不写入磁盘”的错误文案',
+            '密码强度（A-S-5／fix-03）：全应用统一为一套估算——泄露口令黑名单、leet 归一化、重复单元与长键盘／字母序列都会计入；弱包裹密码需二次确认',
+            '破解时间（N-01）改按诚实的每秒一万次计算：40 位约 2.8 小时，不再写“数月”；CI 构建必须先通过分析与测试（E-S-1）；统计“为空”现在也包含解密字节（N-04）',
+          ]),
+      const _Entry(
           '2.7.1',
           [
             '安全修复（审计 N-01）：伪装/胁迫/粉碎计数器不再只是隐藏显示，而是彻底删除——网页端它们存于明文 localStorage，"duressFired" 等于告诉查看者存在并触发过胁迫密码；各平台启动时自动清除旧计数',
@@ -388,6 +404,14 @@ List<_Entry> _entries(AppStrings s) {
     ];
   }
   return [
+    const _Entry(
+        '2.7.2',
+        [
+          'Security (audit C-S-2 / fix-02): before the original is shredded, the new container is now fully re-decrypted layer by layer instead of only checking the header HMAC - a damaged or truncated output is kept and the original is not destroyed',
+          'Notes (A-S-1 / A-S-2): auto-lock now also clears the note text being typed and any decrypted note; Save as file asks for confirmation because that copy is plaintext, and the false "never written to disk" wording was corrected',
+          'Password strength (A-S-5 / fix-03): one shared estimator for every field - leaked-password blacklist, leet normalisation, repeated units and long keyboard/alphabet runs; a weak key wrap password needs a second confirmation',
+          'Cracking-time text (N-01) now uses the honest 10k guesses per second (40 bits is about 2.8 hours, not "months"); CI builds are gated on analyze plus tests (E-S-1); the stats "empty" state now includes decrypted bytes (N-04)',
+        ]),
     const _Entry(
         '2.7.1',
         [

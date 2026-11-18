@@ -1307,13 +1307,32 @@ Future<EncryptResult> encryptFile(
   }
 }
 
-/// Cheap sanity check of a freshly written V4 file (magic + real HMAC at
-/// full-strength 600K iterations) before we allow shredding the original.
+/// Self-consistency proof of a freshly written V4 file BEFORE the
+/// original may be shredded.
+///
+/// v2.7.2 (audit C-S-2 / fix-02): this used to stop at the header HMAC,
+/// so a truncated body or a partially flushed write still passed and the
+/// only copy of the plaintext was destroyed. It now re-parses the file
+/// the way the decryptor does - header length against the real byte
+/// count, the decoy slot present, full GCM tag check on every layer and
+/// the inner payload structure - and returns false on any mismatch.
 Future<bool> _verifyWrittenV4(String outPath, String password) async {
   try {
     final data = _readFile(outPath);
     if (detectFormat(data) != fmtV4) return false;
-    if (data.length < _v4HeaderLen + _tagSize) return false;
+    if (data.length < _v4HeaderLen + _tagSize + _tagSize) return false;
+
+    final layoutVer = data[_v4VerOff];
+    if (layoutVer != _v4LayoutVer && layoutVer != _v4LayoutVerLegacy) {
+      return false;
+    }
+
+    final realCtLen = _readU64LE(data, _v4RealCtLenOff);
+    if (realCtLen <= 0) return false;
+    final realCtEnd = _v4HeaderLen + realCtLen;
+    // Room for [realCt][realTag] plus a non-empty [decoyCt][decoyTag]:
+    // every V4 file carries both slots, so anything shorter was cut off.
+    if (realCtEnd + _tagSize + _tagSize >= data.length) return false;
 
     final salt = data.sublist(_v4RealSaltOff, _v4RealSaltOff + _saltSize);
     final n1 = data.sublist(
@@ -1324,7 +1343,34 @@ Future<bool> _verifyWrittenV4(String outPath, String password) async {
         _v4RealSaltOff + _saltSize + _nonceSize * 3);
     final hmac = data.sublist(_v4RealHmacOff, _v4RealHmacOff + _hmacSize);
 
-    return await _v4VerifyPartition(password, salt, n1, n2, n3, hmac) != null;
+    final keys = await _v4VerifyPartition(password, salt, n1, n2, n3, hmac);
+    if (keys == null) return false;
+
+    final realCt = data.sublist(_v4HeaderLen, realCtEnd);
+    final realTag = data.sublist(realCtEnd, realCtEnd + _tagSize);
+    final duressSalt =
+        data.sublist(_v4DuressSaltOff, _v4DuressSaltOff + _saltSize);
+    final duressHmac =
+        data.sublist(_v4DuressHmacOff, _v4DuressHmacOff + _hmacSize);
+
+    final aad = layoutVer >= _v4LayoutVer
+        ? _buildV4Aad(
+            salt: salt,
+            n1: n1,
+            n2: n2,
+            n3: n3,
+            ctLen: realCtLen,
+            layoutVer: layoutVer,
+            flags: data[_v4FlagsOff],
+            slot: _v4SlotReal,
+            duressSalt: duressSalt,
+            duressHmac: duressHmac,
+          )
+        : _buildV4Aad(salt: salt, n1: n1, n2: n2, n3: n3, ctLen: realCtLen);
+
+    final internal =
+        await _decryptBody(keys, n1, n2, n3, realCt, realTag, aad: aad);
+    return internal.success;
   } catch (_) {
     return false;
   }
@@ -1485,14 +1531,22 @@ Future<Uint8List> _v3Assemble({
 final _kem768 = PqcKem.kyber768;
 
 /// Self-consistency proof of a freshly written V3 file BEFORE the
-/// original may be shredded: re-read, re-parse, and re-check the body
-/// HMAC with the CEK we still hold in memory.
+/// original may be shredded: re-read, re-parse, re-check the body HMAC
+/// with the CEK we still hold in memory, then decrypt every GCM layer.
+///
+/// v2.7.2 (audit C-S-2 / fix-02): the HMAC alone accepted a truncated
+/// body, so a short write could pass and the plaintext was then wiped.
 Future<bool> _verifyWrittenV3(String outPath, List<int> cek) async {
   try {
     final data = _readFile(outPath);
     if (detectFormat(data) != fmtV3) return false;
     if (data.length < _v3HeaderLen + _tagSize) return false;
     if (data[_v3VerOff] != _v3LayoutVer) return false;
+
+    final ctLen = _readU64LE(data, _v3CtLenOff);
+    if (ctLen <= 0) return false;
+    final ctEnd = _v3HeaderLen + ctLen;
+    if (ctEnd + _tagSize > data.length) return false;
 
     final salt2 = data.sublist(_v3Salt2Off, _v3Salt2Off + _saltSize);
     final n1 = data.sublist(_v3N1Off, _v3N1Off + _nonceSize);
@@ -1508,7 +1562,12 @@ Future<bool> _verifyWrittenV3(String outPath, List<int> cek) async {
       ..add(n2)
       ..add(n3);
     final computed = await _hmacSha256(keys.vk, hData.toBytes());
-    return _constantTimeEq(computed, stored);
+    if (!_constantTimeEq(computed, stored)) return false;
+
+    final bodyCt = data.sublist(_v3HeaderLen, ctEnd);
+    final bodyTag = data.sublist(ctEnd, ctEnd + _tagSize);
+    final internal = await _decryptBody(keys, n1, n2, n3, bodyCt, bodyTag);
+    return internal.success;
   } catch (_) {
     return false;
   }
