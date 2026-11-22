@@ -79,26 +79,44 @@ class PasswordStrength extends StatelessWidget {
     final n = _normalize(pw);
     if (n.isEmpty) return false;
     if (_common.contains(n)) return true;
-    // Drop trailing digits already handled by _normalize, but a pure
-    // digit string has no letters left - check the original too.
+    // v2.7.5 (audit N-06): "P@ssw0rd1" normalises to "passwordi" (1 -> i),
+    // so an exact match missed it. A known word plus a 1-2 letter tail is
+    // still the same leaked password ("password1", "p@ssw0rd$").
+    for (final word in _common) {
+      if (word.length >= 5 &&
+          n.startsWith(word) &&
+          n.length - word.length <= 2) {
+        return true;
+      }
+    }
+    // A pure digit string has no letters left - check the original too.
     final stripped = raw.replaceAll(RegExp(r'[^a-z]'), '');
     return stripped.isNotEmpty && _common.contains(stripped);
   }
 
-  /// Length of the repeating unit when [pw] is a repetition, else null.
-  /// "abcabcabcabc" -> 3, "aaaa" -> 1, "abcd" -> null.
+  /// Length of the repeating unit when [pw] is (mostly) a repetition.
+  /// "abcabcabcabc" -> 3, "aaaaaaaa1" -> 1, "abcd" -> null.
+  ///
+  /// v2.7.5 (audit N-08): the old version required an exact full-string
+  /// repetition, so one different trailing character ("aaaaaaaa1") escaped
+  /// and scored 46.5 bits. Coverage of at least 80% now counts.
   static int? repeatedUnitLength(List<int> runes) {
     final n = runes.length;
-    for (var p = 1; p * 2 <= n; p++) {
-      if (n % p != 0) continue;
-      var ok = true;
-      for (var i = p; i < n; i++) {
-        if (runes[i] != runes[i % p]) {
-          ok = false;
-          break;
+    if (n < 3) return null;
+    for (var p = 1; p <= n ~/ 3 && p <= 8; p++) {
+      var reps = 0;
+      for (var i = 0; i + p <= n; i += p) {
+        var ok = true;
+        for (var j = 0; j < p; j++) {
+          if (runes[i + j] != runes[j]) {
+            ok = false;
+            break;
+          }
         }
+        if (!ok) break;
+        reps++;
       }
-      if (ok) return p;
+      if (reps >= 3 && reps * p * 5 >= n * 4) return p;
     }
     return null;
   }

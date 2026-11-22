@@ -107,12 +107,21 @@ List<_Entry> _entries(AppStrings s) {
   if (s.lang == AppLanguage.hannom) {
     return [
       const _Entry(
+          '2.7.5',
+          [
+            '修保密（審計 X-01）：V3 解碼今空信明文 flags——雙通道皆無條件試，翻該字節空復改結果、空復使集信永解不開',
+            '名清（X-02／X-10）：解碼名吧 .vctpub 名今皆清 bidi／零寬／控制字、空名補位、過長截，界面空復顯「photoexe.jpg」之偽；收件人對話明言「名非簽，唯信指紋」',
+            '集信信息（X-03）今正顯 V3／V4，空復誤作「V1 經典」；V4 亦顯可否認之提示',
+            '碎前確認（X-05／X-06／X-21）：有誘餌則連誘餌分區一併試解，無誘餌則驗其長度比例；另比對解出之明文與原文；確認失敗則除壞產物、原信空除',
+            '雜項：密鎖對話今響恐慌鎖（X-04）；強度估法得「P@ssw0rd1」吧「aaaaaaaa1」（N-06／N-08）；40 位破解時正為約 3.5 年（N-07）；密口生成空出過短之串（X-09）；舊 V 鍵比對兩路同工（X-11）；網頁暫名加 128 位隨機（X-12）；寫碟暫名亦隨機（X-14）；V1-old 場頭長正為 127（X-22）；名長越界即拒（X-19）；出路徑等入徑即拒（X-20）',
+          ]),
+      const _Entry(
           '2.7.2',
           [
             '修保密（審計 C-S-2／fix-02）：碎原信前，今全試解新集層層，空只驗場頭 HMAC——集損或截短則留原信空碎',
             '記註（A-S-1／A-S-2）：自鎖今又清所書之文吧㐌解之記；「留成集信」前須確認，蓋其本為明文；「空寫出碟」之誤言今正',
             '密口強度（A-S-5／fix-03）：全應用一估法——黑榜洩密口、leet 歸一、重複單元吧長序列皆計；弱包裹密口須再確認',
-            '破解時（N-01）今按每秒萬猜實算：40 位約 2.8 時，空復言「數月」；CI 構建須過分析與測試（E-S-1）；統計「空」今含解碼字節（N-04）',
+            '破解時（N-01）今按每秒萬猜實算：40 位約 3.5 年，空復言「數月」；CI 構建須過分析與測試（E-S-1）；統計「空」今含解碼字節（N-04）',
           ]),
       const _Entry(
           '2.7.1',
@@ -257,12 +266,21 @@ List<_Entry> _entries(AppStrings s) {
   if (!en) {
     return [
       const _Entry(
+          '2.7.5',
+          [
+            '安全修复（审计 X-01）：V3 解密不再信任明文 flags——密码与密钥两条通道都无条件尝试，翻转该字节不再改变结果，也不会让文件被永久拒解',
+            '名称清洗（X-02／X-10）：解密文件名与 .vctpub 名称统一清除 bidi／零宽／控制字符、空名补位、超长截断，界面不再渲染“photoexe.jpg”式伪装；收件人确认框明确写“名称不是签名，只信指纹”',
+            '文件信息（X-03）正确显示 V3／V4，不再误标为“V1 经典”；V4 也显示可否认性提示',
+            '粉碎前校验（X-05／X-06／X-21）：设置诱饵时连同诱饵分区一起试解密，未设置时校验长度比例；并比对解出的明文与原文；校验失败会删除损坏产物，原件绝不删除',
+            '杂项：密钥密码对话框响应恐慌锁（X-04）；强度估算识别“P@ssw0rd1”与“aaaaaaaa1”（N-06／N-08）；40 位破解时间修正为约 3.5 年（N-07）；生成器不再输出短于所选字符类的串（X-09）；旧 V 键比对两条路径等量计算（X-11）；网页临时文件名加 128 位随机后缀（X-12）；落盘临时名同样随机（X-14）；V1-old 头部长度修正为 127（X-22）；名称长度越界直接拒绝（X-19）；输出路径等于输入路径直接拒绝（X-20）',
+          ]),
+      const _Entry(
           '2.7.2',
           [
             '安全修复（审计 C-S-2／fix-02）：粉碎原件前，新容器现在会逐层完整试解密，而不再只校验头部 HMAC——输出损坏或被截断时保留原件、绝不销毁',
             '笔记（A-S-1／A-S-2）：自动锁现在同时清空正在输入的笔记文本与已解密内容；“另存为文件”前需确认，因为该副本是明文；并修正“绝不写入磁盘”的错误文案',
             '密码强度（A-S-5／fix-03）：全应用统一为一套估算——泄露口令黑名单、leet 归一化、重复单元与长键盘／字母序列都会计入；弱包裹密码需二次确认',
-            '破解时间（N-01）改按诚实的每秒一万次计算：40 位约 2.8 小时，不再写“数月”；CI 构建必须先通过分析与测试（E-S-1）；统计“为空”现在也包含解密字节（N-04）',
+            '破解时间（N-01）改按诚实的每秒一万次计算：40 位约 3.5 年，不再写“数月”；CI 构建必须先通过分析与测试（E-S-1）；统计“为空”现在也包含解密字节（N-04）',
           ]),
       const _Entry(
           '2.7.1',
@@ -405,12 +423,21 @@ List<_Entry> _entries(AppStrings s) {
   }
   return [
     const _Entry(
+        '2.7.5',
+        [
+          'Security (audit X-01): V3 decryption no longer trusts the plaintext flags byte - the password and KEM channels are both tried unconditionally, so flipping that byte cannot change the outcome or make the file permanently unreadable',
+          'Name hygiene (X-02 / X-10): decrypted file names and .vctpub names are stripped of bidi / zero-width / control characters, padded when empty and capped when long, so the UI can no longer render a spoof like "photoexe.jpg"; the recipient dialog now says plainly that the name is not signed - trust the fingerprint',
+          'File info (X-03) now shows V3 / V4 instead of mislabelling every modern file as "V1 (classic)"; V4 also shows the deniability note',
+          'Shred verification (X-05 / X-06 / X-21): a configured decoy partition is fully decrypted too, and without one the decoy length ratio is checked; the recovered plaintext is compared with the original; a failed check deletes the damaged output and never the original',
+          'Misc: the key-password dialog now obeys panic lock (X-04); strength catches "P@ssw0rd1" and "aaaaaaaa1" (N-06 / N-08); 40 bits is correctly shown as about 3.5 years (N-07); the generator never returns a string shorter than the selected classes (X-09); legacy V-key checks do equal work on hit and miss (X-11); web temp names get a 128-bit random suffix (X-12); on-disk temp writes use a random suffix too (X-14); V1-old header length is 127 (X-22); out-of-range name lengths are rejected (X-19); output path equal to input is rejected (X-20)',
+        ]),
+    const _Entry(
         '2.7.2',
         [
           'Security (audit C-S-2 / fix-02): before the original is shredded, the new container is now fully re-decrypted layer by layer instead of only checking the header HMAC - a damaged or truncated output is kept and the original is not destroyed',
           'Notes (A-S-1 / A-S-2): auto-lock now also clears the note text being typed and any decrypted note; Save as file asks for confirmation because that copy is plaintext, and the false "never written to disk" wording was corrected',
           'Password strength (A-S-5 / fix-03): one shared estimator for every field - leaked-password blacklist, leet normalisation, repeated units and long keyboard/alphabet runs; a weak key wrap password needs a second confirmation',
-          'Cracking-time text (N-01) now uses the honest 10k guesses per second (40 bits is about 2.8 hours, not "months"); CI builds are gated on analyze plus tests (E-S-1); the stats "empty" state now includes decrypted bytes (N-04)',
+          'Cracking-time text (N-01) now uses the honest 10k guesses per second (40 bits is about 3.5 years, not "months"); CI builds are gated on analyze plus tests (E-S-1); the stats "empty" state now includes decrypted bytes (N-04)',
         ]),
     const _Entry(
         '2.7.1',

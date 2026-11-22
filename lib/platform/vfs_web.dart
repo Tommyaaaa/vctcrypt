@@ -193,7 +193,17 @@ Future<String> createTempText(String text) async {
   return path;
 }
 
-String tempPath(String prefix) => prefix;
+/// v2.7.5 (audit X-12): the native side uses a private 0700 directory and
+/// a 128-bit random name; the web side used to return [prefix] verbatim
+/// (the caller passed a timestamp, so two decrypts in the same microsecond
+/// overwrote each other). Add the same random suffix here.
+String tempPath(String prefix) {
+  final id = List.generate(
+    16,
+    (_) => _rng.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ).join();
+  return '${prefix}_$id.tmp';
+}
 
 /// Trigger a normal browser download for one stored file.
 Future<bool> downloadFile(String path, {String? name}) async {

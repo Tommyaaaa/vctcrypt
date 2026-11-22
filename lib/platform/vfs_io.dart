@@ -37,13 +37,39 @@ bool existsAt(String path) => File(path).existsSync();
 
 void writeBytes(String path, List<int> data) {
   final f = File(path);
-  final tmp = File('$path.vctpart');
+  // v2.7.5 (audit X-14): a fixed "$path.vctpart" let two concurrent writes
+  // share one temporary file. Use a random suffix per call.
+  final rng = Random.secure();
+  final suffix = List.generate(
+    8,
+    (_) => rng.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ).join();
+  final tmp = File('$path.$suffix.vctpart');
   try {
     tmp.writeAsBytesSync(data, flush: true);
     tmp.renameSync(path);
   } on FileSystemException {
-    if (tmp.existsSync()) tmp.deleteSync();
-    f.writeAsBytesSync(data);
+    // Windows refuses rename onto an existing target. Try the same
+    // flush-then-rename discipline by removing the old file first; if even
+    // that fails, fall back to a direct write but at least flush it.
+    if (tmp.existsSync()) {
+      try {
+        if (f.existsSync()) f.deleteSync();
+        tmp.renameSync(path);
+        return;
+      } catch (_) {
+        try {
+          tmp.deleteSync();
+        } catch (_) {}
+      }
+    }
+    final raf = f.openSync(mode: FileMode.write);
+    try {
+      raf.writeFromSync(data);
+      raf.flushSync();
+    } finally {
+      raf.closeSync();
+    }
   }
 }
 
@@ -54,6 +80,11 @@ Future<void> shredAt(String path, {bool quick = false}) async {
   final rng = Random.secure();
   final raf = f.openSync(mode: FileMode.write);
   try {
+    // v2.7.5 (audit X-08): `quick` only overwrites the first 4 KB and then
+    // unlinks - on a 64 MB container that is 0.01% coverage, so most
+    // ciphertext survives in free space. This is a deliberate trade for
+    // speed; it is not a physical-media guarantee. Use the full path when
+    // the adversary may image the disk.
     final cap = quick ? 4 * 1024 : size;
     const chunkSize = 64 * 1024;
     var remaining = cap;

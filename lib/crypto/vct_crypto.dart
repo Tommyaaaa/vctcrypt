@@ -463,7 +463,7 @@ bool isVctFile(String path) {
 /// not those features were used, so the inspector can never tell
 /// whether a decoy or duress password exists.
 class VctFileInfo {
-  /// One of [fmtV1], [fmtV1Old], [fmtV2], [fmtV3] or [fmtNone].
+  /// One of [fmtV1], [fmtV1Old], [fmtV2], [fmtV3], [fmtV4] or [fmtNone].
   final int format;
 
   /// Total file size in bytes.
@@ -472,10 +472,11 @@ class VctFileInfo {
   /// File modification time.
   final DateTime modified;
 
-  /// Size of the encrypted real payload (V2/V4 only; null for V1/V3).
+  /// Size of the encrypted real payload (V2/V3/V4; null for V1).
   final int? realCtLen;
 
-  /// Header size in bytes (V4: 334, V3: 1394, V2: 332, V1/V1-old: 128).
+  /// Header size in bytes (V4: 334, V3: 1394, V2: 332, V1: 128,
+  /// V1-old: 127 because its magic is one byte shorter).
   final int headerLen;
 
   /// v2.5.0 (H4): no channel information is exposed any more.
@@ -581,12 +582,13 @@ VctFileInfo inspectVctFile(String path) {
     );
   }
 
-  // V1 / V1-old: magic 12 + salt 48 + nonces 36 + hmac 32 = 128
+  // V1: 12 + 48 + 36 + 32 = 128. V1-old has an 11-byte magic, so 127
+  // (audit X-22).
   return VctFileInfo(
     format: format,
     fileSize: size,
     modified: modified,
-    headerLen: 128,
+    headerLen: format == fmtV1Old ? 127 : 128,
   );
 }
 
@@ -943,15 +945,15 @@ Future<_InternalResult> _decryptBody(
 
     // Parse payload: [name_len 2B LE] [name] [file_data]
     final nameLen = payload[0] | (payload[1] << 8);
-    if (2 + nameLen > payload.length) {
+    // v2.7.5 (audit X-19): the writer caps names at _maxFname, so a larger
+    // length is corrupt - reject instead of silently truncating it.
+    if (nameLen > _maxFname || 2 + nameLen > payload.length) {
       return _InternalResult(success: false, error: 'PAYLOAD_CORRUPT');
     }
 
-    var origNameLen = nameLen;
-    if (origNameLen >= _maxFname) origNameLen = _maxFname - 1;
     String origName;
     try {
-      origName = utf8.decode(payload.sublist(2, 2 + origNameLen));
+      origName = utf8.decode(payload.sublist(2, 2 + nameLen));
     } catch (_) {
       return _InternalResult(success: false, error: 'PAYLOAD_CORRUPT');
     }
@@ -998,11 +1000,14 @@ Future<bool> _verifyPartitionHmac(
 
   final vk = await _pbkdf2('$password::V', salt, _pbkdf2VIters, 32);
   final computed = await _hmacSha256(vk, hb);
-  if (_constantTimeEq(computed, storedHmac)) return true;
-
+  // v2.7.5 (audit X-11): always run the legacy fallback too. Previously a
+  // hit returned after 600K iterations while a miss cost 610K, a 1.6%
+  // signal on "this guess was right". Both paths now do identical work.
   final legacyVk = await _pbkdf2('$password::V', salt, _pbkdf2VItersLegacy, 32);
   final legacyComputed = await _hmacSha256(legacyVk, hb);
-  return _constantTimeEq(legacyComputed, storedHmac);
+  final fullHit = _constantTimeEq(computed, storedHmac);
+  final legacyHit = _constantTimeEq(legacyComputed, storedHmac);
+  return fullHit || legacyHit;
 }
 
 /// Verify the duress HMAC: HMAC(PBKDF2(duressPassword::V, xsalt), xsalt)
@@ -1014,12 +1019,14 @@ Future<bool> _verifyDuressHmac(
 ) async {
   final vk = await _pbkdf2('$password::V', xsalt, _pbkdf2VIters, 32);
   final computed = await _hmacSha256(vk, xsalt);
-  if (_constantTimeEq(computed, storedHmac)) return true;
-
+  // v2.7.5 (audit X-11): same constant-work treatment as the partition
+  // HMAC, so a duress hit is not faster than a miss.
   final legacyVk =
       await _pbkdf2('$password::V', xsalt, _pbkdf2VItersLegacy, 32);
   final legacyComputed = await _hmacSha256(legacyVk, xsalt);
-  return _constantTimeEq(legacyComputed, storedHmac);
+  final fullHit = _constantTimeEq(computed, storedHmac);
+  final legacyHit = _constantTimeEq(legacyComputed, storedHmac);
+  return fullHit || legacyHit;
 }
 
 /// Write decrypted bytes to a user-visible location.
@@ -1028,7 +1035,11 @@ Future<bool> _verifyDuressHmac(
 /// Secure Notes feature to keep plaintext out of Documents).
 Future<DecryptResult> _writeDecrypted(String vctPath, _InternalResult internal,
     {String? outputPath}) async {
-  final origName = internal.originalName ?? 'decrypted_file';
+  // v2.7.5 (audit X-02): sanitise here, not only in _chooseOutputPath. The
+  // name is attacker-supplied and is also used by the UI for the download
+  // attribute, the share sheet and the success label - all of which used
+  // to render bidi tricks like "photo\u202Egpj.exe" as "photoexe.jpg".
+  final origName = sanitizeFileName(internal.originalName ?? 'decrypted_file');
   final outPath = outputPath ?? await _chooseOutputPath(origName, vctPath);
   _writeFile(outPath, internal.fileBytes!);
   return DecryptResult(
@@ -1099,11 +1110,13 @@ class DecryptResult {
   /// True when the DECOY password was entered and the decoy file was
   /// decrypted. IMPORTANT: the UI must NOT behave differently for decoy
   /// decryption - identical success screen is what makes it deniable.
+  /// v2.7.5 (audit X-15): never read by `lib/screens/`; test/audit only.
   final bool isDecoy;
 
   /// True when the duress password was entered: the file has been
   /// permanently shredded. The returned error is 'WRONG_PASSWORD' on
   /// purpose - observers must not be able to tell duress was triggered.
+  /// v2.7.5 (audit X-15): test/audit only; the UI deliberately ignores it.
   final bool duressTriggered;
 
   DecryptResult({
@@ -1145,6 +1158,11 @@ Future<EncryptResult> encryptFile(
   try {
     if (_passwordTooShort(password)) {
       return EncryptResult(success: false, error: 'PASSWORD_TOO_SHORT');
+    }
+    // v2.7.5 (audit X-20): an explicit output path equal to the input used
+    // to overwrite the plaintext and then shred the ciphertext, losing both.
+    if (outputPath != null && p.equals(outputPath, filePath)) {
+      return EncryptResult(success: false, error: 'OUTPUT_SAME_AS_INPUT');
     }
 
     final decoyPw = options?.decoyPassword;
@@ -1282,12 +1300,23 @@ Future<EncryptResult> encryptFile(
     var shredded = false;
     if (shred) {
       onProgress?.call('SHREDDING');
-      final outputOk = await _verifyWrittenV4(outPath, password);
+      final outputOk = await _verifyWrittenV4(
+        outPath,
+        password,
+        decoyPw: (decoyPw != null && decoyPw.isNotEmpty) ? decoyPw : null,
+        expected: fileData,
+      );
       if (!outputOk) {
         // NEVER destroy the original unless the output is provably valid.
+        // v2.7.5 (audit X-06): also remove the damaged output so the user
+        // is not left with a broken .VCT that no screen told them about.
+        try {
+          vfs.deleteAt(outPath);
+        } catch (_) {}
         return EncryptResult(
           success: false,
           error: 'SHRED_VERIFY_FAILED',
+          outputPath: outPath,
         );
       }
       await _shredFile(filePath);
@@ -1316,7 +1345,8 @@ Future<EncryptResult> encryptFile(
 /// the way the decryptor does - header length against the real byte
 /// count, the decoy slot present, full GCM tag check on every layer and
 /// the inner payload structure - and returns false on any mismatch.
-Future<bool> _verifyWrittenV4(String outPath, String password) async {
+Future<bool> _verifyWrittenV4(String outPath, String password,
+    {String? decoyPw, List<int>? expected}) async {
   try {
     final data = _readFile(outPath);
     if (detectFormat(data) != fmtV4) return false;
@@ -1370,7 +1400,60 @@ Future<bool> _verifyWrittenV4(String outPath, String password) async {
 
     final internal =
         await _decryptBody(keys, n1, n2, n3, realCt, realTag, aad: aad);
-    return internal.success;
+    if (!internal.success) return false;
+    // v2.7.5 (audit X-21): "self-consistent" should mean the bytes that
+    // came back are the bytes we meant to write, not merely that the
+    // container parses. GCM already guarantees this, but assert it.
+    if (expected != null && !_constantTimeEq(internal.fileBytes!, expected)) {
+      return false;
+    }
+
+    // v2.7.5 (audit X-05): the decoy partition must be proven too. The
+    // old check only required "the decoy area is non-empty", so a truncated
+    // or half-flushed decoy still passed and the original was shredded -
+    // permanently losing the plausible-deniability payload.
+    final decoyStart = realCtEnd + _tagSize;
+    final decoyCtEnd = data.length - _tagSize;
+    final decoyCt = data.sublist(decoyStart, decoyCtEnd);
+    final decoyTag = data.sublist(decoyCtEnd);
+    if (decoyPw != null && decoyPw.isNotEmpty) {
+      final dSalt = data.sublist(_v4DecoySaltOff, _v4DecoySaltOff + _saltSize);
+      final dN1 = data.sublist(_v4DecoySaltOff + _saltSize,
+          _v4DecoySaltOff + _saltSize + _nonceSize);
+      final dN2 = data.sublist(_v4DecoySaltOff + _saltSize + _nonceSize,
+          _v4DecoySaltOff + _saltSize + _nonceSize * 2);
+      final dN3 = data.sublist(_v4DecoySaltOff + _saltSize + _nonceSize * 2,
+          _v4DecoySaltOff + _saltSize + _nonceSize * 3);
+      final dHmac = data.sublist(_v4DecoyHmacOff, _v4DecoyHmacOff + _hmacSize);
+      final dKeys =
+          await _v4VerifyPartition(decoyPw, dSalt, dN1, dN2, dN3, dHmac);
+      if (dKeys == null) return false;
+      final dAad = layoutVer >= _v4LayoutVer
+          ? _buildV4Aad(
+              salt: dSalt,
+              n1: dN1,
+              n2: dN2,
+              n3: dN3,
+              ctLen: realCtLen,
+              layoutVer: layoutVer,
+              flags: data[_v4FlagsOff],
+              slot: _v4SlotDecoy,
+              duressSalt: duressSalt,
+              duressHmac: duressHmac,
+            )
+          : _buildV4Aad(
+              salt: dSalt, n1: dN1, n2: dN2, n3: dN3, ctLen: realCtLen);
+      final dInternal =
+          await _decryptBody(dKeys, dN1, dN2, dN3, decoyCt, decoyTag, aad: dAad);
+      if (!dInternal.success) return false;
+    } else {
+      // No decoy configured: the filler is sized to the real partition
+      // (+/- 20%), so a wildly different decoy length is a write error.
+      if (realCtLen <= 0) return false;
+      final ratio = decoyCt.length / realCtLen;
+      if (ratio < 0.8 || ratio > 1.2) return false;
+    }
+    return true;
   } catch (_) {
     return false;
   }
@@ -1450,7 +1533,6 @@ Future<
 /// Wrap the CEK into both channels and assemble the V3 container.
 Future<Uint8List> _v3Assemble({
   required List<int> cek,
-  required List<int> body,
   required ({
     List<int> salt2,
     List<int> n1,
@@ -1501,6 +1583,8 @@ Future<Uint8List> _v3Assemble({
     pwTag = await _secureRandom(_tagSize);
   }
 
+  // Kept for byte-compatibility with older readers. v2.7.5 (X-01): our own
+  // decryptor no longer trusts this byte - see _decryptV3WithKey/Password.
   var flags = 0;
   if (usePassword) flags |= _v3FlagPassword;
   if (useKem) flags |= _v3FlagKem;
@@ -1536,7 +1620,8 @@ final _kem768 = PqcKem.kyber768;
 ///
 /// v2.7.2 (audit C-S-2 / fix-02): the HMAC alone accepted a truncated
 /// body, so a short write could pass and the plaintext was then wiped.
-Future<bool> _verifyWrittenV3(String outPath, List<int> cek) async {
+Future<bool> _verifyWrittenV3(String outPath, List<int> cek,
+    {List<int>? expected}) async {
   try {
     final data = _readFile(outPath);
     if (detectFormat(data) != fmtV3) return false;
@@ -1567,7 +1652,12 @@ Future<bool> _verifyWrittenV3(String outPath, List<int> cek) async {
     final bodyCt = data.sublist(_v3HeaderLen, ctEnd);
     final bodyTag = data.sublist(ctEnd, ctEnd + _tagSize);
     final internal = await _decryptBody(keys, n1, n2, n3, bodyCt, bodyTag);
-    return internal.success;
+    if (!internal.success) return false;
+    // v2.7.5 (audit X-21): compare the recovered plaintext too.
+    if (expected != null && !_constantTimeEq(internal.fileBytes!, expected)) {
+      return false;
+    }
+    return true;
   } catch (_) {
     return false;
   }
@@ -1592,6 +1682,10 @@ Future<EncryptResult> encryptFileHybrid(
     }
     if (usePassword && _passwordTooShort(password)) {
       return EncryptResult(success: false, error: 'PASSWORD_TOO_SHORT');
+    }
+    // v2.7.5 (audit X-20): same-input/output guard as encryptFile.
+    if (outputPath != null && p.equals(outputPath, filePath)) {
+      return EncryptResult(success: false, error: 'OUTPUT_SAME_AS_INPUT');
     }
 
     // v2.6.0 (V-06): the KEM path used to skip the size ceiling that the
@@ -1625,7 +1719,6 @@ Future<EncryptResult> encryptFileHybrid(
       onProgress?.call('ENCRYPTING');
       assembled = await _v3Assemble(
         cek: cek,
-        body: payload,
         enc: enc,
         usePassword: usePassword,
         useKem: useKem,
@@ -1643,9 +1736,17 @@ Future<EncryptResult> encryptFileHybrid(
     var shredded = false;
     if (options.shredOriginal) {
       onProgress?.call('SHREDDING');
-      final ok = await _verifyWrittenV3(outPath, cek);
+      final ok = await _verifyWrittenV3(outPath, cek, expected: fileData);
       if (!ok) {
-        return EncryptResult(success: false, error: 'SHRED_VERIFY_FAILED');
+        // v2.7.5 (audit X-06): drop the damaged output, keep the original.
+        try {
+          vfs.deleteAt(outPath);
+        } catch (_) {}
+        return EncryptResult(
+          success: false,
+          error: 'SHRED_VERIFY_FAILED',
+          outputPath: outPath,
+        );
       }
       await _shredFile(filePath);
       shredded = true;
@@ -1672,11 +1773,12 @@ Future<DecryptResult> _decryptV3WithKey(
   ProgressCallback? onProgress, {
   String? outputPath,
 }) async {
-  final flags = fileData[_v3FlagsOff];
-  if ((flags & _v3FlagKem) == 0) {
-    return DecryptResult(success: false, error: 'KEY_NOT_APPLICABLE');
-  }
-
+  // v2.7.5 (audit X-01): the plaintext `flags` byte is NOT trusted.
+  // v2.7.0 only stopped *displaying* the channel bits; a one-byte flip
+  // still re-routed decryption (KEY_NOT_APPLICABLE) and made the file
+  // permanently unreadable with the recipient key. Both channels are now
+  // tried unconditionally - the KEM wrap has its own GCM tag, so a missing
+  // or random slot simply fails authentication. Flags become advisory.
   onProgress?.call('VERIFYING');
   final kemCt = fileData.sublist(_v3KemCtOff, _v3KemCtOff + _v3KemCtLen);
   final ss = privateKey.dk.length == 2400
@@ -1692,7 +1794,9 @@ Future<DecryptResult> _decryptV3WithKey(
   try {
     cek = await _aesGcmDecrypt(wrapK, kwNonce, kwCt, kwTag);
   } catch (_) {
-    return DecryptResult(success: false, error: 'WRONG_KEY');
+    // No KEM channel (random filler) or a corrupted wrap: same answer,
+    // exactly as before, but no longer driven by an attacker-writable bit.
+    return DecryptResult(success: false, error: 'KEY_NOT_APPLICABLE');
   }
 
   return await _v3DecryptBody(cek, fileData, filePath, onProgress,
@@ -1752,32 +1856,28 @@ Future<DecryptResult> _decryptV3WithPassword(
   ProgressCallback? onProgress, {
   String? outputPath,
 }) async {
-  final flags = fileData[_v3FlagsOff];
-
+  // v2.7.5 (audit X-01): ignore the plaintext flags byte. Always run the
+  // full PBKDF2 and attempt the password wrap; the GCM tag decides. A
+  // flipped channel bit can no longer force KEY_REQUIRED, and a wrong
+  // password on a key-only file now reads as WRONG_PASSWORD instead of
+  // leaking "this file has no password channel".
   onProgress?.call('DERIVING');
 
-  // Uniform work: always run the full PBKDF2 even when the channel is
-  // inactive, so timing does not reveal which channels a file has.
   final pwSalt = fileData.sublist(_v3PwSaltOff, _v3PwSaltOff + _saltSize);
   final wrap = await _pbkdf2('${password}::V3', pwSalt, _pbkdf2Iters, 32);
 
-  if ((flags & _v3FlagPassword) != 0) {
-    final pwNonce = fileData.sublist(_v3PwNonceOff, _v3PwNonceOff + _nonceSize);
-    final pwCt = fileData.sublist(_v3PwCtOff, _v3PwCtOff + 32);
-    final pwTag = fileData.sublist(_v3PwTagOff, _v3PwTagOff + _tagSize);
-    try {
-      final cek = await _aesGcmDecrypt(wrap, pwNonce, pwCt, pwTag);
-      return await _v3DecryptBody(cek, fileData, filePath, onProgress,
-          outputPath: outputPath);
-    } on SecretBoxAuthenticationError {
-      return DecryptResult(success: false, error: 'WRONG_PASSWORD');
-    } catch (_) {
-      return DecryptResult(success: false, error: 'CORRUPT');
-    }
+  final pwNonce = fileData.sublist(_v3PwNonceOff, _v3PwNonceOff + _nonceSize);
+  final pwCt = fileData.sublist(_v3PwCtOff, _v3PwCtOff + 32);
+  final pwTag = fileData.sublist(_v3PwTagOff, _v3PwTagOff + _tagSize);
+  try {
+    final cek = await _aesGcmDecrypt(wrap, pwNonce, pwCt, pwTag);
+    return await _v3DecryptBody(cek, fileData, filePath, onProgress,
+        outputPath: outputPath);
+  } on SecretBoxAuthenticationError {
+    return DecryptResult(success: false, error: 'WRONG_PASSWORD');
+  } catch (_) {
+    return DecryptResult(success: false, error: 'CORRUPT');
   }
-
-  // Password channel inactive: this file needs the private key.
-  return DecryptResult(success: false, error: 'KEY_REQUIRED');
 }
 
 /// Public: decrypt a V3 file using a private key object (already
@@ -1869,7 +1969,10 @@ Future<DecryptResult> _decryptV2(
   final realCtEnd = bodyStart + realCtLen;
   if (realCtLen <= 0 ||
       realCtEnd + _tagSize > fileData.length ||
-      realCtEnd + _tagSize + _tagSize > fileData.length) {
+      // v2.7.5 (audit X-16): the decoy partition must carry at least its
+      // own tag, so an exactly-empty decoy is corrupt too (was `>` here but
+      // `>=` elsewhere).
+      realCtEnd + _tagSize + _tagSize >= fileData.length) {
     return DecryptResult(success: false, error: 'CORRUPT');
   }
   final realCt = fileData.sublist(bodyStart, realCtEnd);
@@ -1988,7 +2091,10 @@ Future<DecryptResult> _decryptV4(
   final realCtEnd = bodyStart + realCtLen;
   if (realCtLen <= 0 ||
       realCtEnd + _tagSize > fileData.length ||
-      realCtEnd + _tagSize + _tagSize > fileData.length) {
+      // v2.7.5 (audit X-16): the decoy partition must carry at least its
+      // own tag, so an exactly-empty decoy is corrupt too (was `>` here but
+      // `>=` elsewhere).
+      realCtEnd + _tagSize + _tagSize >= fileData.length) {
     return DecryptResult(success: false, error: 'CORRUPT');
   }
   final realCt = fileData.sublist(bodyStart, realCtEnd);

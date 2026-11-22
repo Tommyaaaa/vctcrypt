@@ -51,6 +51,11 @@ class PasswordGenerator {
       if (pools.isEmpty) return '';
     }
 
+    // v2.7.5 (audit X-09): a length shorter than the number of selected
+    // classes cannot hold one of each; return empty instead of a longer
+    // password that silently exceeds the requested length.
+    if (length < pools.length) return '';
+
     final combined = pools.join();
 
     // Guarantee at least one character from each selected class.
@@ -332,7 +337,7 @@ class _GeneratorSheetState extends State<_GeneratorSheet> {
                 selected: _upper,
                 onSelected: (v) {
                   setState(() => _upper = v);
-                  if (_anyClass) _regenerate();
+                  _regenerate();
                 },
               ),
               FilterChip(
@@ -340,7 +345,7 @@ class _GeneratorSheetState extends State<_GeneratorSheet> {
                 selected: _lower,
                 onSelected: (v) {
                   setState(() => _lower = v);
-                  if (_anyClass) _regenerate();
+                  _regenerate();
                 },
               ),
               FilterChip(
@@ -348,7 +353,7 @@ class _GeneratorSheetState extends State<_GeneratorSheet> {
                 selected: _digits,
                 onSelected: (v) {
                   setState(() => _digits = v);
-                  if (_anyClass) _regenerate();
+                  _regenerate();
                 },
               ),
               FilterChip(
@@ -356,7 +361,7 @@ class _GeneratorSheetState extends State<_GeneratorSheet> {
                 selected: _symbols,
                 onSelected: (v) {
                   setState(() => _symbols = v);
-                  if (_anyClass) _regenerate();
+                  _regenerate();
                 },
               ),
               FilterChip(
@@ -364,7 +369,7 @@ class _GeneratorSheetState extends State<_GeneratorSheet> {
                 selected: _excludeAmbiguous,
                 onSelected: (v) {
                   setState(() => _excludeAmbiguous = v);
-                  if (_anyClass) _regenerate();
+                  _regenerate();
                 },
               ),
             ],

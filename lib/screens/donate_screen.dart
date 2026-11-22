@@ -36,8 +36,16 @@ class DonateScreen extends StatelessWidget {
       final tmp = tempPath(
         'vctcrypt_donate_${DateTime.now().millisecondsSinceEpoch}.png',
       );
-      writeBytes(tmp, bytes);
-      await Share.shareXFiles([XFile(tmp)], text: strings.appName);
+      try {
+        writeBytes(tmp, bytes);
+        await Share.shareXFiles([XFile(tmp)], text: strings.appName);
+      } finally {
+        // v2.7.5 (audit X-17c): the exported QR used to stay in the
+        // private temp directory after every tap.
+        try {
+          deleteAt(tmp);
+        } catch (_) {}
+      }
     } catch (_) {
       // Share sheet unavailable (desktop edge cases) - silently ignore;
       // the QR is still visible on screen for direct scanning.

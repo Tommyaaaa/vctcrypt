@@ -134,11 +134,26 @@ class _KeysScreenState extends State<KeysScreen> {
     var obscure = true;
     var working = false;
 
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: !working,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialog) => AlertDialog(
+    // v2.7.5 (audit X-04): the wrap password protects a long-term ML-KEM
+    // private key, yet this dialog ignored the auto-lock / panic pulse that
+    // the other screens obey. Clear both fields when it fires.
+    final lockPulse = VCTCryptApp.of(context).lockPulse;
+    StateSetter? dialogSetState;
+    void onLock() {
+      pwCtl.clear();
+      pw2Ctl.clear();
+      dialogSetState?.call(() {});
+    }
+    lockPulse.addListener(onLock);
+
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: !working,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialog) {
+            dialogSetState = setDialog;
+            return AlertDialog(
           title: Text(strings.genKeyBtn),
           content: SingleChildScrollView(
             child: Column(
@@ -288,9 +303,13 @@ class _KeysScreenState extends State<KeysScreen> {
               label: Text(strings.genKeyBtn),
             ),
           ],
+        );
+          },
         ),
-      ),
-    );
+      );
+    } finally {
+      lockPulse.removeListener(onLock);
+    }
     nameCtl.dispose();
     pwCtl.dispose();
     pw2Ctl.dispose();

@@ -139,7 +139,18 @@ class _HashScreenState extends State<HashScreen> {
       );
       return;
     }
-    final ok = clean == hash.toLowerCase();
+    // v2.7.5 (audit X-17b): constant-time compare, matching the engine.
+    // Local UI use makes the risk negligible, but the inconsistency was
+    // worth removing.
+    final computed = hash.toLowerCase();
+    var ok = clean.length == computed.length;
+    if (ok) {
+      var diff = 0;
+      for (var i = 0; i < clean.length; i++) {
+        diff |= clean.codeUnitAt(i) ^ computed.codeUnitAt(i);
+      }
+      ok = diff == 0;
+    }
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(

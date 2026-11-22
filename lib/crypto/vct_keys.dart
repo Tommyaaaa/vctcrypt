@@ -130,10 +130,41 @@ class VctPublicKey {
       throw const KeyFileException(errBadKeyFile);
     }
     return VctPublicKey(
-      name: name,
+      name: _safeKeyName(name),
       ek: Uint8List.fromList(data.sublist(nameEnd)),
     );
   }
+}
+
+/// v2.7.5 (audit X-10): the display name comes from an attacker-writable
+/// file. Strip bidi overrides, zero-width characters, control bytes and
+/// path separators before it reaches the recipient dialog or key list.
+String _safeKeyName(String raw) {
+  final out = StringBuffer();
+  var lastDot = false;
+  for (final r in raw.runes) {
+    if ((r >= 0x202A && r <= 0x202E) ||
+        (r >= 0x2066 && r <= 0x2069) ||
+        (r >= 0x200B && r <= 0x200F) ||
+        r == 0xFEFF ||
+        r < 0x20 ||
+        r == 0x7F ||
+        r == 0x2F ||
+        r == 0x5C) {
+      continue;
+    }
+    if (r == 0x2E) {
+      if (lastDot) continue;
+      lastDot = true;
+    } else {
+      lastDot = false;
+    }
+    out.writeCharCode(r);
+  }
+  var name = out.toString().trim();
+  if (name.isEmpty || name == '.' || name == '..') name = 'key';
+  if (name.length > 120) name = name.substring(0, 120);
+  return name;
 }
 
 // ---- Private key (password-wrapped container) ----
@@ -229,7 +260,7 @@ class VctPrivateKey {
     } on SecretBoxAuthenticationError {
       throw const KeyFileException(errWrongKeyPassword);
     }
-    return VctPrivateKey(name: name, dk: dk);
+    return VctPrivateKey(name: _safeKeyName(name), dk: dk);
   }
 }
 

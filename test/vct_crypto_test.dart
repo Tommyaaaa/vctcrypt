@@ -25,6 +25,7 @@ import 'package:vctcrypt/crypto/vendor/mlkem/mlkem.dart';
 
 import 'package:vctcrypt/crypto/vct_crypto.dart' as crypto;
 import 'package:vctcrypt/crypto/vct_keys.dart' as keys;
+import 'package:vctcrypt/widgets/password_strength.dart';
 
 const _katAsset = 'test/mlkem768_kat.json';
 
@@ -362,10 +363,12 @@ void main() {
       expect(enc.success, isTrue, reason: enc.error ?? '');
       expect(enc.usedKem, isTrue);
 
-      // Any password hits the inactive channel -> KEY_REQUIRED.
+      // v2.7.5 (X-01): the password path no longer reads the channel flags,
+      // so an absent password channel is reported as a wrong password
+      // (uniform, non-revealing) instead of KEY_REQUIRED.
       final decPw = await crypto.decryptFile(enc.outputPath!, 'anything', null);
       expect(decPw.success, isFalse);
-      expect(decPw.error, 'KEY_REQUIRED');
+      expect(decPw.error, 'WRONG_PASSWORD');
 
       // The private key works.
       final decKey =
@@ -375,7 +378,7 @@ void main() {
           equals(utf8.encode('post-quantum payload')));
     });
 
-    test('wrong key -> WRONG_KEY', () async {
+    test('wrong key -> KEY_NOT_APPLICABLE', () async {
       final src = _tmpFile('wrongkey.txt', utf8.encode('not for you'));
       final (pub, _) = keys.generateKeyPair('Right');
       final (_, wrongPriv) = keys.generateKeyPair('Wrong');
@@ -390,7 +393,9 @@ void main() {
       final dec =
           await crypto.decryptFileWithKey(enc.outputPath!, wrongPriv, null);
       expect(dec.success, isFalse);
-      expect(dec.error, 'WRONG_KEY');
+      // v2.7.5 (X-01): flags are ignored; a non-matching KEM wrap is
+      // simply "not for this key", the same as a file without a KEM slot.
+      expect(dec.error, 'KEY_NOT_APPLICABLE');
     });
 
     test('private key cannot open a V1 password file -> KEY_NOT_APPLICABLE',
@@ -921,6 +926,94 @@ void main() {
       final dec = await crypto.decryptFile(broken.path, 'g3-pass-2026', null);
       expect(dec.success, isFalse);
       expect(File(broken.path).readAsBytesSync(), equals(before));
+    });
+  });
+
+  // ============================================================
+  // 11. X-01 / X-02 / X-05 / N-06 / N-08 - v2.7.5 regressions
+  // ============================================================
+  group('v2.7.5 audit regressions', () {
+    test('X-01: flipped V3 channel flags do not break password decrypt',
+        () async {
+      final src = _tmpFile('x01_pw.bin', utf8.encode('flags test'));
+      final enc = await crypto.encryptFileHybrid(
+        src.path,
+        const crypto.HybridEncryptOptions(password: 'x01-pass-2026'),
+        null,
+      );
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final blob = File(enc.outputPath!).readAsBytesSync();
+      expect(blob[13] & 0x01, isNot(0), reason: 'password flag should be set');
+      blob[13] ^= 0x03; // clear password bit, set KEM bit
+      final broken = _tmpFile('x01_pw_flip.VCT', blob);
+
+      final dec = await crypto.decryptFile(broken.path, 'x01-pass-2026', null);
+      expect(dec.success, isTrue, reason: dec.error ?? '');
+      expect(File(dec.outputPath!).readAsBytesSync(),
+          utf8.encode('flags test'));
+    });
+
+    test('X-01: flipped V3 flags do not break key decrypt', () async {
+      final src = _tmpFile('x01_key.bin', utf8.encode('key flags test'));
+      final (pub, priv) = keys.generateKeyPair('X01');
+      final enc = await crypto.encryptFileHybrid(
+        src.path,
+        crypto.HybridEncryptOptions(recipient: pub),
+        null,
+      );
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final blob = File(enc.outputPath!).readAsBytesSync();
+      blob[13] = 0x01; // lie: claim password-only
+      final broken = _tmpFile('x01_key_flip.VCT', blob);
+
+      final dec = await crypto.decryptFileWithKey(broken.path, priv, null);
+      expect(dec.success, isTrue, reason: dec.error ?? '');
+    });
+
+    test('X-02: decrypted originalName is sanitised', () async {
+      final src = _tmpFile('photo\u202Egpj.exe', utf8.encode('bidi'));
+      final enc = await crypto.encryptFile(src.path, 'x02-pass-2026', null);
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+
+      final dec =
+          await crypto.decryptFile(enc.outputPath!, 'x02-pass-2026', null);
+      expect(dec.success, isTrue, reason: dec.error ?? '');
+      expect(dec.originalName!.contains('\u202E'), isFalse);
+    });
+
+    test('X-05: decoy partition is verified before shredding', () async {
+      final src = _tmpFile('x05_real.bin', utf8.encode('real data here'));
+      final decoy =
+          _tmpFile('x05_decoy.bin', utf8.encode('decoy data here'));
+      final enc = await crypto.encryptFile(
+        src.path,
+        'x05-pass-2026',
+        null,
+        options: crypto.EncryptOptions(
+          decoyPassword: 'x05-decoy-2026',
+          decoyFilePath: decoy.path,
+          shredOriginal: true,
+        ),
+      );
+      expect(enc.success, isTrue, reason: enc.error ?? '');
+      expect(File(src.path).existsSync(), isFalse);
+
+      // Both passwords still open their partition.
+      final real =
+          await crypto.decryptFile(enc.outputPath!, 'x05-pass-2026', null);
+      expect(real.success, isTrue, reason: real.error ?? '');
+      final fake =
+          await crypto.decryptFile(enc.outputPath!, 'x05-decoy-2026', null);
+      expect(fake.success, isTrue, reason: fake.error ?? '');
+      expect(fake.isDecoy, isTrue);
+    });
+
+    test('N-06 / N-08: leaked and near-repeated passwords score low', () {
+      expect(PasswordStrength.estimateBits('P@ssw0rd1'), 0);
+      expect(PasswordStrength.estimateBits('aaaaaaaa1'), lessThan(40));
+      expect(PasswordStrength.estimateBits('abcd1234'), lessThan(40));
     });
   });
 }

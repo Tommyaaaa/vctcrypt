@@ -42,8 +42,11 @@ Triple AES-256-GCM file encryption with a modern Flutter (Material Design 3) UI 
 | V1 | `VCTCRYPT1\0\0\0` | Classic triple-GCM format, byte-compatible with the CLI releases |
 | V2 | `VCTCRYPT2\0\0\0` | Adds always-present decoy + duress slots (332-byte header) |
 | V3 | `VCTCRYPT3\0\0\0` | Hybrid envelope: random CEK wrapped by password and/or ML-KEM-768 recipient key (1394-byte header) |
+| V4 | `VCTCRYPT4\0\0\0` | Authenticated header + HKDF key split; current default (334-byte header) |
 
 The V1 and V2 formats are fully interoperable: VCTCrypt decrypts both; files encrypted without advanced options keep using V1 for maximum compatibility. V3 is produced only when you encrypt to a recipient key; it is opened with the recipient private key (and optionally the password).
+
+The **runtime is fully offline** (the web CSP allows only `'self'` and `blob:`). Only the maintainer build tools under `tool/` contact the MyMemory / Google translation endpoints, and only when regenerating the bundled policy translations (audit X-18).
 
 ## Testing
 

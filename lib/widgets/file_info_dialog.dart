@@ -42,11 +42,17 @@ Future<void> showFileInfoDialog(
 
   if (!context.mounted) return;
 
-  final formatLabel = info.isV2
-      ? strings.infoFormatV2
-      : info.isValid
-          ? strings.infoFormatV1
-          : strings.infoFormatInvalid;
+  // v2.7.5 (audit X-03): every file written since 2.5.0 is V4, but this
+  // label used to fall through to "V1 (classic)".
+  final formatLabel = !info.isValid
+      ? strings.infoFormatInvalid
+      : info.isV4
+          ? strings.infoFormatV4
+          : info.isV3
+              ? strings.infoFormatV3
+              : info.isV2
+                  ? strings.infoFormatV2
+                  : strings.infoFormatV1;
 
   await showDialog<void>(
     context: context,
@@ -98,7 +104,7 @@ Future<void> showFileInfoDialog(
                   '${info.modified.year}-${_two(info.modified.month)}-${_two(info.modified.day)} '
                   '${_two(info.modified.hour)}:${_two(info.modified.minute)}',
             ),
-            if (info.isValid && info.isV2) ...[
+            if (info.isValid && (info.isV2 || info.isV4)) ...[
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,

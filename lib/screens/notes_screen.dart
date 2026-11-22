@@ -1,8 +1,9 @@
 /// VCTCrypt - Secure Notes screen (v1.5.0)
 ///
 /// Encrypt text straight into a .VCT file and decrypt notes back to
-/// text IN MEMORY - the plaintext never persists on disk (the transient
-/// temp file is shredded). 100% offline.
+/// text in memory. The plaintext lives in memory while the screen is
+/// unlocked; it reaches disk only when the user explicitly chooses
+/// "Save as file" (which warns that the copy is plaintext). 100% offline.
 
 import 'dart:convert';
 
@@ -278,7 +279,8 @@ class _NotesScreenState extends State<NotesScreen> {
     );
     if (confirmed != true || !mounted) return;
 
-    final name = _noteName?.replaceAll('.txt', '') ?? 'note.txt';
+    final base = p.basenameWithoutExtension(_noteName ?? 'note');
+    final name = crypto.sanitizeFileName('$base.txt');
     if (isWebPlatform) {
       await saveBytes(name, utf8.encode(_noteText!));
       if (mounted) _showSnackBar(_strings.noteSavedAs);

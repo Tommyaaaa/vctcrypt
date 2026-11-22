@@ -172,7 +172,11 @@ def parse_functions(src):
 
 # --------------------------------------------------------------- emit
 def esc(s):
-    return s.replace('\\', '\\\\').replace("'", "\\'")
+    # v2.7.5 (audit X-13): also escape $ - a translated entity such as
+    # &#x24; would otherwise become Dart string interpolation.
+    return (s.replace('\\', '\\\\')
+             .replace("'", "\\'")
+             .replace('$', '\\$'))
 
 
 def emit_list(sections, indent):

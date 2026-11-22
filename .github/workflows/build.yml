@@ -546,11 +546,18 @@ jobs:
             | Android | VCTCrypt-Android.apk |
             | Linux | VCTCrypt-Linux-x86_64.AppImage |
 
+            ### What's New in v2.7.5
+            - 🔒 **X-01 - V3 flags no longer trusted**: password and KEM channels are both tried unconditionally; flipping the plaintext flags byte cannot change the result or permanently lock the file
+            - 🏷️ **X-02 / X-10 - name hygiene**: decrypted names and .vctpub names are stripped of bidi / zero-width / control characters; the recipient dialog states that the name is not signed
+            - 🧾 **X-03 - file info**: V3 / V4 are labelled correctly instead of "V1 (classic)"
+            - 🧨 **X-05 / X-06 / X-21 - shred verification**: the decoy partition is decrypted too, the recovered plaintext is compared with the original, and a failed check deletes the damaged output - never the original
+            - 🛡️ **X-04 / N-06 / N-08 / X-09 / X-11 / X-12 / X-14 / X-19 / X-20 / X-22**: panic lock reaches the key dialog; leaked and near-repeated passwords score low; generator length guard; equal-work legacy key checks; random temp names; name-length and same-path guards
+
             ### What's New in v2.7.2
             - 🔒 **C-S-2 / fix-02 - verified before shredding**: the original file is shredded only after the freshly written container has been fully re-decrypted layer by layer (V3 and V4), not merely checked at the header HMAC; a damaged or truncated output keeps the original
             - 🧹 **A-S-1 / A-S-2 - notes**: auto-lock now also clears the note being typed and any decrypted note; Save as file asks for confirmation because that copy is plaintext, and the false "never written to disk" wording was corrected
             - 💪 **A-S-5 / fix-03 - one strength meter**: every field uses the same estimator (leaked-password blacklist, leet normalisation, repeated units, long keyboard/alphabet runs); a weak key wrap password needs a second confirmation
-            - ⏱️ **N-01 / E-S-1 / N-04**: cracking-time text uses the honest 10k guesses/s (40 bits ≈ 2.8 hours), CI builds are gated on analyze + tests, and the stats "empty" state includes decrypted bytes
+            - ⏱️ **N-01 / E-S-1 / N-04**: cracking-time text uses the honest 10k guesses/s (40 bits ≈ 3.5 years), CI builds are gated on analyze + tests, and the stats "empty" state includes decrypted bytes
 
             ### What's New in v2.7.1
             - 🕵️ **N-01 - deniability counters deleted**: decoy / duress / shred counters are removed entirely (on the web they were plaintext localStorage); old counters are wiped at startup
